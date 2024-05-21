@@ -12,11 +12,12 @@ import (
 )
 
 type databaseConfig struct {
-	Name               string
-	UserCollectionName string
-	Username           string
-	Password           string
-	URI                string
+	Name                string
+	UserCollectionName  string
+	Username            string
+	Password            string
+	URI                 string
+	QueryDefaultTimeout time.Duration
 }
 
 type httpServerConfig struct {
@@ -44,7 +45,7 @@ func initializeConfigs() (string, databaseConfig, httpServerConfig, jwtConfing, 
 		panic(err)
 	}
 
-	requiredVariables := [12]string{
+	requiredVariables := [13]string{
 		"VERSION",
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
@@ -53,6 +54,7 @@ func initializeConfigs() (string, databaseConfig, httpServerConfig, jwtConfing, 
 		"DB_USER_NAME",
 		"DB_PASSWORD",
 		"DB_URI",
+		"DB_DEFAULT_TIMEOUT",
 		"ACCESS_TOKEN_SECRET",
 		"REFRESH_TOKEN_SECRET",
 		"ACCESS_TOKEN_TTL",
@@ -66,12 +68,15 @@ func initializeConfigs() (string, databaseConfig, httpServerConfig, jwtConfing, 
 		}
 	}
 
+	queryTimeoutMultiplier, _ := strconv.ParseInt(getEnv("DB_DEFAULT_TIMEOUT"), 10, 64)
+
 	DbConfig := databaseConfig{
-		Name:               getEnv("DB_NAME"),
-		UserCollectionName: getEnv("DB_USER_COLLECTION_NAME"),
-		Username:           getEnv("DB_USER_NAME"),
-		Password:           getEnv("DB_PASSWORD"),
-		URI:                getEnv("DB_URI"),
+		Name:                getEnv("DB_NAME"),
+		UserCollectionName:  getEnv("DB_USER_COLLECTION_NAME"),
+		Username:            getEnv("DB_USER_NAME"),
+		Password:            getEnv("DB_PASSWORD"),
+		URI:                 getEnv("DB_URI"),
+		QueryDefaultTimeout: time.Second * time.Duration(queryTimeoutMultiplier),
 	}
 
 	HttpConfig := httpServerConfig{

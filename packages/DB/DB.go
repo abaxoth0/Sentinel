@@ -37,3 +37,7 @@ func Connect() (*mongo.Client, context.Context) {
 
 	return client, ctx
 }
+
+func DefaultTimeoutContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.TODO(), config.DB.QueryDefaultTimeout)
+}

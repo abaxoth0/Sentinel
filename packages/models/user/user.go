@@ -1,9 +1,9 @@
 package user
 
 import (
-	"context"
 	"log"
 	"net/http"
+	"sentinel/packages/DB"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/models/role"
@@ -104,7 +104,11 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 		Role: role.UnconfirmedUser,
 	}
 
-	result, err := m.collection.InsertOne(context.TODO(), user)
+	ctx, cancel := DB.DefaultTimeoutContext()
+
+	defer cancel()
+
+	result, err := m.collection.InsertOne(ctx, user)
 
 	if err != nil {
 		return uid, ExternalError.New("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
@@ -118,18 +122,19 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 func (m Model) FindUserByEmail(email string) (indexedUser, error) {
 	var user indexedUser
 
-	// empty context
-	ectx := context.TODO()
+	ctx, cancel := DB.DefaultTimeoutContext()
+
+	defer cancel()
 
 	userFilter := bson.D{{"email", email}}
 
-	cur, err := m.collection.Find(ectx, userFilter)
+	cur, err := m.collection.Find(ctx, userFilter)
 
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	if hasResult := cur.Next(ectx); !hasResult {
+	if hasResult := cur.Next(ctx); !hasResult {
 		return user, ExternalError.New("user not found", http.StatusNotFound)
 	}
 
@@ -140,7 +145,7 @@ func (m Model) FindUserByEmail(email string) (indexedUser, error) {
 	}
 
 	// user will be non-empty, but error will still presence
-	if err := cur.Close(ectx); err != nil {
+	if err := cur.Close(ctx); err != nil {
 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
 
 		return user, err
