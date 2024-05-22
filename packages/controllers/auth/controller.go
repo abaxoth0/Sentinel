@@ -83,7 +83,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
 
 	if err := net.Response.Send(resBody, w); err != nil {
-		net.Request.PrintError("Failed to send OK response", http.StatusInternalServerError, req)
+		net.Request.PrintError("Failed to send success response", http.StatusInternalServerError, req)
 	}
 
 	net.Request.Print("Authentication successful, user id: "+iuser.ID, req)
@@ -192,7 +192,7 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
 
 	if err := net.Response.Send(resBody, w); err != nil {
-		net.Response.SendError("Failed to send OK response", http.StatusInternalServerError, req, w)
+		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
 	}
 
 	net.Request.Print("Tokens successfuly refreshed.", req)
@@ -245,7 +245,7 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := net.Response.Send(body, w); err != nil {
-		net.Response.SendError("Failed to send OK response", http.StatusInternalServerError, req, w)
+		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
 
 		return
 	}

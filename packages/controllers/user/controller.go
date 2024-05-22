@@ -56,7 +56,9 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := net.Response.OK(w); err != nil {
-		panic(err)
+		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
+
+		return
 	}
 
 	net.Request.Print("New user created, email: "+body.Email, req)
