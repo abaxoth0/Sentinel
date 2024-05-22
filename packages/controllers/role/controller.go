@@ -1,10 +1,12 @@
 package role
 
 import (
-	"log"
 	"net/http"
+	"sentinel/packages/json"
+	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 	"sentinel/packages/models/user"
+	"sentinel/packages/net"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -22,5 +24,23 @@ func New(dbClient *mongo.Client) *Controller {
 }
 
 func (c Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
-	log.Fatalln("[ METHOD NOT IMPLEMENTED ]")
+	if ok := net.Request.Preprocessing(w, req, http.MethodGet); !ok {
+		return
+	}
+
+	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List}, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+
+		return
+	}
+
+	if err := net.Response.Send(encdoedRoles, w); err != nil {
+		net.Request.PrintError("Failed to send OK response", http.StatusInternalServerError, req)
+	}
+
+	net.Request.Print("OK", req)
 }
