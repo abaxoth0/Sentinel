@@ -47,6 +47,8 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		if err := net.Response.InternalServerError(w); err != nil {
 			panic(err)
 		}
+
+		return
 	}
 
 	iuser, loginError := c.user.Login(body.Email, body.Password)
@@ -74,6 +76,8 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		if err := net.Response.InternalServerError(w); err != nil {
 			panic(err)
 		}
+
+		return
 	}
 
 	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
@@ -181,6 +185,8 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 		if err := net.Response.InternalServerError(w); err != nil {
 			panic(err)
 		}
+
+		return
 	}
 
 	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
@@ -234,6 +240,8 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 		if err := net.Response.InternalServerError(w); err != nil {
 			panic(err)
 		}
+
+		return
 	}
 
 	if err := net.Response.Send(body, w); err != nil {
