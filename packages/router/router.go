@@ -25,7 +25,7 @@ func Init(dbClient *mongo.Client) *mux.Router {
 	router.HandleFunc("/refresh", authController.Refresh)
 	router.HandleFunc("/verification", authController.Verify)
 
-	router.HandleFunc("/user/register", userController.Create)
+	router.HandleFunc("/user/create", userController.Create)
 
 	router.HandleFunc("/roles", roleController.GetRoles)
 
