@@ -43,27 +43,17 @@ func New(dbClient *mongo.Client) *Model {
 	}
 }
 
+// TODO Actually better to create an additional model `auth` and move this method in it. (According to SRP)
+// 		But since it's only 1 method i won't do that, cuz it's not realy confusing.
+
 // Returns indexedUser if auth data is correct, ExternalError otherwise.
 func (m Model) Login(email string, password string) (indexedUser, *ExternalError.ExternalError) {
 	user, err := m.FindUserByEmail(email)
 
-	if err != nil {
-		isUserFound := user != indexedUser{}
-
-		if ok, _ := ExternalError.Is(err); ok && isUserFound {
-			// Invalid email or password, currently we know only about email,
-			// but there are no point to tell user about this, due to security reasons.
-			return user, ExternalError.New("Неверный e-mail или пароль", http.StatusBadRequest)
-		}
-
-		// If user was found and there are error, that means cursor closing failed. (see `FindUserByEmail` method)
-		// This actually not a critical problem, cuz on finishing request processing goroutine will be terminated
-		// and garbage collector should kill connection, but idk how it will work in practice.
-		// P.S. Log for this case perfoms in `FindUserByEmail` method.
-		// If user wasn't found and there are error, that means occured an unexpected error.
-		if !isUserFound {
-			log.Fatalln(err)
-		}
+	// If user was found (user != indexedUser{}) and there are error, that means cursor closing failed. (see `findUserBy` method)
+	// If user wasn't found and there are error, that means occured an unexpected error.
+	if err != nil && (user != indexedUser{}) {
+		return user, ExternalError.New("Неверный e-mail или пароль", http.StatusBadRequest)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
@@ -122,13 +112,17 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 }
 
 func (m Model) FindUserByEmail(email string) (indexedUser, error) {
+	return m.findUserBy("email", email)
+}
+
+func (m Model) findUserBy(key string, value any) (indexedUser, error) {
 	var user indexedUser
 
 	ctx, cancel := DB.DefaultTimeoutContext()
 
 	defer cancel()
 
-	userFilter := bson.D{{"email", email}, {"deletedAt", nil}}
+	userFilter := bson.D{{key, value}, {"deletedAt", nil}}
 
 	cur, err := m.collection.Find(ctx, userFilter)
 
@@ -146,10 +140,12 @@ func (m Model) FindUserByEmail(email string) (indexedUser, error) {
 		log.Fatalln(err)
 	}
 
-	// user will be non-empty, but error will still presence
+	// This actually not a critical problem, cuz on finishing request processing goroutine will be terminated
+	// and garbage collector should kill cursor, but idk how it will work in practice.
 	if err := cur.Close(ctx); err != nil {
 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
 
+		// user will be non-empty, but error will still presence
 		return user, err
 	}
 
