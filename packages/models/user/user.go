@@ -27,6 +27,8 @@ type indexedUser struct {
 	Email    string
 	Password string
 	Role     string
+	// If in DB this property will be nil, then here it will be 0
+	DeletedAt int `bson:"deletedAt,omitempty"`
 }
 
 type Model struct {
@@ -126,7 +128,7 @@ func (m Model) FindUserByEmail(email string) (indexedUser, error) {
 
 	defer cancel()
 
-	userFilter := bson.D{{"email", email}}
+	userFilter := bson.D{{"email", email}, {"deletedAt", nil}}
 
 	cur, err := m.collection.Find(ctx, userFilter)
 
