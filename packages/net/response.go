@@ -71,10 +71,20 @@ func (res response) Send(body []byte, w http.ResponseWriter) error {
 }
 
 // Sends response with given message and status, also log request info in terminal.
-func (res response) SendError(message string, status int, req *http.Request, w http.ResponseWriter) {
-	Response.Message(message, status, w)
+//
+// Returns error if failed to send response (also does log in this case), nil otherwise.
+func (res response) SendError(message string, status int, req *http.Request, w http.ResponseWriter) error {
+	err := Response.Message(message, status, w)
+
+	if err != nil {
+		Request.PrintError("Failed to send response", 500, req)
+
+		return err
+	}
 
 	Request.PrintError(message, status, req)
+
+	return nil
 }
 
 func (res response) InternalServerError(w http.ResponseWriter) error {
