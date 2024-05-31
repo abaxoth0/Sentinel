@@ -48,7 +48,7 @@ func New(dbClient *mongo.Client) *Model {
 // 		But since it's only 1 method i won't do that, cuz it's not realy confusing.
 
 // Returns indexedUser if auth data is correct, ExternalError otherwise.
-func (m Model) Login(email string, password string) (indexedUser, *ExternalError.ExternalError) {
+func (m Model) Login(email string, password string) (indexedUser, *ExternalError.Error) {
 	user, err := m.FindUserByEmail(email)
 
 	// If user was found (user != indexedUser{}) and there are error, that means cursor closing failed. (see `findUserBy` method)

@@ -7,7 +7,6 @@ import (
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
 	"sentinel/packages/net"
-	"strings"
 
 	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -197,29 +196,10 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	authHeaderValue := req.Header.Get("Authorization")
+	accessToken, err := c.token.GetAccessToken(req)
 
-	if authHeaderValue == "" {
-		// Now possible error doesn't matter here, but consider it if want to add smth here
-		net.Response.Message("Вы не авторизованы", http.StatusUnauthorized, w)
-
-		net.Request.PrintError("Missing authorization header", http.StatusUnauthorized, req)
-
-		return
-	}
-
-	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
-
-	accessToken, accessTokenExpired := c.token.ParseAccessToken(accessTokenStr)
-
-	if !accessToken.Valid {
-		net.Response.SendError("Invalid access token", http.StatusBadRequest, req, w)
-
-		return
-	}
-
-	if accessTokenExpired {
-		net.Response.SendError("Access token expired", http.StatusUnauthorized, req, w)
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
 	}

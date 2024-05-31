@@ -2,9 +2,12 @@ package token
 
 import (
 	"log"
+	"net/http"
 	"sentinel/packages/config"
+	ExternalError "sentinel/packages/error"
 	"sentinel/packages/models/user"
 	"sentinel/packages/util"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -82,7 +85,35 @@ func (m Model) Generate(user user.Payload) (SignedToken, SignedToken) {
 	return accessToken, refreshToken
 }
 
-func (m Model) ParseAccessToken(accessToken string) (*jwt.Token, bool) {
+// Retrieves and validates access token from request.
+//
+// Returns token pointer and nil if valid and not expired token was found.
+// Otherwise returns empty token pointer and error.
+func (m Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
+	var r *jwt.Token
+
+	authHeaderValue := req.Header.Get("Authorization")
+
+	if authHeaderValue == "" {
+		return r, ExternalError.New("Вы не авторизованы", 401)
+	}
+
+	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
+
+	token, expired := m.parseAccessToken(accessTokenStr)
+
+	if !token.Valid {
+		return r, ExternalError.New("Invalid access token", http.StatusBadRequest)
+	}
+
+	if expired {
+		return r, ExternalError.New("Access token expired", http.StatusUnauthorized)
+	}
+
+	return r, nil
+}
+
+func (m Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.AccessTokenPublicKey, nil
 	})
