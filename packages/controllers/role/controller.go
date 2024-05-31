@@ -31,9 +31,7 @@ func (c Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
 	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List}, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		net.Response.InternalServerError(w)
 
 		return
 	}

@@ -44,9 +44,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 	body, ok := json.Decode[net.AuthRequestBody](req.Body, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		net.Response.InternalServerError(w)
 
 		return
 	}
@@ -73,9 +71,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 	}, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		net.Response.InternalServerError(w)
 
 		return
 	}
@@ -182,9 +178,7 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	}, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		net.Response.InternalServerError(w)
 
 		return
 	}
@@ -237,9 +231,7 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 	body, ok := json.Encode(payload, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		net.Response.InternalServerError(w)
 
 		return
 	}

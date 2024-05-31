@@ -32,9 +32,9 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 	body, ok := json.Decode[net.AuthRequestBody](req.Body, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		net.Response.InternalServerError(w)
+
+		return
 	}
 
 	_, err := c.user.Create(body.Email, body.Password)
