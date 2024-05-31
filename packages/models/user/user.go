@@ -7,6 +7,7 @@ import (
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/models/role"
+	"sentinel/packages/util"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -111,6 +112,38 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 	return uid, nil
 }
 
+func (m Model) SoftDelete(uid string) error {
+	user, err := m.FindUserByID(uid)
+
+	if err != nil || (user == indexedUser{}) {
+		return ExternalError.New("Пользователь не был найден", http.StatusNotFound)
+	}
+
+	ctx, cancel := DB.DefaultTimeoutContext()
+
+	defer cancel()
+
+	update := bson.D{{
+		"$set", bson.D{{
+			"deletedAt", util.UnixTimeNow(),
+		}},
+	}}
+
+	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(uid), update)
+
+	if err != nil {
+		log.Println("[ ERROR ] Failed to update user (query error) \"" + uid + "\" - " + err.Error())
+
+		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
+	}
+
+	return nil
+}
+
+func (m Model) FindUserByID(uid string) (indexedUser, error) {
+	return m.findUserBy("_id", DB.ObjectIDFromHex(uid))
+}
+
 func (m Model) FindUserByEmail(email string) (indexedUser, error) {
 	return m.findUserBy("email", email)
 }
@@ -122,7 +155,7 @@ func (m Model) findUserBy(key string, value any) (indexedUser, error) {
 
 	defer cancel()
 
-	userFilter := bson.D{{key, value}, {"deletedAt", nil}}
+	userFilter := bson.D{{key, value}, {"deletedAt", primitive.Null{}}}
 
 	cur, err := m.collection.Find(ctx, userFilter)
 

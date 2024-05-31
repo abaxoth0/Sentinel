@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/config"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -36,6 +37,14 @@ func Connect() (*mongo.Client, context.Context) {
 	log.Print("[ DATABASE ] Checking connection: OK")
 
 	return client, ctx
+}
+
+func ObjectIDFromHex(hex string) primitive.ObjectID {
+	objectID, err := primitive.ObjectIDFromHex(hex)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return objectID
 }
 
 func DefaultTimeoutContext() (context.Context, context.CancelFunc) {

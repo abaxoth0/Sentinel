@@ -5,6 +5,10 @@ type AuthRequestBody struct {
 	Password string `json:"password"`
 }
 
+type SoftDeleteBody struct {
+	UID string `json:"uid"`
+}
+
 type TokenResponseBody struct {
 	Message     string `json:"message"`
 	AccessToken string `json:"accessToken"`

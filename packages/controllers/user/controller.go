@@ -67,29 +67,56 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
 	net.Response.InternalServerError(w)
 
-	log.Fatalln("[ CRITICAL ERROR] Method not implemented")
+	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
 }
 
 func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
 	net.Response.InternalServerError(w)
 
-	log.Fatalln("[ CRITICAL ERROR] Method not implemented")
+	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
 }
 
 func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
 	net.Response.InternalServerError(w)
 
-	log.Fatalln("[ CRITICAL ERROR] Method not implemented")
+	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
 }
 
-func (c Controller) UNSAFE_SoftDelete(w http.ResponseWriter, req *http.Request) {
-	net.Response.InternalServerError(w)
+// TODO add access token validation
+func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
 
-	log.Fatalln("[ CRITICAL ERROR] Method not implemented")
+	body, ok := json.Decode[net.SoftDeleteBody](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
+
+	if err := c.user.SoftDelete(body.UID); err != nil {
+		isExternal, e := ExternalError.Is(err)
+
+		if !isExternal {
+			net.Response.InternalServerError(w)
+
+			return
+		}
+
+		net.Response.SendError(e.Message, e.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
+
+	// log.Fatalln("[ WARNING ] Method implementation in progress")
 }
 
 func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) {
 	net.Response.InternalServerError(w)
 
-	log.Fatalln("[ CRITICAL ERROR] Method not implemented")
+	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
 }
