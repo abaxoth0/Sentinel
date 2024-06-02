@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"net/http"
+	ExternalError "sentinel/packages/error"
 	"sentinel/packages/json"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
@@ -13,14 +14,12 @@ import (
 )
 
 /*
+
 	If access token expired response will have status 401 (Unauthorized).
 
 	If refresh token expired response will have status 409 (Conflict) also in this case authentication cookie will be deleted.
 	Refresh token used only in "Refresh" method. (And mustn't be used in any other function, method, etc.)
 
-	TODO Not sure that status 409 is OK for this case, currently this tells user that there are conflict with server and him,
-		 and reason of conflict in next: User assumes that he authorized but it's wrong, cuz refresh token expired.
-		 More likely will be better to use status 401 (unathorized) in this case, but once againg - i'm not sure.
 */
 
 type Controller struct {
@@ -123,51 +122,30 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	authCookie, err := req.Cookie(token.RefreshTokenKey)
+	oldRefreshToken, e := c.token.GetRefreshToken(req)
 
-	if err != nil {
-		if !errors.Is(err, http.ErrNoCookie) {
-			panic(err)
+	// "e" is either http.ErrNoCookie, either ExternalError.Error
+	if e != nil {
+		// If auth cookie wasn't found
+		if errors.Is(e, http.ErrNoCookie) {
+			net.Response.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusUnauthorized, w)
+
+			net.Request.PrintError("Auth cookie wasn't found", http.StatusUnauthorized, req)
 		}
 
-		net.Response.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusBadRequest, w)
+		if isExternal, e := ExternalError.Is(e); isExternal {
+			// This cookie used inside of "GetRefreshToken" method so we know that it's exists.
+			authCookie, _ := req.Cookie(token.RefreshTokenKey)
 
-		net.Request.PrintError("Auth cookie wasn't found", http.StatusBadRequest, req)
+			net.Cookie.Delete(authCookie, w)
 
-		return
-	}
-
-	oldRefreshToken, refreshTokenExpired := c.token.ParseRefreshToken(authCookie.Value)
-
-	if !oldRefreshToken.Valid {
-		net.Cookie.Delete(authCookie, w)
-
-		net.Response.SendError("Invalid refresh token", http.StatusBadRequest, req, w)
-
-		return
-	}
-
-	if refreshTokenExpired {
-		net.Cookie.Delete(authCookie, w)
-
-		net.Response.SendError("Refresh token expired", http.StatusConflict, req, w)
+			net.Response.SendError(e.Message, e.Status, req, w)
+		}
 
 		return
 	}
 
 	claims := oldRefreshToken.Claims.(jwt.MapClaims)
-	email := claims[token.IssuerKey]
-	uid := claims[token.SubjectKey]
-
-	if uid == nil || email == nil {
-		net.Cookie.Delete(authCookie, w)
-
-		net.Response.Message("Malfunction refresh token", http.StatusBadRequest, w)
-
-		net.Request.PrintError("Malfunction refresh token:\n"+authCookie.Value, http.StatusBadRequest, req)
-
-		return
-	}
 
 	accessToken, refreshToken := c.token.Generate(c.token.PayloadFromClaims(claims))
 

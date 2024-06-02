@@ -1,6 +1,7 @@
 package token
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"sentinel/packages/config"
@@ -113,6 +114,41 @@ func (m Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Err
 	return r, nil
 }
 
+// Retrieves and validates refresh token from request.
+//
+// Returns token pointer and nil if valid and not expired token was found.
+// Otherwise returns empty token pointer and error, this error is either http.ErrNoCookie, either ExternalError.Error
+func (m Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
+	var emptyToken *jwt.Token
+
+	authCookie, err := req.Cookie(RefreshTokenKey)
+
+	if err != nil {
+		// If this condition is true, that mean error ocured inside of "req.Cookie(...)"
+		if !errors.Is(err, http.ErrNoCookie) {
+			log.Fatalln(err)
+		}
+
+		return emptyToken, err
+	}
+
+	token, expired := m.parseRefreshToken(authCookie.Value)
+
+	if !token.Valid {
+		return emptyToken, ExternalError.New("Invalid refresh token", http.StatusBadRequest)
+	}
+
+	if expired {
+		// TODO
+		// Not sure that status 409 is OK for this case, currently this tells user that there are conflict with server and him,
+		// and reason of conflict in next: User assumes that he authorized but it's wrong, cuz refresh token expired.
+		// More likely will be better to use status 401 (unathorized) in this case, but once againg - i'm not sure.
+		return emptyToken, ExternalError.New("Refresh token expired", http.StatusConflict)
+	}
+
+	return token, nil
+}
+
 func (m Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.AccessTokenPublicKey, nil
@@ -123,7 +159,7 @@ func (m Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	return token, exp
 }
 
-func (m Model) ParseRefreshToken(refreshToken string) (*jwt.Token, bool) {
+func (m Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.RefreshTokenPublicKey, nil
 	})
@@ -134,6 +170,7 @@ func (m Model) ParseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 }
 
 // IMPORTANT: Use this function only if token is valid.
+// TODO Return error istead of crushing app
 func (m Model) PayloadFromClaims(claims jwt.MapClaims) user.Payload {
 	if claims[IdKey] == nil {
 		log.Fatalln("[ CRITICAL ERROR ] Malfunction token claims: \"jti\" is nil. Ensure that token is valid.")
