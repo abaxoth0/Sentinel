@@ -5,10 +5,12 @@ import (
 	"net/http"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/json"
+	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
 	"sentinel/packages/net"
 
+	"github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -82,9 +84,27 @@ func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) 
 	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
 }
 
-// TODO add access token validation
 func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	accessToken, err := c.token.GetAccessToken(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	// If token is valid, then we can trust claims
+	claims := accessToken.Claims.(jwt.MapClaims)
+	claimsUID := claims[token.IdKey].(string)
+	claimsRole := claims[token.IdKey].(string)
+
+	if !role.IsValid(claimsRole) {
+		net.Response.SendError("Ошибка аутентификации: неверная роль, попробуйте переавторизоваться", 400, req, w)
+
 		return
 	}
 
@@ -96,7 +116,7 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if err := c.user.SoftDelete(body.UID); err != nil {
+	if err := c.user.SoftDelete(body.UID, claimsUID, claimsRole); err != nil {
 		isExternal, e := ExternalError.Is(err)
 
 		if !isExternal {
@@ -111,8 +131,6 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	}
 
 	net.Response.OK(w)
-
-	// log.Fatalln("[ WARNING ] Method implementation in progress")
 }
 
 func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) {

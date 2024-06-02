@@ -112,11 +112,33 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 	return uid, nil
 }
 
-func (m Model) SoftDelete(uid string) error {
-	user, err := m.FindUserByID(uid)
+func (m Model) SoftDelete(targetID string, requesterID string, requesterRole string) error {
+	user, err := m.FindUserByID(targetID)
 
-	if err != nil || (user == indexedUser{}) {
-		return ExternalError.New("Пользователь не был найден", http.StatusNotFound)
+	// There are 1 case in wich error will presence but user will be non-empty:
+	// If failed to close db cursor. (See comment in "findUserBy" method for detatils)
+	if err != nil && (user != indexedUser{}) {
+		if isExternal, _ := ExternalError.Is(err); isExternal {
+			return ExternalError.New("Пользователь не был найден", http.StatusNotFound)
+		}
+
+		log.Fatalln(err.Error())
+	}
+
+	// If user want to delete another user, not himself and hi doesn't have access to do that
+	if targetID != requesterID {
+		// Only moderators and administrators can delete other users.
+		if requesterRole != role.Moderator ||
+			requesterRole != role.Administrator ||
+			// Moderator can't delete another moderator
+			(requesterRole == role.Moderator && user.Role == role.Moderator) {
+			return ExternalError.New("У вас недостаточно прав для выполнения данной операции", http.StatusForbidden)
+		}
+
+		// Administrators can't be deleted through app, only through direct DB query.
+		if user.Role == role.Administrator {
+			return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
+		}
 	}
 
 	ctx, cancel := DB.DefaultTimeoutContext()
@@ -129,10 +151,10 @@ func (m Model) SoftDelete(uid string) error {
 		}},
 	}}
 
-	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(uid), update)
+	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(targetID), update)
 
 	if err != nil {
-		log.Println("[ ERROR ] Failed to update user (query error) \"" + uid + "\" - " + err.Error())
+		log.Println("[ ERROR ] Failed to update user (query error) \"" + targetID + "\" - " + err.Error())
 
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}

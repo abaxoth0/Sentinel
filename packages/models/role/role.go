@@ -28,3 +28,13 @@ var List = [7]string{
 	Moderator,
 	Administrator,
 }
+
+func IsValid(role string) bool {
+	for _, r := range List {
+		if r == role {
+			return true
+		}
+	}
+
+	return false
+}
