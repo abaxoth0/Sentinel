@@ -117,7 +117,7 @@ func (m Model) SoftDelete(targetID string, requesterID string, requesterRole str
 
 	// There are 1 case in wich error will presence but user will be non-empty:
 	// If failed to close db cursor. (See comment in "findUserBy" method for detatils)
-	if err != nil && (user != indexedUser{}) {
+	if err != nil {
 		if isExternal, _ := ExternalError.Is(err); isExternal {
 			return ExternalError.New("Пользователь не был найден", http.StatusNotFound)
 		}
