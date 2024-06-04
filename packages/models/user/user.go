@@ -7,6 +7,7 @@ import (
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/models/role"
+	"sentinel/packages/models/search"
 	"sentinel/packages/util"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,30 +16,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TODO add timeouts for DB queries (https://www.mongodb.com/docs/drivers/go/current/fundamentals/context/)
-
 type user struct {
 	Email    string
 	Password string
 	Role     string
 }
 
-type indexedUser struct {
-	ID       string `bson:"_id"`
-	Email    string
-	Password string
-	Role     string
-	// If in DB this property will be nil, then here it will be 0
-	DeletedAt int `bson:"deletedAt,omitempty"`
-}
-
 type Model struct {
+	search     *search.Model
 	dbClient   *mongo.Client
 	collection *mongo.Collection
 }
 
-func New(dbClient *mongo.Client) *Model {
+func New(dbClient *mongo.Client, searchModel *search.Model) *Model {
 	return &Model{
+		search:     searchModel,
 		dbClient:   dbClient,
 		collection: dbClient.Database(config.DB.Name).Collection(config.DB.UserCollectionName),
 	}
@@ -48,12 +40,12 @@ func New(dbClient *mongo.Client) *Model {
 // 		But since it's only 1 method i won't do that, cuz it's not realy confusing.
 
 // Returns indexedUser if auth data is correct, ExternalError otherwise.
-func (m Model) Login(email string, password string) (indexedUser, *ExternalError.Error) {
-	user, err := m.FindUserByEmail(email)
+func (m Model) Login(email string, password string) (search.IndexedUser, *ExternalError.Error) {
+	user, err := m.search.FindUserByEmail(email)
 
 	// If user was found (user != indexedUser{}) and there are error, that means cursor closing failed. (see `findUserBy` method)
 	// If user wasn't found and there are error, that means occured an unexpected error.
-	if err != nil && (user != indexedUser{}) {
+	if err != nil && (user != search.IndexedUser{}) {
 		return user, ExternalError.New("Неверный e-mail или пароль", http.StatusBadRequest)
 	}
 
@@ -76,7 +68,7 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 		return uid, ExternalError.New("Недопустимый размер пароля. Пароль должен находится в диапозоне от 8 до 64 символов.", http.StatusBadRequest)
 	}
 
-	_, err := m.FindUserByEmail(email)
+	_, err := m.search.FindUserByEmail(email)
 
 	if err == nil {
 		// Invalid email or password, currently we know only about email,
@@ -113,7 +105,7 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 }
 
 func (m Model) SoftDelete(targetID string, requesterID string, requesterRole string) error {
-	user, err := m.FindUserByID(targetID)
+	user, err := m.search.FindUserByID(targetID)
 
 	// There are 1 case in wich error will presence but user will be non-empty:
 	// If failed to close db cursor. (See comment in "findUserBy" method for detatils)
@@ -162,47 +154,51 @@ func (m Model) SoftDelete(targetID string, requesterID string, requesterRole str
 	return nil
 }
 
-func (m Model) FindUserByID(uid string) (indexedUser, error) {
-	return m.findUserBy("_id", DB.ObjectIDFromHex(uid))
+func (m Model) Restore(targetID string, requesterID string, requesterRole string) error {
+	return nil
 }
 
-func (m Model) FindUserByEmail(email string) (indexedUser, error) {
-	return m.findUserBy("email", email)
-}
+// func (m Model) FindUserByID(uid string) (IndexedUser, error) {
+// 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid))
+// }
 
-func (m Model) findUserBy(key string, value any) (indexedUser, error) {
-	var user indexedUser
+// func (m Model) FindUserByEmail(email string) (IndexedUser, error) {
+// 	return m.findUserBy("email", email)
+// }
 
-	ctx, cancel := DB.DefaultTimeoutContext()
+// func (m Model) findUserBy(key string, value any) (IndexedUser, error) {
+// 	var user IndexedUser
 
-	defer cancel()
+// 	ctx, cancel := DB.DefaultTimeoutContext()
 
-	userFilter := bson.D{{key, value}, {"deletedAt", primitive.Null{}}}
+// 	defer cancel()
 
-	cur, err := m.collection.Find(ctx, userFilter)
+// 	userFilter := bson.D{{key, value}, {"deletedAt", primitive.Null{}}}
 
-	if err != nil {
-		log.Fatalln(err)
-	}
+// 	cur, err := m.collection.Find(ctx, userFilter)
 
-	if hasResult := cur.Next(ctx); !hasResult {
-		return user, ExternalError.New("user not found", http.StatusNotFound)
-	}
+// 	if err != nil {
+// 		log.Fatalln(err)
+// 	}
 
-	err = cur.Decode(&user)
+// 	if hasResult := cur.Next(ctx); !hasResult {
+// 		return user, ExternalError.New("user not found", http.StatusNotFound)
+// 	}
 
-	if err != nil {
-		log.Fatalln(err)
-	}
+// 	err = cur.Decode(&user)
 
-	// This actually not a critical problem, cuz on finishing request processing goroutine will be terminated
-	// and garbage collector should kill cursor, but idk how it will work in practice.
-	if err := cur.Close(ctx); err != nil {
-		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
+// 	if err != nil {
+// 		log.Fatalln(err)
+// 	}
 
-		// user will be non-empty, but error will still presence
-		return user, err
-	}
+// 	// This actually not a critical problem, cuz on finishing request processing goroutine will be terminated
+// 	// and garbage collector should kill cursor, but idk how it will work in practice.
+// 	if err := cur.Close(ctx); err != nil {
+// 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
 
-	return user, nil
-}
+// 		// user will be non-empty, but error will still presence
+// 		return user, err
+// 	}
+
+// 	return user, nil
+// }

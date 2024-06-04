@@ -5,7 +5,7 @@ type AuthRequestBody struct {
 	Password string `json:"password"`
 }
 
-type SoftDeleteBody struct {
+type UidBody struct {
 	UID string `json:"uid"`
 }
 

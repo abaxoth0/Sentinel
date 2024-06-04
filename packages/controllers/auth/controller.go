@@ -5,12 +5,12 @@ import (
 	"net/http"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/json"
+	"sentinel/packages/models/auth"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
 	"sentinel/packages/net"
 
 	"github.com/golang-jwt/jwt"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 /*
@@ -25,12 +25,14 @@ import (
 type Controller struct {
 	user  *user.Model
 	token *token.Model
+	auth  *auth.Model
 }
 
-func New(dbClient *mongo.Client) *Controller {
+func New(userModel *user.Model, tokenModel *token.Model, authModel *auth.Model) *Controller {
 	return &Controller{
-		user:  user.New(dbClient),
-		token: token.New(dbClient),
+		user:  userModel,
+		token: tokenModel,
+		auth:  authModel,
 	}
 }
 

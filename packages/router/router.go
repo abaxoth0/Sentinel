@@ -2,10 +2,7 @@ package router
 
 import (
 	"sentinel/packages/config"
-	admincontroller "sentinel/packages/controllers/admin"
-	authcontroller "sentinel/packages/controllers/auth"
-	rolecontroller "sentinel/packages/controllers/role"
-	usercontroller "sentinel/packages/controllers/user"
+	"sentinel/packages/controllers"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,29 +12,29 @@ import (
 func Init(dbClient *mongo.Client) *mux.Router {
 	router := mux.NewRouter()
 
-	authController := authcontroller.New(dbClient)
-	userController := usercontroller.New(dbClient)
-	adminController := admincontroller.New(dbClient)
-	roleController := rolecontroller.New(dbClient)
+	controller := controllers.New(dbClient)
 
-	router.HandleFunc("/login", authController.Login)
-	router.HandleFunc("/logout", authController.Logout)
-	router.HandleFunc("/refresh", authController.Refresh)
-	router.HandleFunc("/verification", authController.Verify)
+	// auth
+	router.HandleFunc("/login", controller.Auth.Login)
+	router.HandleFunc("/logout", controller.Auth.Logout)
+	router.HandleFunc("/refresh", controller.Auth.Refresh)
+	router.HandleFunc("/verification", controller.Auth.Verify)
 
-	router.HandleFunc("/user/create", userController.Create)
-	router.HandleFunc("/user/delete", userController.SoftDelete)
+	// user
+	router.HandleFunc("/user/create", controller.User.Create)
+	router.HandleFunc("/user/delete", controller.User.SoftDelete)
 
-	router.HandleFunc("/roles", roleController.GetRoles)
+	// roles
+	router.HandleFunc("/roles", controller.Role.GetRoles)
 
 	if config.Debug.Enabled {
 		// TODO implement all
-		router.HandleFunc("/user/drop", userController.UNSAFE_HardDelete)
-		router.HandleFunc("/user/change/email", userController.UNSAFE_ChangeEmail)
-		router.HandleFunc("/user/change/password", userController.UNSAFE_ChangePassword)
-		router.HandleFunc("/user/change/role", userController.UNSAFE_ChangeRole)
+		router.HandleFunc("/user/drop", controller.User.UNSAFE_HardDelete)
+		router.HandleFunc("/user/change/email", controller.User.UNSAFE_ChangeEmail)
+		router.HandleFunc("/user/change/password", controller.User.UNSAFE_ChangePassword)
+		router.HandleFunc("/user/change/role", controller.User.UNSAFE_ChangeRole)
 
-		router.HandleFunc("/admin/clear-cache", adminController.DropCache)
+		router.HandleFunc("/admin/clear-cache", controller.Admin.DropCache)
 	}
 
 	return router

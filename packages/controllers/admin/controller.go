@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"sentinel/packages/models/token"
 	"sentinel/packages/models/user"
-
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Controller struct {
@@ -14,10 +12,10 @@ type Controller struct {
 	token *token.Model
 }
 
-func New(dbClient *mongo.Client) *Controller {
+func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 	return &Controller{
-		user:  user.New(dbClient),
-		token: token.New(dbClient),
+		user:  userModel,
+		token: tokenModel,
 	}
 }
 

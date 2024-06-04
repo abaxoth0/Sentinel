@@ -11,7 +11,6 @@ import (
 	"sentinel/packages/net"
 
 	"github.com/golang-jwt/jwt"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Controller struct {
@@ -19,10 +18,10 @@ type Controller struct {
 	token *token.Model
 }
 
-func New(dbClient *mongo.Client) *Controller {
+func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 	return &Controller{
-		user:  user.New(dbClient),
-		token: token.New(dbClient),
+		user:  userModel,
+		token: tokenModel,
 	}
 }
 
@@ -108,7 +107,7 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, ok := json.Decode[net.SoftDeleteBody](req.Body, w)
+	body, ok := json.Decode[net.UidBody](req.Body, w)
 
 	if !ok {
 		if err := net.Response.InternalServerError(w); err != nil {
