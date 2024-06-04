@@ -49,7 +49,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	iuser, loginError := c.user.Login(body.Email, body.Password)
+	iuser, loginError := c.auth.Login(body.Email, body.Password)
 
 	if loginError != nil {
 		net.Response.Message(loginError.Message, loginError.Status, w)
