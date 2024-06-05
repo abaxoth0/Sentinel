@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/DB"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
+	"sentinel/packages/models/auth"
 	"sentinel/packages/models/role"
 	"sentinel/packages/models/search"
 	"sentinel/packages/util"
@@ -82,8 +83,8 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 	return uid, nil
 }
 
-func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole role.Role) error {
-	user, err := m.search.FindUserByID(targetID)
+func (m *Model) SoftDelete(targetUID string, requesterUID string, requesterRole role.Role) error {
+	_, err := m.search.FindUserByID(targetUID)
 
 	// There are 1 case in wich error will presence but user will be non-empty:
 	// If failed to close db cursor. (See comment in "findUserBy" method for detatils)
@@ -95,19 +96,10 @@ func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole ro
 		log.Fatalln(err.Error())
 	}
 
-	// If user want to delete another user, not himself and hi doesn't have access to do that
-	if targetID != requesterID {
-		// Only moderators and administrators can delete other users.
-		if requesterRole != role.Moderator ||
-			requesterRole != role.Administrator ||
-			// Moderator can't delete another moderator
-			(requesterRole == role.Moderator && user.Role == role.Moderator) {
-			return ExternalError.New("У вас недостаточно прав для выполнения данной операции", http.StatusForbidden)
-		}
-
-		// Administrators can't be deleted through app, only through direct DB query.
-		if user.Role == role.Administrator {
-			return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
+	// If user want to delete not himself, but another user and he isn't authorize to do that
+	if targetUID != requesterUID {
+		if err := auth.Rulebook.SoftDeleteUser.Authorize(requesterRole); err != nil {
+			return err
 		}
 	}
 
@@ -121,10 +113,10 @@ func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole ro
 		}},
 	}}
 
-	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(targetID), update)
+	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(targetUID), update)
 
 	if err != nil {
-		log.Println("[ ERROR ] Failed to update user (query error) \"" + targetID + "\" - " + err.Error())
+		log.Println("[ ERROR ] Failed to update user (query error) \"" + targetUID + "\" - " + err.Error())
 
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
@@ -132,6 +124,6 @@ func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole ro
 	return nil
 }
 
-func (m *Model) Restore(targetID string, requesterID string, requesterRole string) error {
+func (m *Model) Restore(targetID string, requesterID string, requesterRole role.Role) error {
 	return nil
 }

@@ -12,15 +12,19 @@ type additionalConditionFunc func(role.Role) (bool, string)
 
 type authorizationRules struct {
 	// Unique name of operation.
-	Operation string
+	Operation OperationName
 	// Array of roles that allow to perform this operation.
 	ValidRoles []role.Role
+	// If true, then role search in `ValidRoles` will be skiped,
+	// but only if user performs operation on himself.
+	// (examples: user want to change email, password or even delete his profile)
+	SkipRoleValidationOnSelf bool
 	// Forbid moderator to perform operations with another moderator.
 	ForbidModToModOps bool
 	// Needed for some operations, if ok should return true and empty string,
 	// otherwise should return false and error message.
 	//
-	// If this property is not needed then set it to `notSpecifiedSpecialCondtion`.
+	// If this property is not needed then set it to `unspecifiedAdditionalCondition`.
 	AdditionCondition additionalConditionFunc
 }
 
@@ -34,8 +38,17 @@ func (authRules authorizationRules) Authorize(userRole role.Role) *ExternalError
 		return ExternalError.New("Для данной операции запрещено взаимодействие вида \"модератор-модератор\"", http.StatusForbidden)
 	}
 
-	for _, validRole := range authRules.ValidRoles {
-		if validRole == userRole {
+	if !authRules.SkipRoleValidationOnSelf {
+		found := false
+
+		for _, validRole := range authRules.ValidRoles {
+			if validRole == userRole {
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			return ExternalError.New("Недостаточно прав для выполнения данной операции", http.StatusForbidden)
 		}
 	}
@@ -55,6 +68,6 @@ func softDeleteUserAdditionalCondition(userRole role.Role) (bool, string) {
 	return true, ""
 }
 
-func notSpecifiedAdditionalCondition(_ role.Role) (bool, string) {
+func unspecifiedAdditionalCondition(_ role.Role) (bool, string) {
 	return true, ""
 }
