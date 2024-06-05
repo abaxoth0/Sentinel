@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/DB"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
+	"sentinel/packages/models/role"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,14 +16,14 @@ import (
 // type user struct {
 // 	Email    string
 // 	Password string
-// 	Role     string
+// 	Role     role.Role
 // }
 
 type IndexedUser struct {
-	ID       string `bson:"_id"`
-	Email    string `bson:"email"`
-	Password string `bson:"password"`
-	Role     string `bson:"role"`
+	ID       string    `bson:"_id"`
+	Email    string    `bson:"email"`
+	Password string    `bson:"password"`
+	Role     role.Role `bson:"role"`
 	// If in DB this property will be nil, then here it will be 0
 	DeletedAt int `bson:"deletedAt,omitempty"`
 }

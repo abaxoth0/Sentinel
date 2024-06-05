@@ -2,26 +2,28 @@ package role
 
 import externalerror "sentinel/packages/error"
 
+type Role string
+
 // This is banned user
-const RestrictedUser string = "restricted_user"
+const RestrictedUser Role = "restricted_user"
 
 // This is an user who didn't yet activated his account
-const UnconfirmedUser string = "unconfirmed_user"
+const UnconfirmedUser Role = "unconfirmed_user"
 
-const DefaultUser string = "user"
+const DefaultUser Role = "user"
 
 // Optional role
-const Manager string = "manager"
+const Manager Role = "manager"
 
-const Support string = "support"
+const Support Role = "support"
 
-const Moderator string = "moderator"
+const Moderator Role = "moderator"
 
 // Can all
-const Administrator string = "admin"
+const Administrator Role = "admin"
 
 // Array with all roles
-var List = [7]string{
+var List = [7]Role{
 	RestrictedUser,
 	UnconfirmedUser,
 	DefaultUser,
@@ -31,7 +33,7 @@ var List = [7]string{
 	Administrator,
 }
 
-func Verify(role string) *externalerror.Error {
+func (role Role) Verify() *externalerror.Error {
 	for _, r := range List {
 		if r == role {
 			return nil

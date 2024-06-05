@@ -19,7 +19,7 @@ import (
 type user struct {
 	Email    string
 	Password string
-	Role     string
+	Role     role.Role
 }
 
 type Model struct {
@@ -82,7 +82,7 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 	return uid, nil
 }
 
-func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole string) error {
+func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole role.Role) error {
 	user, err := m.search.FindUserByID(targetID)
 
 	// There are 1 case in wich error will presence but user will be non-empty:

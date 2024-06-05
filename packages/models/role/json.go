@@ -1,5 +1,5 @@
 package role
 
 type ListJSON struct {
-	Roles [7]string `json:"roles"`
+	Roles [7]Role `json:"roles"`
 }

@@ -99,9 +99,9 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	// If token is valid, then we can trust claims
 	claims := accessToken.Claims.(jwt.MapClaims)
 	claimsUID := claims[token.IdKey].(string)
-	claimsRole := claims[token.IdKey].(string)
+	claimsRole := claims[token.IdKey].(role.Role)
 
-	if err := role.Verify(claimsRole); err != nil {
+	if err := claimsRole.Verify(); err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
+	"sentinel/packages/models/role"
 	"sentinel/packages/models/user"
 	"sentinel/packages/util"
 	"strings"
@@ -48,7 +49,7 @@ func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 		ExpiresAt: generateAccessTokenTtlTimestamp(),
 		Id:        user.ID,
 		Issuer:    user.Email,
-		Subject:   user.Role,
+		Subject:   string(user.Role),
 	})
 
 	refreshTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
@@ -57,7 +58,7 @@ func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 		ExpiresAt: generateRefreshTokenTtlTimestamp(),
 		Id:        user.ID,
 		Issuer:    user.Email,
-		Subject:   user.Role,
+		Subject:   string(user.Role),
 	})
 
 	accessTokenStr, e := accessTokenBuilder.SignedString(*config.JWT.AccessTokenPrivateKey)
@@ -187,6 +188,6 @@ func (m *Model) PayloadFromClaims(claims jwt.MapClaims) *user.Payload {
 	return &user.Payload{
 		ID:    claims[IdKey].(string),
 		Email: claims[IssuerKey].(string),
-		Role:  claims[SubjectKey].(string),
+		Role:  claims[SubjectKey].(role.Role),
 	}
 }
