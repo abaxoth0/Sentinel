@@ -59,7 +59,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	accessToken, refreshToken := c.token.Generate(user.Payload{
+	accessToken, refreshToken := c.token.Generate(&user.Payload{
 		ID:    iuser.ID,
 		Email: iuser.Email,
 		Role:  iuser.Role,

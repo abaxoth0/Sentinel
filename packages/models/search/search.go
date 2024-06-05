@@ -39,7 +39,7 @@ func New(dbClient *mongo.Client) *Model {
 	}
 }
 
-func (m Model) findUserBy(key string, value any) (IndexedUser, error) {
+func (m *Model) findUserBy(key string, value any) (*IndexedUser, error) {
 	var user IndexedUser
 
 	ctx, cancel := DB.DefaultTimeoutContext()
@@ -55,7 +55,7 @@ func (m Model) findUserBy(key string, value any) (IndexedUser, error) {
 	}
 
 	if hasResult := cur.Next(ctx); !hasResult {
-		return user, ExternalError.New("user not found", http.StatusNotFound)
+		return &user, ExternalError.New("user not found", http.StatusNotFound)
 	}
 
 	err = cur.Decode(&user)
@@ -70,16 +70,16 @@ func (m Model) findUserBy(key string, value any) (IndexedUser, error) {
 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
 
 		// user will be non-empty, but error will still presence
-		return user, err
+		return &user, err
 	}
 
-	return user, nil
+	return &user, nil
 }
 
-func (m Model) FindUserByID(uid string) (IndexedUser, error) {
+func (m *Model) FindUserByID(uid string) (*IndexedUser, error) {
 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid))
 }
 
-func (m Model) FindUserByEmail(email string) (IndexedUser, error) {
+func (m *Model) FindUserByEmail(email string) (*IndexedUser, error) {
 	return m.findUserBy("email", email)
 }

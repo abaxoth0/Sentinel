@@ -36,29 +36,7 @@ func New(dbClient *mongo.Client, searchModel *search.Model) *Model {
 	}
 }
 
-// TODO Actually better to create an additional model `auth` and move this method in it. (According to SRP)
-// 		But since it's only 1 method i won't do that, cuz it's not realy confusing.
-
-// Returns indexedUser if auth data is correct, ExternalError otherwise.
-func (m Model) Login(email string, password string) (search.IndexedUser, *ExternalError.Error) {
-	user, err := m.search.FindUserByEmail(email)
-
-	// If user was found (user != indexedUser{}) and there are error, that means cursor closing failed. (see `findUserBy` method)
-	// If user wasn't found and there are error, that means occured an unexpected error.
-	if err != nil && (user != search.IndexedUser{}) {
-		return user, ExternalError.New("Неверный e-mail или пароль", http.StatusBadRequest)
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		// We know that on this stage incorrect only password,
-		// but there are no point to tell user about this, due to security reasons.
-		return user, ExternalError.New("Неверный e-mail или пароль", http.StatusBadRequest)
-	}
-
-	return user, nil
-}
-
-func (m Model) Create(email string, password string) (primitive.ObjectID, error) {
+func (m *Model) Create(email string, password string) (primitive.ObjectID, error) {
 	var uid primitive.ObjectID
 
 	passwordSize := len(password)
@@ -104,7 +82,7 @@ func (m Model) Create(email string, password string) (primitive.ObjectID, error)
 	return uid, nil
 }
 
-func (m Model) SoftDelete(targetID string, requesterID string, requesterRole string) error {
+func (m *Model) SoftDelete(targetID string, requesterID string, requesterRole string) error {
 	user, err := m.search.FindUserByID(targetID)
 
 	// There are 1 case in wich error will presence but user will be non-empty:
@@ -154,19 +132,19 @@ func (m Model) SoftDelete(targetID string, requesterID string, requesterRole str
 	return nil
 }
 
-func (m Model) Restore(targetID string, requesterID string, requesterRole string) error {
+func (m *Model) Restore(targetID string, requesterID string, requesterRole string) error {
 	return nil
 }
 
-// func (m Model) FindUserByID(uid string) (IndexedUser, error) {
+// func (m *Model) FindUserByID(uid string) (IndexedUser, error) {
 // 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid))
 // }
 
-// func (m Model) FindUserByEmail(email string) (IndexedUser, error) {
+// func (m *Model) FindUserByEmail(email string) (IndexedUser, error) {
 // 	return m.findUserBy("email", email)
 // }
 
-// func (m Model) findUserBy(key string, value any) (IndexedUser, error) {
+// func (m *Model) findUserBy(key string, value any) (IndexedUser, error) {
 // 	var user IndexedUser
 
 // 	ctx, cancel := DB.DefaultTimeoutContext()

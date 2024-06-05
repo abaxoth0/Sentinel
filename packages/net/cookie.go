@@ -10,7 +10,7 @@ type cookie struct{}
 
 var Cookie = cookie{}
 
-func (c cookie) BuildAuth(refreshToken token.SignedToken) *http.Cookie {
+func (c *cookie) BuildAuth(refreshToken *token.SignedToken) *http.Cookie {
 	return &http.Cookie{
 		Name:     token.RefreshTokenKey,
 		Value:    refreshToken.Value,
@@ -21,7 +21,7 @@ func (c cookie) BuildAuth(refreshToken token.SignedToken) *http.Cookie {
 	}
 }
 
-func (c cookie) Delete(cookie *http.Cookie, w http.ResponseWriter) {
+func (c *cookie) Delete(cookie *http.Cookie, w http.ResponseWriter) {
 	cookie.HttpOnly = true
 	cookie.MaxAge = -1
 	http.SetCookie(w, cookie)

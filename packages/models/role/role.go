@@ -1,5 +1,7 @@
 package role
 
+import externalerror "sentinel/packages/error"
+
 // This is banned user
 const RestrictedUser string = "restricted_user"
 
@@ -29,12 +31,12 @@ var List = [7]string{
 	Administrator,
 }
 
-func IsValid(role string) bool {
+func Verify(role string) *externalerror.Error {
 	for _, r := range List {
 		if r == role {
-			return true
+			return nil
 		}
 	}
 
-	return false
+	return externalerror.New("Ошибка авторизации: неверная роль, попробуйте переавторизоваться", 400)
 }

@@ -101,8 +101,8 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	claimsUID := claims[token.IdKey].(string)
 	claimsRole := claims[token.IdKey].(string)
 
-	if !role.IsValid(claimsRole) {
-		net.Response.SendError("Ошибка аутентификации: неверная роль, попробуйте переавторизоваться", 400, req, w)
+	if err := role.Verify(claimsRole); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
 	}
@@ -136,4 +136,37 @@ func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) 
 	net.Response.InternalServerError(w)
 
 	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
+}
+
+func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	accessToken, err := c.token.GetAccessToken(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	// If token is valid, then we can trust claims
+	claims := accessToken.Claims.(jwt.MapClaims)
+	claimsUID := claims[token.IdKey].(string)
+	claimsRole := claims[token.IdKey].(string)
+
+	if err := role.Verify(claimsRole); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	body, ok := json.Decode[net.UidBody](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
 }

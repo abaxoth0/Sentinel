@@ -41,7 +41,7 @@ const IssuerKey string = "iss"
 const SubjectKey string = "sub"
 
 // Generate access and refresh tokens. (they returns in same order as here)
-func (m Model) Generate(user user.Payload) (SignedToken, SignedToken) {
+func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 	accessTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
 		IssuedAt: time.Now().Unix(),
 		// For certain values see config
@@ -71,12 +71,12 @@ func (m Model) Generate(user user.Payload) (SignedToken, SignedToken) {
 		log.Fatalf("[ CRITICAL ERROR ] Failed to sign refresh token.\n%s", err)
 	}
 
-	accessToken := SignedToken{
+	accessToken := &SignedToken{
 		Value: accessTokenStr,
 		TTL:   config.JWT.AccessTokenTTL.Milliseconds(),
 	}
 
-	refreshToken := SignedToken{
+	refreshToken := &SignedToken{
 		Value: refreshTokenStr,
 		TTL:   config.JWT.RefreshTokenTTL.Milliseconds(),
 	}
@@ -90,7 +90,7 @@ func (m Model) Generate(user user.Payload) (SignedToken, SignedToken) {
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
-func (m Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
+func (m *Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
 	var r *jwt.Token
 
 	authHeaderValue := req.Header.Get("Authorization")
@@ -118,7 +118,7 @@ func (m Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Err
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error, this error is either http.ErrNoCookie, either ExternalError.Error
-func (m Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
+func (m *Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	var emptyToken *jwt.Token
 
 	authCookie, err := req.Cookie(RefreshTokenKey)
@@ -149,7 +149,7 @@ func (m Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	return token, nil
 }
 
-func (m Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
+func (m *Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.AccessTokenPublicKey, nil
 	})
@@ -159,7 +159,7 @@ func (m Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	return token, exp
 }
 
-func (m Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
+func (m *Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.RefreshTokenPublicKey, nil
 	})
@@ -171,7 +171,7 @@ func (m Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 
 // IMPORTANT: Use this function only if token is valid.
 // TODO Return error istead of crushing app
-func (m Model) PayloadFromClaims(claims jwt.MapClaims) user.Payload {
+func (m *Model) PayloadFromClaims(claims jwt.MapClaims) *user.Payload {
 	if claims[IdKey] == nil {
 		log.Fatalln("[ CRITICAL ERROR ] Malfunction token claims: \"jti\" is nil. Ensure that token is valid.")
 	}
@@ -184,7 +184,7 @@ func (m Model) PayloadFromClaims(claims jwt.MapClaims) user.Payload {
 		log.Fatalln("[ CRITICAL ERROR ] Malfunction token claims: \"sub\" is nil. Ensure that token is valid.")
 	}
 
-	return user.Payload{
+	return &user.Payload{
 		ID:    claims[IdKey].(string),
 		Email: claims[IssuerKey].(string),
 		Role:  claims[SubjectKey].(string),

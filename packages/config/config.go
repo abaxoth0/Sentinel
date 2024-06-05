@@ -38,7 +38,7 @@ type debugConfig struct {
 	Enabled bool
 }
 
-func initializeConfigs() (string, databaseConfig, httpServerConfig, jwtConfing, debugConfig) {
+func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfing, *debugConfig) {
 	log.Println("[ CONFIG ] Initializing...")
 
 	if err := godotenv.Load(); err != nil {
@@ -117,7 +117,7 @@ func initializeConfigs() (string, databaseConfig, httpServerConfig, jwtConfing, 
 
 	log.Println("[ CONFIG ] Initializing: OK")
 
-	return v, DbConfig, HttpConfig, JWTConfig, DebugConfig
+	return v, &DbConfig, &HttpConfig, &JWTConfig, &DebugConfig
 }
 
 func getEnv(key string) string {
