@@ -13,12 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// type user struct {
-// 	Email    string
-// 	Password string
-// 	Role     role.Role
-// }
-
 type IndexedUser struct {
 	ID       string    `bson:"_id"`
 	Email    string    `bson:"email"`
@@ -40,14 +34,20 @@ func New(dbClient *mongo.Client) *Model {
 	}
 }
 
-func (m *Model) findUserBy(key string, value any) (*IndexedUser, error) {
+func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUser, error) {
 	var user IndexedUser
 
 	ctx, cancel := DB.DefaultTimeoutContext()
 
 	defer cancel()
 
-	userFilter := bson.D{{key, value}, {"deletedAt", primitive.Null{}}}
+	var userFilter bson.D
+
+	if omitDeleted {
+		userFilter = bson.D{{key, value}, {"deletedAt", primitive.Null{}}}
+	} else {
+		userFilter = bson.D{{key, value}}
+	}
 
 	cur, err := m.collection.Find(ctx, userFilter)
 
@@ -78,9 +78,13 @@ func (m *Model) findUserBy(key string, value any) (*IndexedUser, error) {
 }
 
 func (m *Model) FindUserByID(uid string) (*IndexedUser, error) {
-	return m.findUserBy("_id", DB.ObjectIDFromHex(uid))
+	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), true)
+}
+
+func (m *Model) FindSoftDeletedUserByID(uid string) (*IndexedUser, error) {
+	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), false)
 }
 
 func (m *Model) FindUserByEmail(email string) (*IndexedUser, error) {
-	return m.findUserBy("email", email)
+	return m.findUserBy("email", email, true)
 }

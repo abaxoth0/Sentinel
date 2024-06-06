@@ -112,7 +112,7 @@ func (m *Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Er
 		return r, ExternalError.New("Access token expired", http.StatusUnauthorized)
 	}
 
-	return r, nil
+	return token, nil
 }
 
 // Retrieves and validates refresh token from request.

@@ -7,8 +7,8 @@ type rulebook struct {
 	Clear *authorizationRules
 	// User soft delete operation rules
 	SoftDeleteUser *authorizationRules
-	// Restore soft deleted user
-	Restore *authorizationRules
+	// RestoreSoftDeletedUser soft deleted user
+	RestoreSoftDeletedUser *authorizationRules
 }
 
 // Used for authorization
@@ -27,8 +27,8 @@ var Rulebook = &rulebook{
 		ForbidModToModOps:        true,
 		AdditionCondition:        softDeleteUserAdditionalCondition,
 	},
-	Restore: &authorizationRules{
-		Operation:                AuthorizationOperations.Restore,
+	RestoreSoftDeletedUser: &authorizationRules{
+		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,

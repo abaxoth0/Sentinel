@@ -23,6 +23,13 @@ type user struct {
 	Role     role.Role
 }
 
+type userFilter struct {
+	targetUID     string
+	requesterUID  string
+	requesterRole role.Role
+	deleted       bool
+}
+
 type Model struct {
 	search     *search.Model
 	dbClient   *mongo.Client
@@ -83,10 +90,16 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 	return uid, nil
 }
 
-func (m *Model) SoftDelete(targetUID string, requesterUID string, requesterRole role.Role) error {
-	_, err := m.search.FindUserByID(targetUID)
+func (m *Model) update(filter *userFilter, upd *primitive.E) *ExternalError.Error {
+	var err error
 
-	// There are 1 case in wich error will presence but user will be non-empty:
+	if filter.deleted {
+		_, err = m.search.FindSoftDeletedUserByID(filter.targetUID)
+	} else {
+		_, err = m.search.FindUserByID(filter.targetUID)
+	}
+
+	// There is 1 case in wich error will presence but user will be non-empty:
 	// If failed to close db cursor. (See comment in "findUserBy" method for detatils)
 	if err != nil {
 		if isExternal, _ := ExternalError.Is(err); isExternal {
@@ -96,27 +109,16 @@ func (m *Model) SoftDelete(targetUID string, requesterUID string, requesterRole 
 		log.Fatalln(err.Error())
 	}
 
-	// If user want to delete not himself, but another user and he isn't authorize to do that
-	if targetUID != requesterUID {
-		if err := auth.Rulebook.SoftDeleteUser.Authorize(requesterRole); err != nil {
-			return err
-		}
-	}
-
 	ctx, cancel := DB.DefaultTimeoutContext()
 
 	defer cancel()
 
-	update := bson.D{{
-		"$set", bson.D{{
-			"deletedAt", util.UnixTimeNow(),
-		}},
-	}}
+	update := bson.D{{"$set", bson.D{*upd}}}
 
-	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(targetUID), update)
+	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(filter.targetUID), update)
 
 	if err != nil {
-		log.Println("[ ERROR ] Failed to update user (query error) \"" + targetUID + "\" - " + err.Error())
+		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.targetUID + "\" - " + err.Error())
 
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
@@ -124,6 +126,39 @@ func (m *Model) SoftDelete(targetUID string, requesterUID string, requesterRole 
 	return nil
 }
 
-func (m *Model) Restore(targetID string, requesterID string, requesterRole role.Role) error {
-	return nil
+func (m *Model) SoftDelete(targetUID string, requesterUID string, requesterRole role.Role) *ExternalError.Error {
+	// If user want to delete not himself, but another user and he isn't authorize to do that
+	if targetUID != requesterUID {
+		if err := auth.Rulebook.SoftDeleteUser.Authorize(requesterRole); err != nil {
+			return err
+		}
+	}
+
+	filter := &userFilter{
+		targetUID:     targetUID,
+		requesterUID:  requesterUID,
+		requesterRole: requesterRole,
+		deleted:       false,
+	}
+
+	upd := &primitive.E{"deletedAt", util.UnixTimeNow()}
+
+	return m.update(filter, upd)
+}
+
+func (m *Model) Restore(targetUID string, requesterUID string, requesterRole role.Role) *ExternalError.Error {
+	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(requesterRole); err != nil {
+		return err
+	}
+
+	filter := &userFilter{
+		targetUID:     targetUID,
+		requesterUID:  requesterUID,
+		requesterRole: requesterRole,
+		deleted:       true,
+	}
+
+	upd := &primitive.E{"deletedAt", primitive.Null{}}
+
+	return m.update(filter, upd)
 }

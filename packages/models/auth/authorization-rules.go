@@ -34,7 +34,7 @@ type authorizationRules struct {
 // (Better to do this inside of controller)
 func (authRules authorizationRules) Authorize(userRole role.Role) *ExternalError.Error {
 	// Is Moderator-Moderator operation forbidden
-	if authRules.ForbidModToModOps && (userRole == role.Moderator || userRole == role.Administrator) {
+	if authRules.ForbidModToModOps && userRole == role.Moderator {
 		return ExternalError.New("Для данной операции запрещено взаимодействие вида \"модератор-модератор\"", http.StatusForbidden)
 	}
 

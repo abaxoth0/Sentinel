@@ -116,15 +116,7 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := c.user.SoftDelete(body.UID, claimsUID, claimsRole); err != nil {
-		isExternal, e := ExternalError.Is(err)
-
-		if !isExternal {
-			net.Response.InternalServerError(w)
-
-			return
-		}
-
-		net.Response.SendError(e.Message, e.Status, req, w)
+		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
 	}
@@ -136,4 +128,45 @@ func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) 
 	net.Response.InternalServerError(w)
 
 	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
+}
+
+func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
+		return
+	}
+
+	accessToken, err := c.token.GetAccessToken(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	// If token is valid, then we can trust claims
+	claims := accessToken.Claims.(jwt.MapClaims)
+	claimsUID := claims[token.IdKey].(string)
+	claimsRole := role.Role(claims[token.SubjectKey].(string))
+
+	if err := claimsRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	body, ok := json.Decode[net.UidBody](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
+
+	if err := c.user.Restore(body.UID, claimsUID, claimsRole); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
 }
