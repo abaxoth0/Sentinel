@@ -23,11 +23,10 @@ type user struct {
 	Role     role.Role
 }
 
-type userFilter struct {
-	targetUID     string
-	requesterUID  string
-	requesterRole role.Role
-	deleted       bool
+type Filter struct {
+	TargetUID     string
+	RequesterUID  string
+	RequesterRole role.Role
 }
 
 type Model struct {
@@ -90,13 +89,13 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 	return uid, nil
 }
 
-func (m *Model) update(filter *userFilter, upd *primitive.E) *ExternalError.Error {
+func (m *Model) update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error {
 	var err error
 
-	if filter.deleted {
-		_, err = m.search.FindSoftDeletedUserByID(filter.targetUID)
+	if deleted {
+		_, err = m.search.FindSoftDeletedUserByID(filter.TargetUID)
 	} else {
-		_, err = m.search.FindUserByID(filter.targetUID)
+		_, err = m.search.FindUserByID(filter.TargetUID)
 	}
 
 	// There is 1 case in wich error will presence but user will be non-empty:
@@ -115,10 +114,10 @@ func (m *Model) update(filter *userFilter, upd *primitive.E) *ExternalError.Erro
 
 	update := bson.D{{"$set", bson.D{*upd}}}
 
-	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(filter.targetUID), update)
+	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(filter.TargetUID), update)
 
 	if err != nil {
-		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.targetUID + "\" - " + err.Error())
+		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.TargetUID + "\" - " + err.Error())
 
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
@@ -126,39 +125,72 @@ func (m *Model) update(filter *userFilter, upd *primitive.E) *ExternalError.Erro
 	return nil
 }
 
-func (m *Model) SoftDelete(targetUID string, requesterUID string, requesterRole role.Role) *ExternalError.Error {
+func (m *Model) SoftDelete(filter *Filter) *ExternalError.Error {
 	// If user want to delete not himself, but another user and he isn't authorize to do that
-	if targetUID != requesterUID {
-		if err := auth.Rulebook.SoftDeleteUser.Authorize(requesterRole); err != nil {
+	if filter.TargetUID != filter.RequesterUID {
+		if err := auth.Rulebook.SoftDeleteUser.Authorize(filter.RequesterRole); err != nil {
 			return err
 		}
 	}
 
-	filter := &userFilter{
-		targetUID:     targetUID,
-		requesterUID:  requesterUID,
-		requesterRole: requesterRole,
-		deleted:       false,
-	}
-
 	upd := &primitive.E{"deletedAt", util.UnixTimeNow()}
 
-	return m.update(filter, upd)
+	return m.update(filter, upd, false)
 }
 
-func (m *Model) Restore(targetUID string, requesterUID string, requesterRole role.Role) *ExternalError.Error {
-	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(requesterRole); err != nil {
+func (m *Model) Restore(filter *Filter) *ExternalError.Error {
+	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
 		return err
-	}
-
-	filter := &userFilter{
-		targetUID:     targetUID,
-		requesterUID:  requesterUID,
-		requesterRole: requesterRole,
-		deleted:       true,
 	}
 
 	upd := &primitive.E{"deletedAt", primitive.Null{}}
 
-	return m.update(filter, upd)
+	return m.update(filter, upd, true)
+}
+
+func (m *Model) ChangeEmail(filter *Filter, newEmail string) *ExternalError.Error {
+	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+		return err
+	}
+
+	// Need to ensure that new email is not already used by some other user,
+	// for that err must be not nil and have a type of ExternalError,
+	// if this both condition satisfied then user with this email wasn't found.
+	// (which means that it can be used)
+	_, err := m.search.FindUserByEmail(newEmail)
+
+	// user with new email was found
+	if err == nil {
+		return ExternalError.New("Данный E-Mail уже занят", http.StatusConflict)
+	}
+
+	// Check is error external. (if not -> return error)
+	// External Error returned only if user wasn't found
+	if isExternal, _ := ExternalError.Is(err); !isExternal {
+		return ExternalError.New("Не удалось подтвердить доступность запрошенного E-Mail'а: Внутренняя ошибка сервера", http.StatusInternalServerError)
+	}
+
+	upd := &primitive.E{"email", newEmail}
+
+	return m.update(filter, upd, true)
+}
+
+func (m *Model) ChangePassword(filter *Filter, newPassword string) *ExternalError.Error {
+	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+		return err
+	}
+
+	upd := &primitive.E{"password", newPassword}
+
+	return m.update(filter, upd, true)
+}
+
+func (m *Model) ChangeRole(filter *Filter, newRole string) *ExternalError.Error {
+	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+		return err
+	}
+
+	upd := &primitive.E{"role", newRole}
+
+	return m.update(filter, upd, true)
 }

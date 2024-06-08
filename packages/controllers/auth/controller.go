@@ -148,8 +148,15 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	}
 
 	claims := oldRefreshToken.Claims.(jwt.MapClaims)
+	payload, err := c.token.PayloadFromClaims(claims)
 
-	accessToken, refreshToken := c.token.Generate(c.token.PayloadFromClaims(claims))
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	accessToken, refreshToken := c.token.Generate(payload)
 
 	resBody, ok := json.Encode(net.TokenResponseBody{
 		Message:     "Токены успешно обновлены",
@@ -186,7 +193,13 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 
 	claims := accessToken.Claims.(jwt.MapClaims)
 
-	payload := c.token.PayloadFromClaims(claims)
+	payload, err := c.token.PayloadFromClaims(claims)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
 
 	body, ok := json.Encode(payload, w)
 

@@ -172,22 +172,30 @@ func (m *Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 
 // IMPORTANT: Use this function only if token is valid.
 // TODO Return error istead of crushing app
-func (m *Model) PayloadFromClaims(claims jwt.MapClaims) *user.Payload {
-	if claims[IdKey] == nil {
-		log.Fatalln("[ CRITICAL ERROR ] Malfunction token claims: \"jti\" is nil. Ensure that token is valid.")
-	}
+func (m *Model) PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Error) {
+	var r *user.Payload
 
-	if claims[IssuerKey] == nil {
-		log.Fatalln("[ CRITICAL ERROR ] Malfunction token claims: \"iss\" is nil. Ensure that token is valid.")
-	}
-
-	if claims[SubjectKey] == nil {
-		log.Fatalln("[ CRITICAL ERROR ] Malfunction token claims: \"sub\" is nil. Ensure that token is valid.")
+	if err := verifyClaims(claims); err != nil {
+		return r, err
 	}
 
 	return &user.Payload{
 		ID:    claims[IdKey].(string),
 		Email: claims[IssuerKey].(string),
-		Role:  claims[SubjectKey].(role.Role),
+		Role:  role.Role(claims[SubjectKey].(string)),
+	}, nil
+}
+
+func (m *Model) UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter, *ExternalError.Error) {
+	var r *user.Filter
+
+	if err := verifyClaims(claims); err != nil {
+		return r, err
 	}
+
+	return &user.Filter{
+		TargetUID:     targetUID,
+		RequesterUID:  claims[IdKey].(string),
+		RequesterRole: role.Role(claims[SubjectKey].(string)),
+	}, nil
 }

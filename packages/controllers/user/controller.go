@@ -5,7 +5,6 @@ import (
 	"net/http"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/json"
-	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
 	"sentinel/packages/net"
@@ -66,21 +65,139 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 }
 
 func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
-	net.Response.InternalServerError(w)
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
 
-	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
+	accessToken, err := c.token.GetAccessToken(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	// If token is valid, then we can trust claims
+	body, ok := json.Decode[net.UidAndEmailBody](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
+
+	// If token is valid, then we can trust claims
+	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := filter.RequesterRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := c.user.ChangeEmail(filter, body.Email); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
 }
 
 func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
-	net.Response.InternalServerError(w)
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
 
-	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
+	accessToken, err := c.token.GetAccessToken(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	body, ok := json.Decode[net.UidAndPasswordBody](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
+
+	// If token is valid, then we can trust claims
+	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := filter.RequesterRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := c.user.ChangePassword(filter, body.Password); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
 }
 
 func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
-	net.Response.InternalServerError(w)
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
 
-	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
+	accessToken, err := c.token.GetAccessToken(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	body, ok := json.Decode[net.UidAndRoleBody](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
+
+	// If token is valid, then we can trust claims
+	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := filter.RequesterRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := c.user.ChangeRole(filter, body.Role); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
 }
 
 func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
@@ -96,17 +213,6 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// If token is valid, then we can trust claims
-	claims := accessToken.Claims.(jwt.MapClaims)
-	claimsUID := claims[token.IdKey].(string)
-	claimsRole := claims[token.IdKey].(role.Role)
-
-	if err := claimsRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
 	body, ok := json.Decode[net.UidBody](req.Body, w)
 
 	if !ok {
@@ -115,7 +221,22 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if err := c.user.SoftDelete(body.UID, claimsUID, claimsRole); err != nil {
+	// If token is valid, then we can trust claims
+	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := filter.RequesterRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := c.user.SoftDelete(filter); err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
@@ -144,16 +265,6 @@ func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// If token is valid, then we can trust claims
-	claims := accessToken.Claims.(jwt.MapClaims)
-	claimsUID := claims[token.IdKey].(string)
-	claimsRole := role.Role(claims[token.SubjectKey].(string))
-
-	if err := claimsRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
 	body, ok := json.Decode[net.UidBody](req.Body, w)
 
 	if !ok {
@@ -162,7 +273,22 @@ func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if err := c.user.Restore(body.UID, claimsUID, claimsRole); err != nil {
+	// If token is valid, then we can trust claims
+	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := filter.RequesterRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := c.user.Restore(filter); err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return

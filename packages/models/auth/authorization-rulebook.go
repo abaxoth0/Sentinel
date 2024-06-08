@@ -9,6 +9,12 @@ type rulebook struct {
 	SoftDeleteUser *authorizationRules
 	// RestoreSoftDeletedUser soft deleted user
 	RestoreSoftDeletedUser *authorizationRules
+	// Change user email
+	ChangeUserEmail *authorizationRules
+	// Change user password
+	ChangeUserPassword *authorizationRules
+	// Change user role
+	ChangeUserRole *authorizationRules
 }
 
 // Used for authorization
