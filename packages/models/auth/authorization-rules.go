@@ -61,9 +61,10 @@ func (authRules authorizationRules) Authorize(userRole role.Role) *ExternalError
 }
 
 func softDeleteUserAdditionalCondition(userRole role.Role) (bool, string) {
-	if userRole == role.Administrator {
-		return false, "Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)"
-	}
+	// TODO FIX: Now work incorrect (userRole is requester role, but must be target role)
+	// if userRole == role.Administrator {
+	// 	return false, "Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)"
+	// }
 
 	return true, ""
 }

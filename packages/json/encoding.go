@@ -10,7 +10,7 @@ import (
 
 // Decode given request body.
 // Returns decoded json and true if there are no errors, false otherwise.
-func Decode[T interface{} | net.AuthRequestBody](body io.ReadCloser, w http.ResponseWriter) (T, bool) {
+func Decode[T map[string]any | net.AuthRequestBody](body io.ReadCloser, w http.ResponseWriter) (T, bool) {
 	var result T
 
 	if err := json.NewDecoder(body).Decode(&result); err != nil {

@@ -79,7 +79,7 @@ func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.R
 		return emptyBody, emptyFilter, false
 	}
 
-	body, ok := json.Decode[net.UidBody](req.Body, w)
+	body, ok := json.Decode[map[string]any](req.Body, w)
 
 	if !ok {
 		if err := net.Response.InternalServerError(w); err != nil {
@@ -88,7 +88,7 @@ func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.R
 	}
 
 	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+	filter, err := c.token.UserFilterFromClaims(body["UID"].(string), accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
@@ -105,119 +105,107 @@ func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.R
 	return body, filter, true
 }
 
-func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
+func (c Controller) changeUserProperty(targetProperty property, allowedMethod string, w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, allowedMethod); !ok {
 		return
 	}
 
-	rawBody, filter, ok := c.buildReqBodyAndUserFilter(w, req)
+	if ok := targetProperty.Verify(); !ok {
+		net.Response.SendError("Invalid user property", http.StatusInternalServerError, req, w)
 
-	// Response was already sent
-	if !ok {
 		return
 	}
 
-	body := rawBody.(net.UidAndEmailBody)
+	accessToken, err := c.token.GetAccessToken(req)
 
-	if err := c.user.ChangeEmail(filter, body.Email); err != nil {
+	if err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
 	}
 
+	// Body is untyped
+	body, ok := json.Decode[map[string]any](req.Body, w)
+
+	if !ok {
+		if err := net.Response.InternalServerError(w); err != nil {
+			panic(err)
+		}
+	}
+
+	// If token is valid, then we can trust claims
+	filter, err := c.token.UserFilterFromClaims(body["uid"].(string), accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := filter.RequesterRole.Verify(); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	var e *ExternalError.Error
+
+	switch targetProperty {
+	case emailProperty:
+		e = c.user.ChangeEmail(filter, body["email"].(string))
+	case passwordProperty:
+		e = c.user.ChangePassword(filter, body["password"].(string))
+	case roleProperty:
+		e = c.user.ChangeRole(filter, body["role"].(string))
+	case deletedAtProperty:
+		if allowedMethod == http.MethodDelete {
+			e = c.user.SoftDelete(filter)
+
+			break
+		}
+
+		if allowedMethod == http.MethodPut {
+			e = c.user.Restore(filter)
+
+			break
+		}
+
+		e = ExternalError.New("Invalid request method", http.StatusBadRequest)
+	default:
+		net.Request.PrintError("Invalid user property", 500, req)
+	}
+
+	if e != nil {
+		net.Response.SendError(e.Message, e.Status, req, w)
+
+		return
+	}
+
 	net.Response.OK(w)
+}
+
+func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
+	c.changeUserProperty(emailProperty, http.MethodPatch, w, req)
 }
 
 func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
-		return
-	}
-
-	rawBody, filter, ok := c.buildReqBodyAndUserFilter(w, req)
-
-	// Response was already sent
-	if !ok {
-		return
-	}
-
-	body := rawBody.(net.UidAndPasswordBody)
-
-	if err := c.user.ChangePassword(filter, body.Password); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
+	c.changeUserProperty(passwordProperty, http.MethodPatch, w, req)
 }
 
 func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
-		return
-	}
-
-	rawBody, filter, ok := c.buildReqBodyAndUserFilter(w, req)
-
-	// Response was already sent
-	if !ok {
-		return
-	}
-
-	body := rawBody.(net.UidAndRoleBody)
-
-	if err := c.user.ChangeRole(filter, body.Role); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
+	c.changeUserProperty(roleProperty, http.MethodPatch, w, req)
 }
 
 func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
+	c.changeUserProperty(deletedAtProperty, http.MethodDelete, w, req)
+}
 
-	_, filter, ok := c.buildReqBodyAndUserFilter(w, req)
-
-	// Response was already sent
-	if !ok {
-		return
-	}
-
-	if err := c.user.SoftDelete(filter); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
+func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
+	c.changeUserProperty(deletedAtProperty, http.MethodPut, w, req)
 }
 
 func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) {
 	net.Response.InternalServerError(w)
 
 	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
-}
-
-func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
-		return
-	}
-
-	_, filter, ok := c.buildReqBodyAndUserFilter(w, req)
-
-	// Response was already sent
-	if !ok {
-		return
-	}
-
-	if err := c.user.Restore(filter); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
 }

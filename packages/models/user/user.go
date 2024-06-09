@@ -46,11 +46,8 @@ func New(dbClient *mongo.Client, searchModel *search.Model) *Model {
 func (m *Model) Create(email string, password string) (primitive.ObjectID, error) {
 	var uid primitive.ObjectID
 
-	passwordSize := len(password)
-
-	// bcrypt can handle password with maximum size of 72 bytes
-	if passwordSize < 8 || passwordSize > 64 {
-		return uid, ExternalError.New("Недопустимый размер пароля. Пароль должен находится в диапозоне от 8 до 64 символов.", http.StatusBadRequest)
+	if err := verifyPassword(password); err != nil {
+		return uid, err
 	}
 
 	_, err := m.search.FindUserByEmail(email)
@@ -180,7 +177,17 @@ func (m *Model) ChangePassword(filter *Filter, newPassword string) *ExternalErro
 		return err
 	}
 
-	upd := &primitive.E{"password", newPassword}
+	if err := verifyPassword(newPassword); err != nil {
+		return err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+
+	if err != nil {
+		return ExternalError.New("Не удалось изменить пароль: Внутреняя ошибка сервера.", http.StatusInternalServerError)
+	}
+
+	upd := &primitive.E{"password", hashedPassword}
 
 	return m.update(filter, upd, true)
 }
