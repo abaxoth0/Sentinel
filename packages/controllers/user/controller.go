@@ -106,7 +106,7 @@ func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.R
 }
 
 func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
 		return
 	}
 
@@ -129,7 +129,7 @@ func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request)
 }
 
 func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
 		return
 	}
 
@@ -152,7 +152,7 @@ func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Reque
 }
 
 func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
 		return
 	}
 
@@ -202,7 +202,7 @@ func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) 
 }
 
 func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
 		return
 	}
 
