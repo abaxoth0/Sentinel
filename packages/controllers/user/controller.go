@@ -64,153 +64,19 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 	net.Request.Print("New user created, email: "+body.Email, req)
 }
 
-func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
+// Returns untyped request body, access token and true if no errors occurred, false otherwise
+func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.Request) (interface{}, *user.Filter, bool) {
+	// empty body
+	var emptyBody any
+	// empty token
+	var emptyFilter *user.Filter
 
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
-		return
-	}
-
-	// If token is valid, then we can trust claims
-	body, ok := json.Decode[net.UidAndEmailBody](req.Body, w)
-
-	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
-	}
-
-	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := filter.RequesterRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := c.user.ChangeEmail(filter, body.Email); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
-}
-
-func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
-
-	accessToken, err := c.token.GetAccessToken(req)
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	body, ok := json.Decode[net.UidAndPasswordBody](req.Body, w)
-
-	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
-	}
-
-	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := filter.RequesterRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := c.user.ChangePassword(filter, body.Password); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
-}
-
-func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
-
-	accessToken, err := c.token.GetAccessToken(req)
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	body, ok := json.Decode[net.UidAndRoleBody](req.Body, w)
-
-	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
-	}
-
-	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := filter.RequesterRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := c.user.ChangeRole(filter, body.Role); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
-}
-
-func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
-
-	accessToken, err := c.token.GetAccessToken(req)
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
+		return emptyBody, emptyFilter, false
 	}
 
 	body, ok := json.Decode[net.UidBody](req.Body, w)
@@ -227,12 +93,96 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
-		return
+		return emptyBody, emptyFilter, false
 	}
 
 	if err := filter.RequesterRole.Verify(); err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
+		return emptyBody, emptyFilter, false
+	}
+
+	return body, filter, true
+}
+
+func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	rawBody, filter, ok := c.buildReqBodyAndUserFilter(w, req)
+
+	// Response was already sent
+	if !ok {
+		return
+	}
+
+	body := rawBody.(net.UidAndEmailBody)
+
+	if err := c.user.ChangeEmail(filter, body.Email); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
+}
+
+func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	rawBody, filter, ok := c.buildReqBodyAndUserFilter(w, req)
+
+	// Response was already sent
+	if !ok {
+		return
+	}
+
+	body := rawBody.(net.UidAndPasswordBody)
+
+	if err := c.user.ChangePassword(filter, body.Password); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
+}
+
+func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	rawBody, filter, ok := c.buildReqBodyAndUserFilter(w, req)
+
+	// Response was already sent
+	if !ok {
+		return
+	}
+
+	body := rawBody.(net.UidAndRoleBody)
+
+	if err := c.user.ChangeRole(filter, body.Role); err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	net.Response.OK(w)
+}
+
+func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	_, filter, ok := c.buildReqBodyAndUserFilter(w, req)
+
+	// Response was already sent
+	if !ok {
 		return
 	}
 
@@ -252,39 +202,14 @@ func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) 
 }
 
 func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
 		return
 	}
 
-	accessToken, err := c.token.GetAccessToken(req)
+	_, filter, ok := c.buildReqBodyAndUserFilter(w, req)
 
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	// If token is valid, then we can trust claims
-	body, ok := json.Decode[net.UidBody](req.Body, w)
-
+	// Response was already sent
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
-	}
-
-	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := filter.RequesterRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
 		return
 	}
 
