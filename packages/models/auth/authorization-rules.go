@@ -21,11 +21,6 @@ type authorizationRules struct {
 	SkipRoleValidationOnSelf bool
 	// Forbid moderator to perform operations with another moderator.
 	ForbidModToModOps bool
-	// Needed for some operations, if ok should return true and empty string,
-	// otherwise should return false and error message.
-	//
-	// If this property is not needed then set it to `unspecifiedAdditionalCondition`.
-	AdditionCondition additionalConditionFunc
 }
 
 // Returns true if role is sufficient to perform this operation, false otherwise.
@@ -53,22 +48,5 @@ func (authRules authorizationRules) Authorize(userRole role.Role) *ExternalError
 		}
 	}
 
-	if ok, message := authRules.AdditionCondition(userRole); !ok {
-		return ExternalError.New(message, http.StatusForbidden)
-	}
-
 	return nil
-}
-
-func softDeleteUserAdditionalCondition(userRole role.Role) (bool, string) {
-	// TODO FIX: Now work incorrect (userRole is requester role, but must be target role)
-	// if userRole == role.Administrator {
-	// 	return false, "Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)"
-	// }
-
-	return true, ""
-}
-
-func unspecifiedAdditionalCondition(_ role.Role) (bool, string) {
-	return true, ""
 }

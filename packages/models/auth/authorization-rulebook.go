@@ -24,20 +24,17 @@ var Rulebook = &rulebook{
 		ValidRoles:               role.List[:],
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        false,
-		AdditionCondition:        unspecifiedAdditionalCondition,
 	},
 	SoftDeleteUser: &authorizationRules{
 		Operation:                AuthorizationOperations.SoftDeleteUser,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: true,
 		ForbidModToModOps:        true,
-		AdditionCondition:        softDeleteUserAdditionalCondition,
 	},
 	RestoreSoftDeletedUser: &authorizationRules{
 		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,
-		AdditionCondition:        unspecifiedAdditionalCondition,
 	},
 }

@@ -34,7 +34,7 @@ func New(dbClient *mongo.Client) *Model {
 	}
 }
 
-func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUser, error) {
+func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUser, *ExternalError.Error) {
 	var user IndexedUser
 
 	ctx, cancel := DB.DefaultTimeoutContext()
@@ -67,24 +67,22 @@ func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUse
 
 	// This actually not a critical problem, cuz on finishing request processing goroutine will be terminated
 	// and garbage collector should kill cursor, but idk how it will work in practice.
+	// user will be non-empty, but error will still presence
 	if err := cur.Close(ctx); err != nil {
 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
-
-		// user will be non-empty, but error will still presence
-		return &user, err
 	}
 
 	return &user, nil
 }
 
-func (m *Model) FindUserByID(uid string) (*IndexedUser, error) {
+func (m *Model) FindUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), true)
 }
 
-func (m *Model) FindSoftDeletedUserByID(uid string) (*IndexedUser, error) {
+func (m *Model) FindSoftDeletedUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), false)
 }
 
-func (m *Model) FindUserByEmail(email string) (*IndexedUser, error) {
+func (m *Model) FindUserByEmail(email string) (*IndexedUser, *ExternalError.Error) {
 	return m.findUserBy("email", email, true)
 }

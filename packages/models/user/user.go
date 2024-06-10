@@ -50,9 +50,7 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 		return uid, err
 	}
 
-	_, err := m.search.FindUserByEmail(email)
-
-	if err == nil {
+	if _, err := m.search.FindUserByEmail(email); err == nil {
 		// Invalid email or password, currently we know only about email,
 		// but there are no point to tell user about this, due to security reasons.
 		return uid, ExternalError.New("Пользователь с таким e-mail'ом уже существует.", http.StatusConflict)
@@ -87,7 +85,7 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 }
 
 func (m *Model) update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error {
-	var err error
+	var err *ExternalError.Error
 
 	if deleted {
 		_, err = m.search.FindSoftDeletedUserByID(filter.TargetUID)
@@ -111,10 +109,10 @@ func (m *Model) update(filter *Filter, upd *primitive.E, deleted bool) *External
 
 	update := bson.D{{"$set", bson.D{*upd}}}
 
-	_, err = m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(filter.TargetUID), update)
+	_, updError := m.collection.UpdateByID(ctx, DB.ObjectIDFromHex(filter.TargetUID), update)
 
-	if err != nil {
-		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.TargetUID + "\" - " + err.Error())
+	if updError != nil {
+		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.TargetUID + "\" - " + updError.Error())
 
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
@@ -128,6 +126,16 @@ func (m *Model) SoftDelete(filter *Filter) *ExternalError.Error {
 		if err := auth.Rulebook.SoftDeleteUser.Authorize(filter.RequesterRole); err != nil {
 			return err
 		}
+	}
+
+	targetUser, err := m.search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return err
+	}
+
+	if targetUser.Role == role.Administrator {
+		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
 	}
 
 	upd := &primitive.E{"deletedAt", util.UnixTimeNow()}
