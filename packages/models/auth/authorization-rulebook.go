@@ -37,4 +37,22 @@ var Rulebook = &rulebook{
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,
 	},
+	ChangeUserEmail: &authorizationRules{
+		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
+		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
+		SkipRoleValidationOnSelf: true,
+		ForbidModToModOps:        true,
+	},
+	ChangeUserPassword: &authorizationRules{
+		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
+		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
+		SkipRoleValidationOnSelf: true,
+		ForbidModToModOps:        true,
+	},
+	ChangeUserRole: &authorizationRules{
+		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
+		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
+		SkipRoleValidationOnSelf: false,
+		ForbidModToModOps:        true,
+	},
 }

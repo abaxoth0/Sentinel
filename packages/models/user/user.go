@@ -154,7 +154,7 @@ func (m *Model) Restore(filter *Filter) *ExternalError.Error {
 }
 
 func (m *Model) ChangeEmail(filter *Filter, newEmail string) *ExternalError.Error {
-	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+	if err := auth.Rulebook.ChangeUserEmail.Authorize(filter.RequesterRole); err != nil {
 		return err
 	}
 
@@ -175,7 +175,7 @@ func (m *Model) ChangeEmail(filter *Filter, newEmail string) *ExternalError.Erro
 }
 
 func (m *Model) ChangePassword(filter *Filter, newPassword string) *ExternalError.Error {
-	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+	if err := auth.Rulebook.ChangeUserPassword.Authorize(filter.RequesterRole); err != nil {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (m *Model) ChangePassword(filter *Filter, newPassword string) *ExternalErro
 }
 
 func (m *Model) ChangeRole(filter *Filter, newRole string) *ExternalError.Error {
-	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+	if err := auth.Rulebook.ChangeUserRole.Authorize(filter.RequesterRole); err != nil {
 		return err
 	}
 
