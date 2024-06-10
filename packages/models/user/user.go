@@ -169,12 +169,6 @@ func (m *Model) ChangeEmail(filter *Filter, newEmail string) *ExternalError.Erro
 		return ExternalError.New("Данный E-Mail уже занят", http.StatusConflict)
 	}
 
-	// Check is error external. (if not -> return error)
-	// External Error returned only if user wasn't found
-	if isExternal, _ := ExternalError.Is(err); !isExternal {
-		return ExternalError.New("Не удалось подтвердить доступность запрошенного E-Mail'а: Внутренняя ошибка сервера", http.StatusInternalServerError)
-	}
-
 	upd := &primitive.E{"email", newEmail}
 
 	return m.update(filter, upd, true)
