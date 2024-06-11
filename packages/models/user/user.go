@@ -128,13 +128,11 @@ func (m *Model) SoftDelete(filter *Filter) *ExternalError.Error {
 		}
 	}
 
-	targetUser, err := m.search.FindUserByID(filter.TargetUID)
+	if isAdmin, err := m.isUserAdmin(filter.TargetUID); isAdmin {
+		if err != nil {
+			return err
+		}
 
-	if err != nil {
-		return err
-	}
-
-	if targetUser.Role == role.Administrator {
 		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
 	}
 
@@ -199,7 +197,25 @@ func (m *Model) ChangeRole(filter *Filter, newRole string) *ExternalError.Error 
 		return err
 	}
 
+	if isAdmin, err := m.isUserAdmin(filter.TargetUID); isAdmin {
+		if err != nil {
+			return err
+		}
+
+		return ExternalError.New("Невозможно изменить роль администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
+	}
+
 	upd := &primitive.E{"role", newRole}
 
 	return m.update(filter, upd, true)
+}
+
+func (m *Model) isUserAdmin(uid string) (bool, *ExternalError.Error) {
+	targetUser, err := m.search.FindUserByID(uid)
+
+	if err != nil {
+		return false, err
+	}
+
+	return targetUser.Role == role.Administrator, nil
 }
