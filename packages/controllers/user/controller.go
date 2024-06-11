@@ -65,44 +65,36 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 }
 
 // Returns untyped request body, access token and true if no errors occurred, false otherwise
-func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.Request) (interface{}, *user.Filter, bool) {
+func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
 	// empty body
-	var emptyBody any
+	var emptyBody map[string]any
 	// empty token
 	var emptyFilter *user.Filter
 
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return emptyBody, emptyFilter, false
+		return emptyBody, emptyFilter, err
 	}
 
 	body, ok := json.Decode[map[string]any](req.Body, w)
 
 	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
+		return emptyBody, emptyFilter, ExternalError.New("Internal Server Error", http.StatusInternalServerError)
 	}
 
 	// If token is valid, then we can trust claims
 	filter, err := c.token.UserFilterFromClaims(body["UID"].(string), accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return emptyBody, emptyFilter, false
+		return emptyBody, emptyFilter, err
 	}
 
 	if err := filter.RequesterRole.Verify(); err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return emptyBody, emptyFilter, false
+		return emptyBody, emptyFilter, err
 	}
 
-	return body, filter, true
+	return body, filter, nil
 }
 
 func (c Controller) changeUserProperty(targetProperty property, allowedMethod string, w http.ResponseWriter, req *http.Request) {
@@ -116,33 +108,9 @@ func (c Controller) changeUserProperty(targetProperty property, allowedMethod st
 		return
 	}
 
-	accessToken, err := c.token.GetAccessToken(req)
+	body, filter, err := c.buildReqBodyAndUserFilter(w, req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	// Body is untyped
-	body, ok := json.Decode[map[string]any](req.Body, w)
-
-	if !ok {
-		if err := net.Response.InternalServerError(w); err != nil {
-			panic(err)
-		}
-	}
-
-	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body["uid"].(string), accessToken.Claims.(jwt.MapClaims))
-
-	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
-	}
-
-	if err := filter.RequesterRole.Verify(); err != nil {
 		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
