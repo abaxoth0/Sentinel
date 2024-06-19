@@ -85,22 +85,14 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 }
 
 func (m *Model) update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error {
-	var err *ExternalError.Error
-
 	if deleted {
-		_, err = m.search.FindSoftDeletedUserByID(filter.TargetUID)
-	} else {
-		_, err = m.search.FindUserByID(filter.TargetUID)
-	}
-
-	// There is 1 case in wich error will presence but user will be non-empty:
-	// If failed to close db cursor. (See comment in "findUserBy" method for detatils)
-	if err != nil {
-		if isExternal, _ := ExternalError.Is(err); isExternal {
-			return ExternalError.New("Пользователь не был найден", http.StatusNotFound)
+		if _, err := m.search.FindSoftDeletedUserByID(filter.TargetUID); err != nil {
+			return err
 		}
-
-		log.Fatalln(err.Error())
+	} else {
+		if _, err := m.search.FindUserByID(filter.TargetUID); err != nil {
+			return err
+		}
 	}
 
 	ctx, cancel := DB.DefaultTimeoutContext()
@@ -149,6 +141,36 @@ func (m *Model) Restore(filter *Filter) *ExternalError.Error {
 	upd := &primitive.E{"deletedAt", primitive.Null{}}
 
 	return m.update(filter, upd, true)
+}
+
+// Hard delete
+func (m *Model) Drop(filter *Filter) *ExternalError.Error {
+	// If user want to delete not himself, but another user and he isn't authorize to do that
+	if filter.TargetUID != filter.RequesterUID {
+		if err := auth.Rulebook.DropUser.Authorize(filter.RequesterRole); err != nil {
+			return err
+		}
+	}
+
+	user, err := m.search.FindAnyUserByID(filter.TargetUID)
+
+	if err != nil {
+		return err
+	}
+
+	if user.Role == role.Administrator {
+		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
+	}
+
+	ctx, cancel := DB.DefaultTimeoutContext()
+
+	defer cancel()
+
+	if _, e := m.collection.DeleteOne(ctx, bson.D{{"_id", filter.TargetUID}}); e != nil {
+		return ExternalError.New("Не удалось удалить пользователя", http.StatusInternalServerError)
+	}
+
+	return nil
 }
 
 func (m *Model) ChangeEmail(filter *Filter, newEmail string) *ExternalError.Error {

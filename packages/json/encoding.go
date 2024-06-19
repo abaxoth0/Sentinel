@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"net/http"
 	"sentinel/packages/net"
 )
 
 // Decode given request body.
 // Returns decoded json and true if there are no errors, false otherwise.
-func Decode[T map[string]any | net.AuthRequestBody](body io.ReadCloser, w http.ResponseWriter) (T, bool) {
+func Decode[T map[string]any | net.AuthRequestBody](body io.ReadCloser) (T, bool) {
 	var result T
 
 	if err := json.NewDecoder(body).Decode(&result); err != nil {
@@ -24,7 +23,7 @@ func Decode[T map[string]any | net.AuthRequestBody](body io.ReadCloser, w http.R
 
 // Encode passed `target` argument into json.
 // Returns `target` argument in json format (type []byte), and true if no errors occured, false otherwise.
-func Encode(target interface{}, w http.ResponseWriter) ([]byte, bool) {
+func Encode(target interface{}) ([]byte, bool) {
 	result, err := json.Marshal(target)
 
 	if err != nil {

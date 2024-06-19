@@ -77,12 +77,12 @@ func (res *response) SendError(message string, status int, req *http.Request, w 
 	err := Response.Message(message, status, w)
 
 	if err != nil {
-		Request.PrintError("Failed to send response", 500, req)
+		Request.PrintError("Failed to send response", req)
 
 		return err
 	}
 
-	Request.PrintError(message, status, req)
+	Request.PrintError(message, req)
 
 	return nil
 }

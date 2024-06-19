@@ -41,7 +41,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, ok := json.Decode[net.AuthRequestBody](req.Body, w)
+	body, ok := json.Decode[net.AuthRequestBody](req.Body)
 
 	if !ok {
 		net.Response.InternalServerError(w)
@@ -68,7 +68,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 	resBody, ok := json.Encode(net.TokenResponseBody{
 		Message:     "Пользователь успешно авторизован",
 		AccessToken: accessToken.Value,
-	}, w)
+	})
 
 	if !ok {
 		net.Response.InternalServerError(w)
@@ -79,7 +79,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
 
 	if err := net.Response.Send(resBody, w); err != nil {
-		net.Request.PrintError("Failed to send success response", http.StatusInternalServerError, req)
+		net.Request.PrintError("Failed to send success response", req)
 	}
 
 	net.Request.Print("Authentication successful, user id: "+iuser.ID, req)
@@ -104,7 +104,7 @@ func (c Controller) Logout(w http.ResponseWriter, req *http.Request) {
 
 		net.Response.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusBadRequest, w)
 
-		net.Request.PrintError("Missing refresh token", http.StatusBadRequest, req)
+		net.Request.PrintError("Missing refresh token", req)
 
 		return
 	}
@@ -132,7 +132,7 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 		if errors.Is(e, http.ErrNoCookie) {
 			net.Response.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusUnauthorized, w)
 
-			net.Request.PrintError("Auth cookie wasn't found", http.StatusUnauthorized, req)
+			net.Request.PrintError("Auth cookie wasn't found", req)
 		}
 
 		if isExternal, e := ExternalError.Is(e); isExternal {
@@ -161,7 +161,7 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	resBody, ok := json.Encode(net.TokenResponseBody{
 		Message:     "Токены успешно обновлены",
 		AccessToken: accessToken.Value,
-	}, w)
+	})
 
 	if !ok {
 		net.Response.InternalServerError(w)
@@ -201,7 +201,7 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, ok := json.Encode(payload, w)
+	body, ok := json.Encode(payload)
 
 	if !ok {
 		net.Response.InternalServerError(w)

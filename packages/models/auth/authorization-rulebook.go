@@ -9,6 +9,8 @@ type rulebook struct {
 	SoftDeleteUser *authorizationRules
 	// RestoreSoftDeletedUser soft deleted user
 	RestoreSoftDeletedUser *authorizationRules
+	// Hard delete user
+	DropUser *authorizationRules
 	// Change user email
 	ChangeUserEmail *authorizationRules
 	// Change user password
@@ -37,20 +39,26 @@ var Rulebook = &rulebook{
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,
 	},
+	DropUser: &authorizationRules{
+		Operation:                AuthorizationOperations.DropUser,
+		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
+		SkipRoleValidationOnSelf: false,
+		ForbidModToModOps:        true,
+	},
 	ChangeUserEmail: &authorizationRules{
-		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
+		Operation:                AuthorizationOperations.ChangeUserEmail,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: true,
 		ForbidModToModOps:        true,
 	},
 	ChangeUserPassword: &authorizationRules{
-		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
+		Operation:                AuthorizationOperations.ChangeUserPassword,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: true,
 		ForbidModToModOps:        true,
 	},
 	ChangeUserRole: &authorizationRules{
-		Operation:                AuthorizationOperations.RestoreSoftDeletedUser,
+		Operation:                AuthorizationOperations.ChangeUserRole,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,

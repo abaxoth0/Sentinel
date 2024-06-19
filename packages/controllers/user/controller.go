@@ -24,77 +24,40 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 	}
 }
 
-func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPost); !ok {
-		return
-	}
+// Retrieves untyped request body from given request
+func (c Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalError.Error) {
+	var emptyBody map[string]any
 
-	body, ok := json.Decode[net.AuthRequestBody](req.Body, w)
+	body, ok := json.Decode[map[string]any](req.Body)
 
 	if !ok {
-		net.Response.InternalServerError(w)
-
-		return
+		return emptyBody, ExternalError.New("Internal Server Error (failed to decode JSON)", http.StatusInternalServerError)
 	}
 
-	_, err := c.user.Create(body.Email, body.Password)
-
-	if err != nil {
-		ok, e := ExternalError.Is(err)
-
-		if !ok {
-			net.Response.Message("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError, w)
-
-			log.Fatalln(err)
-		}
-
-		net.Response.Message(e.Message, e.Status, w)
-
-		net.Request.PrintError("Failed to create new user: "+e.Message, e.Status, req)
-
-		return
-	}
-
-	if err := net.Response.OK(w); err != nil {
-		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
-
-		return
-	}
-
-	net.Request.Print("New user created, email: "+body.Email, req)
+	return body, nil
 }
 
-// Returns untyped request body, access token and true if no errors occurred, false otherwise
-func (c Controller) buildReqBodyAndUserFilter(w http.ResponseWriter, req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
-	// empty body
-	var emptyBody map[string]any
-	// empty token
+func (c Controller) buildUserFilter(tartetUID string, req *http.Request) (*user.Filter, *ExternalError.Error) {
 	var emptyFilter *user.Filter
 
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
-		return emptyBody, emptyFilter, err
-	}
-
-	body, ok := json.Decode[map[string]any](req.Body, w)
-
-	if !ok {
-		return emptyBody, emptyFilter, ExternalError.New("Internal Server Error", http.StatusInternalServerError)
+		return emptyFilter, err
 	}
 
 	// If token is valid, then we can trust claims
-	filter, err := c.token.UserFilterFromClaims(body["UID"].(string), accessToken.Claims.(jwt.MapClaims))
+	filter, err := c.token.UserFilterFromClaims(tartetUID, accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
-		return emptyBody, emptyFilter, err
+		return emptyFilter, err
 	}
 
 	if err := filter.RequesterRole.Verify(); err != nil {
-		return emptyBody, emptyFilter, err
+		return emptyFilter, err
 	}
 
-	return body, filter, nil
+	return filter, nil
 }
 
 func (c Controller) changeUserProperty(targetProperty property, allowedMethod string, w http.ResponseWriter, req *http.Request) {
@@ -108,9 +71,18 @@ func (c Controller) changeUserProperty(targetProperty property, allowedMethod st
 		return
 	}
 
-	body, filter, err := c.buildReqBodyAndUserFilter(w, req)
+	body, bodyErr := c.buildReqBody(req)
+	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
 
-	if err != nil {
+	if bodyErr != nil || filterErr != nil {
+		var err *ExternalError.Error
+
+		if bodyErr != nil {
+			err = bodyErr
+		} else {
+			err = filterErr
+		}
+
 		net.Response.SendError(err.Message, err.Status, req, w)
 
 		return
@@ -140,7 +112,7 @@ func (c Controller) changeUserProperty(targetProperty property, allowedMethod st
 
 		e = ExternalError.New("Invalid request method", http.StatusBadRequest)
 	default:
-		net.Request.PrintError("Invalid user property", 500, req)
+		net.Request.PrintError("Invalid user property", req)
 	}
 
 	if e != nil {
@@ -150,6 +122,46 @@ func (c Controller) changeUserProperty(targetProperty property, allowedMethod st
 	}
 
 	net.Response.OK(w)
+}
+
+func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodPost); !ok {
+		return
+	}
+
+	body, ok := json.Decode[net.AuthRequestBody](req.Body)
+
+	if !ok {
+		net.Response.InternalServerError(w)
+
+		return
+	}
+
+	_, err := c.user.Create(body.Email, body.Password)
+
+	if err != nil {
+		ok, e := ExternalError.Is(err)
+
+		if !ok {
+			net.Response.Message("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError, w)
+
+			log.Fatalln(err)
+		}
+
+		net.Response.Message(e.Message, e.Status, w)
+
+		net.Request.PrintError("Failed to create new user: "+e.Message, req)
+
+		return
+	}
+
+	if err := net.Response.OK(w); err != nil {
+		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
+
+		return
+	}
+
+	net.Request.Print("New user created, email: "+body.Email, req)
 }
 
 func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
@@ -172,8 +184,36 @@ func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
 	c.changeUserProperty(deletedAtProperty, http.MethodPut, w, req)
 }
 
-func (c Controller) UNSAFE_HardDelete(w http.ResponseWriter, req *http.Request) {
-	net.Response.InternalServerError(w)
+// Hard delete
+func (c Controller) Drop(w http.ResponseWriter, req *http.Request) {
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
 
-	log.Fatalln("[ CRITICAL ERROR ] Method not implemented")
+	body, bodyErr := c.buildReqBody(req)
+	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
+
+	if bodyErr != nil || filterErr != nil {
+		var err *ExternalError.Error
+
+		if bodyErr != nil {
+			err = bodyErr
+		} else {
+			err = filterErr
+		}
+
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if err := c.user.Drop(filter); err != nil {
+		net.Response.Message(err.Message, err.Status, w)
+
+		net.Request.PrintError(err.Message, req)
+
+		return
+	}
+
+	net.Response.OK(w)
 }

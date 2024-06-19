@@ -38,7 +38,7 @@ func (r *request) Preprocessing(w http.ResponseWriter, req *http.Request, method
 	if req.Method != method {
 		Response.Message("Method Not Allowed. Allowed methods: "+method, http.StatusMethodNotAllowed, w)
 
-		r.Print("[ ERROR ] Method allowed", req)
+		r.Print("Method not allowed", req)
 
 		return false
 	}
@@ -89,6 +89,6 @@ func (r *request) Print(message string, req *http.Request) {
 // Example with `message` = "Access token expired":
 //
 // "2020/01/01 12:00:00 [ 127.0.0.1:50000 ] Error: GET /verification | Access token expired"
-func (r *request) PrintError(message string, status int, req *http.Request) {
+func (r *request) PrintError(message string, req *http.Request) {
 	log.Printf("[ %s ] Error: %s %s | %s", req.RemoteAddr, req.Method, req.RequestURI, message)
 }

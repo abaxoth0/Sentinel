@@ -26,7 +26,7 @@ func (c Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List}, w)
+	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List})
 
 	if !ok {
 		net.Response.InternalServerError(w)
@@ -35,7 +35,7 @@ func (c Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := net.Response.Send(encdoedRoles, w); err != nil {
-		net.Request.PrintError("Failed to send OK response", http.StatusInternalServerError, req)
+		net.Request.PrintError("Failed to send OK response", req)
 	}
 
 	net.Request.Print("OK", req)

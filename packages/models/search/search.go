@@ -75,12 +75,29 @@ func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUse
 	return &user, nil
 }
 
+// Search for not deleted user with given UID
 func (m *Model) FindUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), true)
 }
 
+// Search for soft deleted user with given UID
 func (m *Model) FindSoftDeletedUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
 	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), false)
+}
+
+// Search for user with given UID, regardless of his deletion status
+func (m *Model) FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+	out, err := m.FindUserByID(uid)
+
+	if err == nil {
+		return out, err
+	}
+
+	if err.Status != http.StatusNotFound {
+		return nil, err
+	}
+
+	return m.FindSoftDeletedUserByID(uid)
 }
 
 func (m *Model) FindUserByEmail(email string) (*IndexedUser, *ExternalError.Error) {
