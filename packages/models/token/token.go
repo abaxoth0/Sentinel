@@ -171,7 +171,6 @@ func (m *Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 }
 
 // IMPORTANT: Use this function only if token is valid.
-// TODO Return error istead of crushing app
 func (m *Model) PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Error) {
 	var r *user.Payload
 

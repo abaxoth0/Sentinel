@@ -26,12 +26,10 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 
 // Retrieves untyped request body from given request
 func (c Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalError.Error) {
-	var emptyBody map[string]any
-
 	body, ok := json.Decode[map[string]any](req.Body)
 
 	if !ok {
-		return emptyBody, ExternalError.New("Internal Server Error (failed to decode JSON)", http.StatusInternalServerError)
+		return map[string]any{}, ExternalError.New("Internal Server Error (failed to decode JSON)", http.StatusInternalServerError)
 	}
 
 	return body, nil
@@ -60,68 +58,19 @@ func (c Controller) buildUserFilter(tartetUID string, req *http.Request) (*user.
 	return filter, nil
 }
 
-func (c Controller) changeUserProperty(targetProperty property, allowedMethod string, w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, allowedMethod); !ok {
-		return
-	}
-
-	if ok := targetProperty.Verify(); !ok {
-		net.Response.SendError("Invalid user property", http.StatusInternalServerError, req, w)
-
-		return
-	}
-
+func (c Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
 	body, bodyErr := c.buildReqBody(req)
 	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
 
-	if bodyErr != nil || filterErr != nil {
-		var err *ExternalError.Error
-
-		if bodyErr != nil {
-			err = bodyErr
-		} else {
-			err = filterErr
-		}
-
-		net.Response.SendError(err.Message, err.Status, req, w)
-
-		return
+	if bodyErr != nil {
+		return map[string]any{}, &user.Filter{}, bodyErr
 	}
 
-	var e *ExternalError.Error
-
-	switch targetProperty {
-	case emailProperty:
-		e = c.user.ChangeEmail(filter, body["email"].(string))
-	case passwordProperty:
-		e = c.user.ChangePassword(filter, body["password"].(string))
-	case roleProperty:
-		e = c.user.ChangeRole(filter, body["role"].(string))
-	case deletedAtProperty:
-		if allowedMethod == http.MethodDelete {
-			e = c.user.SoftDelete(filter)
-
-			break
-		}
-
-		if allowedMethod == http.MethodPut {
-			e = c.user.Restore(filter)
-
-			break
-		}
-
-		e = ExternalError.New("Invalid request method", http.StatusBadRequest)
-	default:
-		net.Request.PrintError("Invalid user property", req)
+	if filterErr != nil {
+		return map[string]any{}, &user.Filter{}, filterErr
 	}
 
-	if e != nil {
-		net.Response.SendError(e.Message, e.Status, req, w)
-
-		return
-	}
-
-	net.Response.OK(w)
+	return body, filter, nil
 }
 
 func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
@@ -165,23 +114,93 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 }
 
 func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
-	c.changeUserProperty(emailProperty, http.MethodPatch, w, req)
+	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
+		return
+	}
+
+	body, filter, err := c.getRequestBodyAndUserFilter(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if e := c.user.ChangeEmail(filter, body["email"].(string)); e != nil {
+		net.Response.SendError(e.Message, e.Status, req, w)
+	}
 }
 
 func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
-	c.changeUserProperty(passwordProperty, http.MethodPatch, w, req)
+	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
+		return
+	}
+
+	body, filter, err := c.getRequestBodyAndUserFilter(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if e := c.user.ChangePassword(filter, body["password"].(string)); e != nil {
+		net.Response.SendError(e.Message, e.Status, req, w)
+	}
 }
 
 func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
-	c.changeUserProperty(roleProperty, http.MethodPatch, w, req)
+	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
+		return
+	}
+
+	body, filter, err := c.getRequestBodyAndUserFilter(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if e := c.user.ChangeRole(filter, body["role"].(string)); e != nil {
+		net.Response.SendError(e.Message, e.Status, req, w)
+	}
 }
 
 func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
-	c.changeUserProperty(deletedAtProperty, http.MethodDelete, w, req)
+	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
+		return
+	}
+
+	_, filter, err := c.getRequestBodyAndUserFilter(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if e := c.user.SoftDelete(filter); e != nil {
+		net.Response.SendError(e.Message, e.Status, req, w)
+	}
 }
 
 func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
-	c.changeUserProperty(deletedAtProperty, http.MethodPut, w, req)
+	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
+		return
+	}
+
+	_, filter, err := c.getRequestBodyAndUserFilter(req)
+
+	if err != nil {
+		net.Response.SendError(err.Message, err.Status, req, w)
+
+		return
+	}
+
+	if e := c.user.Restore(filter); e != nil {
+		net.Response.SendError(e.Message, e.Status, req, w)
+	}
 }
 
 // Hard delete
