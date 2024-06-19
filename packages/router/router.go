@@ -25,9 +25,9 @@ func Init(dbClient *mongo.Client) *mux.Router {
 	router.HandleFunc("/user/delete", controller.User.SoftDelete)
 	router.HandleFunc("/user/restore", controller.User.Restore)
 	router.HandleFunc("/user/drop", controller.User.Drop)
-	router.HandleFunc("/user/change/email", controller.User.UNSAFE_ChangeEmail)
-	router.HandleFunc("/user/change/password", controller.User.UNSAFE_ChangePassword)
-	router.HandleFunc("/user/change/role", controller.User.UNSAFE_ChangeRole)
+	router.HandleFunc("/user/change/email", controller.User.ChangeEmail)
+	router.HandleFunc("/user/change/password", controller.User.ChangePassword)
+	router.HandleFunc("/user/change/role", controller.User.ChangeRole)
 
 	// roles
 	router.HandleFunc("/roles", controller.Role.GetRoles)

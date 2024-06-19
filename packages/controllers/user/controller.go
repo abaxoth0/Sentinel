@@ -113,7 +113,7 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 	net.Request.Print("New user created, email: "+body.Email, req)
 }
 
-func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request) {
+func (c Controller) ChangeEmail(w http.ResponseWriter, req *http.Request) {
 	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
 		return
 	}
@@ -131,7 +131,7 @@ func (c Controller) UNSAFE_ChangeEmail(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Request) {
+func (c Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
 		return
 	}
@@ -149,7 +149,7 @@ func (c Controller) UNSAFE_ChangePassword(w http.ResponseWriter, req *http.Reque
 	}
 }
 
-func (c Controller) UNSAFE_ChangeRole(w http.ResponseWriter, req *http.Request) {
+func (c Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
 		return
 	}
