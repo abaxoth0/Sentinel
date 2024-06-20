@@ -40,6 +40,9 @@ func Init(dbClient *mongo.Client) *mux.Router {
 
 	router.HandleFunc("/user/change/role", request.Preprocessing(controller.User.ChangeRole, []string{http.MethodPatch}))
 
+	// TODO Add slug and get login from here instead of a request body
+	router.HandleFunc("/user/check/login", request.Preprocessing(controller.User.CheckIsLoginExists, []string{http.MethodPost}))
+
 	// roles
 	router.HandleFunc("/roles", request.Preprocessing(controller.Role.GetRoles, []string{http.MethodPatch}))
 

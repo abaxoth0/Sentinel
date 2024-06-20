@@ -8,7 +8,7 @@ import (
 
 // Decode given request body.
 // Returns decoded json and true if there are no errors, false otherwise.
-func Decode[T map[string]any | AuthRequestBody](body io.ReadCloser) (T, bool) {
+func Decode[T decodeInput](body io.ReadCloser) (T, bool) {
 	var result T
 
 	if err := json.NewDecoder(body).Decode(&result); err != nil {

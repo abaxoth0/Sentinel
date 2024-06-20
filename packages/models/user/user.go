@@ -232,6 +232,18 @@ func (m *Model) ChangeRole(filter *Filter, newRole string) *ExternalError.Error 
 	return m.update(filter, upd, true)
 }
 
+func (m *Model) CheckIsLoginExists(login string) (bool, *ExternalError.Error) {
+	if _, err := m.search.FindUserByLogin(login); err != nil {
+		if err.Status == http.StatusNotFound {
+			return true, nil
+		}
+
+		return false, err
+	}
+
+	return false, nil
+}
+
 func (m *Model) isUserAdmin(uid string) (bool, *ExternalError.Error) {
 	targetUser, err := m.search.FindUserByID(uid)
 

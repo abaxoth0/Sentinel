@@ -7,6 +7,7 @@ import (
 	"sentinel/packages/json"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
+	"strconv"
 
 	"github.com/StepanAnanin/weaver/http/response"
 	"github.com/StepanAnanin/weaver/logger"
@@ -250,4 +251,36 @@ func (c Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	}
 
 	res.OK()
+}
+
+func (c Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request) {
+	res := response.New(w)
+
+	body, ok := json.Decode[json.LoginBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+
+		return
+	}
+
+	isExists, err := c.user.CheckIsLoginExists(body.Login)
+
+	if err != nil {
+		res.Message(err.Message, err.Status)
+
+		return
+	}
+
+	resBody, ok := json.Encode(json.MessageResponseBody{Message: strconv.FormatBool(isExists)})
+
+	if !ok {
+		res.InternalServerError()
+
+		logger.PrintError("Failed to encode json", req)
+
+		return
+	}
+
+	res.SendBody(resBody)
 }
