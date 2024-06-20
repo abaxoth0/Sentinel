@@ -35,7 +35,7 @@ const RefreshTokenKey string = "refreshToken"
 // UID
 const IdKey string = "jti"
 
-// E-Mail
+// Login
 const IssuerKey string = "iss"
 
 // Role
@@ -48,7 +48,7 @@ func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 		// For certain values see config
 		ExpiresAt: generateAccessTokenTtlTimestamp(),
 		Id:        user.ID,
-		Issuer:    user.Email,
+		Issuer:    user.Login,
 		Subject:   string(user.Role),
 	})
 
@@ -57,7 +57,7 @@ func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 		// For certain values see config
 		ExpiresAt: generateRefreshTokenTtlTimestamp(),
 		Id:        user.ID,
-		Issuer:    user.Email,
+		Issuer:    user.Login,
 		Subject:   string(user.Role),
 	})
 
@@ -180,7 +180,7 @@ func (m *Model) PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *Externa
 
 	return &user.Payload{
 		ID:    claims[IdKey].(string),
-		Email: claims[IssuerKey].(string),
+		Login: claims[IssuerKey].(string),
 		Role:  role.Role(claims[SubjectKey].(string)),
 	}, nil
 }

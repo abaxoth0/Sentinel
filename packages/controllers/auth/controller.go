@@ -49,7 +49,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	iuser, loginError := c.auth.Login(body.Email, body.Password)
+	iuser, loginError := c.auth.Login(body.Login, body.Password)
 
 	if loginError != nil {
 		res.Message(loginError.Message, loginError.Status)
@@ -61,7 +61,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 
 	accessToken, refreshToken := c.token.Generate(&user.Payload{
 		ID:    iuser.ID,
-		Email: iuser.Email,
+		Login: iuser.Login,
 		Role:  iuser.Role,
 	})
 

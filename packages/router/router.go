@@ -34,7 +34,7 @@ func Init(dbClient *mongo.Client) *mux.Router {
 
 	router.HandleFunc("/user/drop", request.Preprocessing(controller.User.Drop, []string{http.MethodPost}))
 
-	router.HandleFunc("/user/change/email", request.Preprocessing(controller.User.ChangeEmail, []string{http.MethodPatch}))
+	router.HandleFunc("/user/change/login", request.Preprocessing(controller.User.ChangeLogin, []string{http.MethodPatch}))
 
 	router.HandleFunc("/user/change/password", request.Preprocessing(controller.User.ChangePassword, []string{http.MethodPatch}))
 

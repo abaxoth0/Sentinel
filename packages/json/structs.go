@@ -1,7 +1,7 @@
 package json
 
 type AuthRequestBody struct {
-	Email    string `json:"email"`
+	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
@@ -9,9 +9,9 @@ type UidBody struct {
 	UID string `json:"uid"`
 }
 
-type UidAndEmailBody struct {
+type UidAndLoginBody struct {
 	UID   string `json:"uid"`
-	Email string `json:"email"`
+	Login string `json:"login"`
 }
 
 type UidAndPasswordBody struct {

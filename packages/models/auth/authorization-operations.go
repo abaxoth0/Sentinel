@@ -8,7 +8,7 @@ type authorizationOps struct {
 	SoftDeleteUser         OperationName
 	RestoreSoftDeletedUser OperationName
 	DropUser               OperationName
-	ChangeUserEmail        OperationName
+	ChangeUserLogin        OperationName
 	ChangeUserPassword     OperationName
 	ChangeUserRole         OperationName
 }
@@ -18,7 +18,7 @@ var AuthorizationOperations = &authorizationOps{
 	SoftDeleteUser:         "soft_delete_user",
 	RestoreSoftDeletedUser: "restore_soft_deleted_user",
 	DropUser:               "drop_user",
-	ChangeUserEmail:        "change_user_email",
+	ChangeUserLogin:        "change_user_login",
 	ChangeUserPassword:     "change_user_password",
 	ChangeUserRole:         "change_user_role",
 }

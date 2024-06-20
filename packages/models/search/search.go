@@ -15,7 +15,7 @@ import (
 
 type IndexedUser struct {
 	ID       string    `bson:"_id"`
-	Email    string    `bson:"email"`
+	Login    string    `bson:"login"`
 	Password string    `bson:"password"`
 	Role     role.Role `bson:"role"`
 	// If in DB this property will be nil, then here it will be 0
@@ -69,7 +69,7 @@ func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUse
 	// and garbage collector should kill cursor, but idk how it will work in practice.
 	// user will be non-empty, but error will still presence
 	if err := cur.Close(ctx); err != nil {
-		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, E-Mail:%s\n", user.ID, user.Email)
+		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, Login:%s\n", user.ID, user.Login)
 	}
 
 	return &user, nil
@@ -100,6 +100,6 @@ func (m *Model) FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error)
 	return m.FindSoftDeletedUserByID(uid)
 }
 
-func (m *Model) FindUserByEmail(email string) (*IndexedUser, *ExternalError.Error) {
-	return m.findUserBy("email", email, true)
+func (m *Model) FindUserByLogin(login string) (*IndexedUser, *ExternalError.Error) {
+	return m.findUserBy("login", login, true)
 }

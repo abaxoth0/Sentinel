@@ -18,7 +18,7 @@ import (
 )
 
 type user struct {
-	Email    string
+	Login    string
 	Password string
 	Role     role.Role
 }
@@ -43,17 +43,17 @@ func New(dbClient *mongo.Client, searchModel *search.Model) *Model {
 	}
 }
 
-func (m *Model) Create(email string, password string) (primitive.ObjectID, error) {
+func (m *Model) Create(login string, password string) (primitive.ObjectID, error) {
 	var uid primitive.ObjectID
 
 	if err := verifyPassword(password); err != nil {
 		return uid, err
 	}
 
-	if _, err := m.search.FindUserByEmail(email); err == nil {
-		// Invalid email or password, currently we know only about email,
+	if _, err := m.search.FindUserByLogin(login); err == nil {
+		// Invalid login or password, currently we know only about login,
 		// but there are no point to tell user about this, due to security reasons.
-		return uid, ExternalError.New("Пользователь с таким e-mail'ом уже существует.", http.StatusConflict)
+		return uid, ExternalError.New("Пользователь с таким логином уже существует.", http.StatusConflict)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
@@ -63,7 +63,7 @@ func (m *Model) Create(email string, password string) (primitive.ObjectID, error
 	}
 
 	user := user{
-		Email:    email,
+		Login:    login,
 		Password: string(hashedPassword),
 		// TODO Add possibility to control, which role will be assigned for each new user
 		Role: role.UnconfirmedUser,
@@ -173,23 +173,23 @@ func (m *Model) Drop(filter *Filter) *ExternalError.Error {
 	return nil
 }
 
-func (m *Model) ChangeEmail(filter *Filter, newEmail string) *ExternalError.Error {
-	if err := auth.Rulebook.ChangeUserEmail.Authorize(filter.RequesterRole); err != nil {
+func (m *Model) ChangeLogin(filter *Filter, newlogin string) *ExternalError.Error {
+	if err := auth.Rulebook.ChangeUserLogin.Authorize(filter.RequesterRole); err != nil {
 		return err
 	}
 
-	// Need to ensure that new email is not already used by some other user,
+	// Need to ensure that new login is not already used by some other user,
 	// for that err must be not nil and have a type of ExternalError,
-	// if this both condition satisfied then user with this email wasn't found.
+	// if this both condition satisfied then user with this login wasn't found.
 	// (which means that it can be used)
-	_, err := m.search.FindUserByEmail(newEmail)
+	_, err := m.search.FindUserByLogin(newlogin)
 
-	// user with new email was found
+	// user with new login was found
 	if err == nil {
-		return ExternalError.New("Данный E-Mail уже занят", http.StatusConflict)
+		return ExternalError.New("Данный логин уже занят", http.StatusConflict)
 	}
 
-	upd := &primitive.E{"email", newEmail}
+	upd := &primitive.E{"login", newlogin}
 
 	return m.update(filter, upd, true)
 }

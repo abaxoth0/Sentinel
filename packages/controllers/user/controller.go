@@ -85,7 +85,7 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err := c.user.Create(body.Email, body.Password)
+	_, err := c.user.Create(body.Login, body.Password)
 
 	if err != nil {
 		ok, e := ExternalError.Is(err)
@@ -105,10 +105,10 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 
 	res.OK()
 
-	logger.Print("New user created, email: "+body.Email, req)
+	logger.Print("New user created, login: "+body.Login, req)
 }
 
-func (c Controller) ChangeEmail(w http.ResponseWriter, req *http.Request) {
+func (c Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
@@ -121,7 +121,7 @@ func (c Controller) ChangeEmail(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if e := c.user.ChangeEmail(filter, body["email"].(string)); e != nil {
+	if e := c.user.ChangeLogin(filter, body["login"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
 
 		logger.PrintError(e.Message, req)

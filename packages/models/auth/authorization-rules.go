@@ -6,10 +6,6 @@ import (
 	"sentinel/packages/models/role"
 )
 
-// Argument is user role. Before calling this function ensure, that role is valid.
-// Must return true and empty string if OK, otherwise - false and error message.
-type additionalConditionFunc func(role.Role) (bool, string)
-
 type authorizationRules struct {
 	// Unique name of operation.
 	Operation OperationName
@@ -17,7 +13,7 @@ type authorizationRules struct {
 	ValidRoles []role.Role
 	// If true, then role search in `ValidRoles` will be skiped,
 	// but only if user performs operation on himself.
-	// (examples: user want to change email, password or even delete his profile)
+	// (examples: user want to change login, password or even delete his profile)
 	SkipRoleValidationOnSelf bool
 	// Forbid moderator to perform operations with another moderator.
 	ForbidModToModOps bool

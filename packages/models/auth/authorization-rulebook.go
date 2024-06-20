@@ -11,8 +11,8 @@ type rulebook struct {
 	RestoreSoftDeletedUser *authorizationRules
 	// Hard delete user
 	DropUser *authorizationRules
-	// Change user email
-	ChangeUserEmail *authorizationRules
+	// Change user login
+	ChangeUserLogin *authorizationRules
 	// Change user password
 	ChangeUserPassword *authorizationRules
 	// Change user role
@@ -45,8 +45,8 @@ var Rulebook = &rulebook{
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,
 	},
-	ChangeUserEmail: &authorizationRules{
-		Operation:                AuthorizationOperations.ChangeUserEmail,
+	ChangeUserLogin: &authorizationRules{
+		Operation:                AuthorizationOperations.ChangeUserLogin,
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: true,
 		ForbidModToModOps:        true,
