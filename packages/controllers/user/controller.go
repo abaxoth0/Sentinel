@@ -27,7 +27,7 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 }
 
 // Retrieves untyped request body from given request
-func (c Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalError.Error) {
+func (c *Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalError.Error) {
 	body, ok := json.Decode[map[string]any](req.Body)
 
 	if !ok {
@@ -37,7 +37,7 @@ func (c Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalEr
 	return body, nil
 }
 
-func (c Controller) buildUserFilter(tartetUID string, req *http.Request) (*user.Filter, *ExternalError.Error) {
+func (c *Controller) buildUserFilter(tartetUID string, req *http.Request) (*user.Filter, *ExternalError.Error) {
 	var emptyFilter *user.Filter
 
 	accessToken, err := c.token.GetAccessToken(req)
@@ -60,7 +60,7 @@ func (c Controller) buildUserFilter(tartetUID string, req *http.Request) (*user.
 	return filter, nil
 }
 
-func (c Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
+func (c *Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
 	body, bodyErr := c.buildReqBody(req)
 	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
 
@@ -75,7 +75,7 @@ func (c Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]a
 	return body, filter, nil
 }
 
-func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Create(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
@@ -109,7 +109,7 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 	logger.Print("New user created, login: "+body.Login, req)
 }
 
-func (c Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
@@ -131,7 +131,7 @@ func (c Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-func (c Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
@@ -153,7 +153,7 @@ func (c Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-func (c Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
@@ -175,7 +175,7 @@ func (c Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	_, filter, err := c.getRequestBodyAndUserFilter(req)
@@ -197,7 +197,7 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Restore(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	_, filter, err := c.getRequestBodyAndUserFilter(req)
@@ -220,7 +220,7 @@ func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
 }
 
 // Hard delete
-func (c Controller) Drop(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, bodyErr := c.buildReqBody(req)
@@ -253,7 +253,7 @@ func (c Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-func (c Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, ok := json.Decode[json.LoginBody](req.Body)

@@ -23,7 +23,7 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 	}
 }
 
-func (c Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List})

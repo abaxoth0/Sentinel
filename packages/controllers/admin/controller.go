@@ -19,6 +19,6 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 	}
 }
 
-func (c Controller) DropCache(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) DropCache(w http.ResponseWriter, req *http.Request) {
 	log.Fatalln("[ METHOD NOT IMPLEMENTED ]")
 }

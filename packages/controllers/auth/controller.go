@@ -38,7 +38,7 @@ func New(userModel *user.Model, tokenModel *token.Model, authModel *auth.Model) 
 	}
 }
 
-func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
@@ -88,7 +88,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 // Tokens not used there, cuz it's not matter are they valid or expired, and there are used no methods, that require them.
 // Some redundant functional will not change result, it can only add some new prolems. For example:
 // User can just stuck, without possibility to logout, cuz this function won't work or will work incorrect.
-func (c Controller) Logout(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Logout(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	authCookie, err := req.Cookie(token.RefreshTokenKey)
@@ -112,7 +112,7 @@ func (c Controller) Logout(w http.ResponseWriter, req *http.Request) {
 	logger.Print("User logged out.", req)
 }
 
-func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	oldRefreshToken, e := c.token.GetRefreshToken(req)
@@ -171,7 +171,7 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	logger.Print("Tokens successfuly refreshed.", req)
 }
 
-func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
+func (c *Controller) Verify(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	accessToken, err := c.token.GetAccessToken(req)
