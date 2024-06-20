@@ -126,6 +126,8 @@ func (c Controller) ChangeEmail(w http.ResponseWriter, req *http.Request) {
 
 		logger.PrintError(e.Message, req)
 	}
+
+	res.OK()
 }
 
 func (c Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
@@ -146,6 +148,8 @@ func (c Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 
 		logger.PrintError(e.Message, req)
 	}
+
+	res.OK()
 }
 
 func (c Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
@@ -166,6 +170,8 @@ func (c Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 
 		logger.PrintError(e.Message, req)
 	}
+
+	res.OK()
 }
 
 func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
@@ -186,6 +192,8 @@ func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 
 		logger.PrintError(e.Message, req)
 	}
+
+	res.OK()
 }
 
 func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
@@ -206,6 +214,8 @@ func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
 
 		logger.PrintError(e.Message, req)
 	}
+
+	res.OK()
 }
 
 // Hard delete
