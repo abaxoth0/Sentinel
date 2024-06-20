@@ -6,7 +6,9 @@ import (
 	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 	"sentinel/packages/models/user"
-	"sentinel/packages/net"
+
+	"github.com/StepanAnanin/weaver/http/response"
+	"github.com/StepanAnanin/weaver/logger"
 )
 
 type Controller struct {
@@ -22,21 +24,19 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 }
 
 func (c Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodGet); !ok {
-		return
-	}
+	res := response.New(w)
 
 	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List})
 
 	if !ok {
-		net.Response.InternalServerError(w)
+		res.InternalServerError()
 
 		return
 	}
 
-	if err := net.Response.Send(encdoedRoles, w); err != nil {
-		net.Request.PrintError("Failed to send OK response", req)
+	if err := res.SendBody(encdoedRoles); err != nil {
+		logger.PrintError("Failed to send OK response", req)
 	}
 
-	net.Request.Print("OK", req)
+	logger.Print("OK", req)
 }

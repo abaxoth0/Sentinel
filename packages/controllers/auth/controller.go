@@ -8,8 +8,10 @@ import (
 	"sentinel/packages/models/auth"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
-	"sentinel/packages/net"
 
+	"github.com/StepanAnanin/weaver/http/cookie"
+	"github.com/StepanAnanin/weaver/http/response"
+	"github.com/StepanAnanin/weaver/logger"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -37,14 +39,12 @@ func New(userModel *user.Model, tokenModel *token.Model, authModel *auth.Model) 
 }
 
 func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPost); !ok {
-		return
-	}
+	res := response.New(w)
 
-	body, ok := json.Decode[net.AuthRequestBody](req.Body)
+	body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
 	if !ok {
-		net.Response.InternalServerError(w)
+		res.InternalServerError()
 
 		return
 	}
@@ -52,9 +52,9 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 	iuser, loginError := c.auth.Login(body.Email, body.Password)
 
 	if loginError != nil {
-		net.Response.Message(loginError.Message, loginError.Status, w)
+		res.Message(loginError.Message, loginError.Status)
 
-		net.Request.Print("[ AUTH ERROR ] Invalid auth data.", req)
+		logger.PrintError("Invalid auth data.", req)
 
 		return
 	}
@@ -65,24 +65,22 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 		Role:  iuser.Role,
 	})
 
-	resBody, ok := json.Encode(net.TokenResponseBody{
+	resBody, ok := json.Encode(json.TokenResponseBody{
 		Message:     "Пользователь успешно авторизован",
 		AccessToken: accessToken.Value,
 	})
 
 	if !ok {
-		net.Response.InternalServerError(w)
+		res.InternalServerError()
 
 		return
 	}
 
-	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
+	http.SetCookie(w, buildAuthCookie(refreshToken))
 
-	if err := net.Response.Send(resBody, w); err != nil {
-		net.Request.PrintError("Failed to send success response", req)
-	}
+	res.SendBody(resBody)
 
-	net.Request.Print("Authentication successful, user id: "+iuser.ID, req)
+	logger.Print("Authentication successful, user id: "+iuser.ID, req)
 }
 
 // This method terminates authentication.
@@ -91,9 +89,7 @@ func (c Controller) Login(w http.ResponseWriter, req *http.Request) {
 // Some redundant functional will not change result, it can only add some new prolems. For example:
 // User can just stuck, without possibility to logout, cuz this function won't work or will work incorrect.
 func (c Controller) Logout(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
+	res := response.New(w)
 
 	authCookie, err := req.Cookie(token.RefreshTokenKey)
 
@@ -102,27 +98,22 @@ func (c Controller) Logout(w http.ResponseWriter, req *http.Request) {
 			panic(err)
 		}
 
-		net.Response.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusBadRequest, w)
+		res.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusBadRequest)
 
-		net.Request.PrintError("Missing refresh token", req)
+		logger.PrintError("Missing refresh token", req)
 
 		return
 	}
 
-	net.Cookie.Delete(authCookie, w)
+	cookie.Delete(authCookie, w)
 
-	// In error case log already done in `net.SendOkResponse`
-	if err := net.Response.OK(w); err != nil {
-		return
-	}
+	res.OK()
 
-	net.Request.Print("User logged out.", req)
+	logger.Print("User logged out.", req)
 }
 
 func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
-		return
-	}
+	res := response.New(w)
 
 	oldRefreshToken, e := c.token.GetRefreshToken(req)
 
@@ -130,18 +121,20 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	if e != nil {
 		// If auth cookie wasn't found
 		if errors.Is(e, http.ErrNoCookie) {
-			net.Response.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusUnauthorized, w)
+			res.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusUnauthorized)
 
-			net.Request.PrintError("Auth cookie wasn't found", req)
+			logger.PrintError("Auth cookie wasn't found", req)
 		}
 
 		if isExternal, e := ExternalError.Is(e); isExternal {
 			// This cookie used inside of "GetRefreshToken" method so we know that it's exists.
 			authCookie, _ := req.Cookie(token.RefreshTokenKey)
 
-			net.Cookie.Delete(authCookie, w)
+			cookie.Delete(authCookie, w)
 
-			net.Response.SendError(e.Message, e.Status, req, w)
+			res.Message(e.Message, e.Status)
+
+			logger.PrintError(e.Message, req)
 		}
 
 		return
@@ -151,42 +144,42 @@ func (c Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	payload, err := c.token.PayloadFromClaims(claims)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.Print(err.Message, req)
 
 		return
 	}
 
 	accessToken, refreshToken := c.token.Generate(payload)
 
-	resBody, ok := json.Encode(net.TokenResponseBody{
+	resBody, ok := json.Encode(json.TokenResponseBody{
 		Message:     "Токены успешно обновлены",
 		AccessToken: accessToken.Value,
 	})
 
 	if !ok {
-		net.Response.InternalServerError(w)
+		res.InternalServerError()
 
 		return
 	}
 
-	http.SetCookie(w, net.Cookie.BuildAuth(refreshToken))
+	http.SetCookie(w, buildAuthCookie(refreshToken))
 
-	if err := net.Response.Send(resBody, w); err != nil {
-		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
-	}
+	res.SendBody(resBody)
 
-	net.Request.Print("Tokens successfuly refreshed.", req)
+	logger.Print("Tokens successfuly refreshed.", req)
 }
 
 func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodGet); !ok {
-		return
-	}
+	res := response.New(w)
 
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.Print(err.Message, req)
 
 		return
 	}
@@ -196,7 +189,9 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 	payload, err := c.token.PayloadFromClaims(claims)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.Print(err.Message, req)
 
 		return
 	}
@@ -204,16 +199,12 @@ func (c Controller) Verify(w http.ResponseWriter, req *http.Request) {
 	body, ok := json.Encode(payload)
 
 	if !ok {
-		net.Response.InternalServerError(w)
+		res.InternalServerError()
 
 		return
 	}
 
-	if err := net.Response.Send(body, w); err != nil {
-		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
+	res.SendBody(body)
 
-		return
-	}
-
-	net.Request.Print("Authentication verified for \""+payload.ID+"\".", req)
+	logger.Print("Authentication verified for \""+payload.ID+"\".", req)
 }

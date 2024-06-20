@@ -1,4 +1,4 @@
-package net
+package json
 
 type AuthRequestBody struct {
 	Email    string `json:"email"`

@@ -1,8 +1,11 @@
 module sentinel
 
-go 1.22
+go 1.22.3
+
+toolchain go1.22.4
 
 require (
+	github.com/StepanAnanin/weaver v1.0.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect

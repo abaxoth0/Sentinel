@@ -7,8 +7,9 @@ import (
 	"sentinel/packages/json"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
-	"sentinel/packages/net"
 
+	"github.com/StepanAnanin/weaver/http/response"
+	"github.com/StepanAnanin/weaver/logger"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -74,14 +75,12 @@ func (c Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]a
 }
 
 func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPost); !ok {
-		return
-	}
+	res := response.New(w)
 
-	body, ok := json.Decode[net.AuthRequestBody](req.Body)
+	body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
 	if !ok {
-		net.Response.InternalServerError(w)
+		res.InternalServerError()
 
 		return
 	}
@@ -92,122 +91,126 @@ func (c Controller) Create(w http.ResponseWriter, req *http.Request) {
 		ok, e := ExternalError.Is(err)
 
 		if !ok {
-			net.Response.Message("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError, w)
+			res.Message("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
 
 			log.Fatalln(err)
 		}
 
-		net.Response.Message(e.Message, e.Status, w)
+		res.Message(e.Message, e.Status)
 
-		net.Request.PrintError("Failed to create new user: "+e.Message, req)
-
-		return
-	}
-
-	if err := net.Response.OK(w); err != nil {
-		net.Response.SendError("Failed to send success response", http.StatusInternalServerError, req, w)
+		logger.PrintError("Failed to create new user: "+e.Message, req)
 
 		return
 	}
 
-	net.Request.Print("New user created, email: "+body.Email, req)
+	res.OK()
+
+	logger.Print("New user created, email: "+body.Email, req)
 }
 
 func (c Controller) ChangeEmail(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
-		return
-	}
+	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
 	if e := c.user.ChangeEmail(filter, body["email"].(string)); e != nil {
-		net.Response.SendError(e.Message, e.Status, req, w)
+		res.Message(e.Message, e.Status)
+
+		logger.PrintError(e.Message, req)
 	}
 }
 
 func (c Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
-		return
-	}
+	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
 	if e := c.user.ChangePassword(filter, body["password"].(string)); e != nil {
-		net.Response.SendError(e.Message, e.Status, req, w)
+		res.Message(e.Message, e.Status)
+
+		logger.PrintError(e.Message, req)
 	}
 }
 
 func (c Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPatch); !ok {
-		return
-	}
+	res := response.New(w)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
 	if e := c.user.ChangeRole(filter, body["role"].(string)); e != nil {
-		net.Response.SendError(e.Message, e.Status, req, w)
+		res.Message(e.Message, e.Status)
+
+		logger.PrintError(e.Message, req)
 	}
 }
 
 func (c Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
+	res := response.New(w)
 
 	_, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
 	if e := c.user.SoftDelete(filter); e != nil {
-		net.Response.SendError(e.Message, e.Status, req, w)
+		res.Message(e.Message, e.Status)
+
+		logger.PrintError(e.Message, req)
 	}
 }
 
 func (c Controller) Restore(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodPut); !ok {
-		return
-	}
+	res := response.New(w)
 
 	_, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
 	if e := c.user.Restore(filter); e != nil {
-		net.Response.SendError(e.Message, e.Status, req, w)
+		res.Message(e.Message, e.Status)
+
+		logger.PrintError(e.Message, req)
 	}
 }
 
 // Hard delete
 func (c Controller) Drop(w http.ResponseWriter, req *http.Request) {
-	if ok := net.Request.Preprocessing(w, req, http.MethodDelete); !ok {
-		return
-	}
+	res := response.New(w)
 
 	body, bodyErr := c.buildReqBody(req)
 	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
@@ -221,18 +224,20 @@ func (c Controller) Drop(w http.ResponseWriter, req *http.Request) {
 			err = filterErr
 		}
 
-		net.Response.SendError(err.Message, err.Status, req, w)
+		res.Message(err.Message, err.Status)
+
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
 	if err := c.user.Drop(filter); err != nil {
-		net.Response.Message(err.Message, err.Status, w)
+		res.Message(err.Message, err.Status)
 
-		net.Request.PrintError(err.Message, req)
+		logger.PrintError(err.Message, req)
 
 		return
 	}
 
-	net.Response.OK(w)
+	res.OK()
 }

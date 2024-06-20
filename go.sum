@@ -1,3 +1,7 @@
+github.com/StepanAnanin/weaver v1.0.0 h1:lDrjf6Xy/4TnjTWO4hRJjPKpG+Z84QE4g+hYAc9F+bc=
+github.com/StepanAnanin/weaver v1.0.0/go.mod h1:MVOX6EqkDouql9UmdhqUB759ep6mwD71ibNfqTK1zVo=
+github.com/StepanAnanin/weaver v1.0.1 h1:N+zGeBKnYwbg0kuGo82wv8urmP71/gsHPma73Cov68Q=
+github.com/StepanAnanin/weaver v1.0.1/go.mod h1:MVOX6EqkDouql9UmdhqUB759ep6mwD71ibNfqTK1zVo=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang/snappy v0.0.1 h1:Qgr9rKW7uDUkrbSmQeiDsGa8SjGyCOGtuasMWwvp2P4=

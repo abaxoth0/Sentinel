@@ -1,9 +1,11 @@
 package router
 
 import (
+	"net/http"
 	"sentinel/packages/config"
 	"sentinel/packages/controllers"
 
+	"github.com/StepanAnanin/weaver/http/request"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -15,26 +17,34 @@ func Init(dbClient *mongo.Client) *mux.Router {
 	controller := controllers.New(dbClient)
 
 	// auth
-	router.HandleFunc("/login", controller.Auth.Login)
-	router.HandleFunc("/logout", controller.Auth.Logout)
-	router.HandleFunc("/refresh", controller.Auth.Refresh)
-	router.HandleFunc("/verify", controller.Auth.Verify)
+	router.HandleFunc("/login", request.Preprocessing(controller.Auth.Login, []string{http.MethodPost}))
+
+	router.HandleFunc("/logout", request.Preprocessing(controller.Auth.Logout, []string{http.MethodDelete}))
+
+	router.HandleFunc("/refresh", request.Preprocessing(controller.Auth.Refresh, []string{http.MethodPut}))
+
+	router.HandleFunc("/verify", request.Preprocessing(controller.Auth.Verify, []string{http.MethodGet}))
 
 	// user
-	router.HandleFunc("/user/create", controller.User.Create)
-	router.HandleFunc("/user/delete", controller.User.SoftDelete)
-	router.HandleFunc("/user/restore", controller.User.Restore)
-	router.HandleFunc("/user/drop", controller.User.Drop)
-	router.HandleFunc("/user/change/email", controller.User.ChangeEmail)
-	router.HandleFunc("/user/change/password", controller.User.ChangePassword)
-	router.HandleFunc("/user/change/role", controller.User.ChangeRole)
+	router.HandleFunc("/user/create", request.Preprocessing(controller.User.Create, []string{http.MethodPost}))
+
+	router.HandleFunc("/user/delete", request.Preprocessing(controller.User.SoftDelete, []string{http.MethodDelete}))
+
+	router.HandleFunc("/user/restore", request.Preprocessing(controller.User.Restore, []string{http.MethodPut}))
+
+	router.HandleFunc("/user/drop", request.Preprocessing(controller.User.Drop, []string{http.MethodPost}))
+
+	router.HandleFunc("/user/change/email", request.Preprocessing(controller.User.ChangeEmail, []string{http.MethodPatch}))
+
+	router.HandleFunc("/user/change/password", request.Preprocessing(controller.User.ChangePassword, []string{http.MethodPatch}))
+
+	router.HandleFunc("/user/change/role", request.Preprocessing(controller.User.ChangeRole, []string{http.MethodPatch}))
 
 	// roles
-	router.HandleFunc("/roles", controller.Role.GetRoles)
+	router.HandleFunc("/roles", request.Preprocessing(controller.Role.GetRoles, []string{http.MethodPatch}))
 
 	if config.Debug.Enabled {
-
-		router.HandleFunc("/admin/clear-cache", controller.Admin.DropCache)
+		router.HandleFunc("/admin/clear-cache", request.Preprocessing(controller.Admin.DropCache, []string{http.MethodDelete}))
 	}
 
 	return router
