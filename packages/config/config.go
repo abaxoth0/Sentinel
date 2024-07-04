@@ -33,12 +33,20 @@ type jwtConfing struct {
 	RefreshTokenTTL        time.Duration
 }
 
+type cacheConfig struct {
+	URI           string
+	Password      string
+	DB            int
+	SocketTimeout time.Duration
+	TTL           time.Duration
+}
+
 type debugConfig struct {
 	// Must be false only on project deployment.
 	Enabled bool
 }
 
-func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfing, *debugConfig) {
+func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
 	log.Println("[ CONFIG ] Initializing...")
 
 	if err := godotenv.Load(); err != nil {
@@ -109,6 +117,18 @@ func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfin
 		RefreshTokenTTL:        time.Hour * 24 * time.Duration(RefreshTokenTtlMultiplier),
 	}
 
+	CacheDB, _ := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
+	CacheSocketTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_SOCKET_READ_TIMEOUT"), 10, 64)
+	CacheTTLMultiplier, _ := strconv.ParseInt(getEnv("CACHE_TTL"), 10, 64)
+
+	CacheConfig := cacheConfig{
+		URI:           getEnv("CACHE_URI"),
+		Password:      getEnv("CACHE_PASSWORD"),
+		DB:            int(CacheDB),
+		SocketTimeout: time.Second * time.Duration(CacheSocketTimeoutMultiplier),
+		TTL:           time.Minute * time.Duration(CacheTTLMultiplier),
+	}
+
 	DebugConfig := debugConfig{
 		Enabled: getEnv("DEBUG_ENABLED") == "true",
 	}
@@ -117,7 +137,7 @@ func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfin
 
 	log.Println("[ CONFIG ] Initializing: OK")
 
-	return v, &DbConfig, &HttpConfig, &JWTConfig, &DebugConfig
+	return v, &DbConfig, &HttpConfig, &JWTConfig, &CacheConfig, &DebugConfig
 }
 
 func getEnv(key string) string {
@@ -128,4 +148,4 @@ func getEnv(key string) string {
 	return env
 }
 
-var AppVersion, DB, HTTP, JWT, Debug = initializeConfigs()
+var AppVersion, DB, HTTP, JWT, Cache, Debug = initializeConfigs()
