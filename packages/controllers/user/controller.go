@@ -7,7 +7,6 @@ import (
 	"sentinel/packages/json"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
-	"strconv"
 
 	"github.com/StepanAnanin/weaver/http/response"
 	"github.com/StepanAnanin/weaver/logger"
@@ -272,7 +271,7 @@ func (c *Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	resBody, ok := json.Encode(json.MessageResponseBody{Message: strconv.FormatBool(isExists)})
+	resBody, ok := json.Encode(json.LoginExistanceResponseBody{Exists: isExists})
 
 	if !ok {
 		res.InternalServerError()

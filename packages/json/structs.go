@@ -46,3 +46,7 @@ type TokenResponseBody struct {
 type MessageResponseBody struct {
 	Message string `json:"message"`
 }
+
+type LoginExistanceResponseBody struct {
+	Exists bool `json:"exists"`
+}
