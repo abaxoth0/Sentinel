@@ -1,4 +1,4 @@
-package role
+package rolecontroller
 
 import (
 	"net/http"

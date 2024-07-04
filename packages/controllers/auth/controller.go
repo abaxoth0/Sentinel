@@ -1,4 +1,4 @@
-package auth
+package authcontroller
 
 import (
 	"errors"
@@ -54,7 +54,7 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 	if loginError != nil {
 		res.Message(loginError.Message, loginError.Status)
 
-		logger.PrintError("Invalid auth data.", req)
+		logger.Print("Invalid auth data.", req)
 
 		return
 	}
@@ -100,7 +100,7 @@ func (c *Controller) Logout(w http.ResponseWriter, req *http.Request) {
 
 		res.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusBadRequest)
 
-		logger.PrintError("Missing refresh token", req)
+		logger.Print("Missing refresh token", req)
 
 		return
 	}
@@ -123,7 +123,7 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 		if errors.Is(e, http.ErrNoCookie) {
 			res.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusUnauthorized)
 
-			logger.PrintError("Auth cookie wasn't found", req)
+			logger.Print("Auth cookie wasn't found", req)
 		}
 
 		if isExternal, e := ExternalError.Is(e); isExternal {
@@ -134,7 +134,7 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 
 			res.Message(e.Message, e.Status)
 
-			logger.PrintError(e.Message, req)
+			logger.Print(e.Message, req)
 		}
 
 		return

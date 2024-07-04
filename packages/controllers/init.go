@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	AdminController "sentinel/packages/controllers/admin"
 	AuthController "sentinel/packages/controllers/auth"
+	CacheController "sentinel/packages/controllers/cache"
 	RoleController "sentinel/packages/controllers/role"
 	UserController "sentinel/packages/controllers/user"
 	"sentinel/packages/models/auth"
@@ -15,7 +15,7 @@ import (
 
 type Controllers struct {
 	Auth  *AuthController.Controller
-	Admin *AdminController.Controller
+	Cache *CacheController.Controller
 	User  *UserController.Controller
 	Role  *RoleController.Controller
 }
@@ -30,7 +30,7 @@ func New(dbClient *mongo.Client) *Controllers {
 
 	return &Controllers{
 		Auth:  AuthController.New(userModel, tokenModel, authModel),
-		Admin: AdminController.New(userModel, tokenModel),
+		Cache: CacheController.New(userModel, tokenModel),
 		User:  UserController.New(userModel, tokenModel),
 		Role:  RoleController.New(userModel, tokenModel),
 	}

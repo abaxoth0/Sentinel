@@ -1,4 +1,4 @@
-package user
+package usercontroller
 
 import (
 	"log"
@@ -124,7 +124,7 @@ func (c *Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
 	if e := c.user.ChangeLogin(filter, body["login"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
 
-		logger.PrintError(e.Message, req)
+		logger.Print(e.Message, req)
 	}
 
 	res.OK()
@@ -146,7 +146,7 @@ func (c *Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 	if e := c.user.ChangePassword(filter, body["password"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
 
-		logger.PrintError(e.Message, req)
+		logger.Print(e.Message, req)
 	}
 
 	res.OK()
@@ -168,7 +168,7 @@ func (c *Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 	if e := c.user.ChangeRole(filter, body["role"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
 
-		logger.PrintError(e.Message, req)
+		logger.Print(e.Message, req)
 	}
 
 	res.OK()
@@ -190,7 +190,7 @@ func (c *Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	if e := c.user.SoftDelete(filter); e != nil {
 		res.Message(e.Message, e.Status)
 
-		logger.PrintError(e.Message, req)
+		logger.Print(e.Message, req)
 	}
 
 	res.OK()
@@ -212,7 +212,7 @@ func (c *Controller) Restore(w http.ResponseWriter, req *http.Request) {
 	if e := c.user.Restore(filter); e != nil {
 		res.Message(e.Message, e.Status)
 
-		logger.PrintError(e.Message, req)
+		logger.Print(e.Message, req)
 	}
 
 	res.OK()
@@ -244,7 +244,7 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	if err := c.user.Drop(filter); err != nil {
 		res.Message(err.Message, err.Status)
 
-		logger.PrintError(err.Message, req)
+		logger.Print(err.Message, req)
 
 		return
 	}

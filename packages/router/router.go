@@ -44,10 +44,10 @@ func Init(dbClient *mongo.Client) *mux.Router {
 	router.HandleFunc("/user/check/login", request.Preprocessing(controller.User.CheckIsLoginExists, []string{http.MethodPost}))
 
 	// roles
-	router.HandleFunc("/roles", request.Preprocessing(controller.Role.GetRoles, []string{http.MethodPatch}))
+	router.HandleFunc("/roles", request.Preprocessing(controller.Role.GetRoles, []string{http.MethodGet}))
 
 	if config.Debug.Enabled {
-		router.HandleFunc("/admin/clear-cache", request.Preprocessing(controller.Admin.DropCache, []string{http.MethodDelete}))
+		router.HandleFunc("/cache/drop", request.Preprocessing(controller.Cache.Drop, []string{http.MethodDelete}))
 	}
 
 	return router

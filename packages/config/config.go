@@ -46,14 +46,22 @@ type debugConfig struct {
 	Enabled bool
 }
 
-func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
+func getEnv(key string) string {
+	env, _ := os.LookupEnv(key)
+
+	log.Println("[ ENV ] Loaded: " + key)
+
+	return env
+}
+
+var AppVersion, DB, HTTP, JWT, Cache, Debug = (func() (string, *databaseConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
 	log.Println("[ CONFIG ] Initializing...")
 
 	if err := godotenv.Load(); err != nil {
 		panic(err)
 	}
 
-	requiredVariables := [13]string{
+	requiredVariables := [18]string{
 		"VERSION",
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
@@ -67,6 +75,11 @@ func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfin
 		"REFRESH_TOKEN_SECRET",
 		"ACCESS_TOKEN_TTL",
 		"REFRESH_TOKEN_TTL",
+		"CACHE_URI",
+		"CACHE_PASSWORD",
+		"CACHE_DB",
+		"CACHE_SOCKET_READ_TIMEOUT",
+		"CACHE_TTL",
 	}
 
 	// Check is all required env variables exists
@@ -138,14 +151,4 @@ func initializeConfigs() (string, *databaseConfig, *httpServerConfig, *jwtConfin
 	log.Println("[ CONFIG ] Initializing: OK")
 
 	return v, &DbConfig, &HttpConfig, &JWTConfig, &CacheConfig, &DebugConfig
-}
-
-func getEnv(key string) string {
-	env, _ := os.LookupEnv(key)
-
-	log.Println("[ ENV ] Loaded: " + key)
-
-	return env
-}
-
-var AppVersion, DB, HTTP, JWT, Cache, Debug = initializeConfigs()
+})()
