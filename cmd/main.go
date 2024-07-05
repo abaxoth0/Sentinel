@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"runtime"
 	"sentinel/packages/DB"
+	"sentinel/packages/cache"
 	"sentinel/packages/config"
 	"sentinel/packages/router"
 	"sentinel/packages/util"
@@ -22,12 +23,12 @@ func main() {
 
 	defer dbClient.Disconnect(ctx)
 
+	cache.Init()
+
 	log.Println("[ SERVER ] Initializng router...")
 
-	// Creating controllers and routes.
 	Router := router.Init(dbClient)
 
-	// Applying router to root route
 	http.Handle("/", Router)
 
 	log.Println("[ SERVER ] Initializng router: OK")
@@ -53,11 +54,11 @@ func main() {
 }
 
 var logo string = `
-  ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗     
-  ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║████╗  ██║██╔════╝██║     
-  ███████╗█████╗  ██╔██╗ ██║   ██║   ██║██╔██╗ ██║█████╗  ██║     
-  ╚════██║██╔══╝  ██║╚██╗██║   ██║   ██║██║╚██╗██║██╔══╝  ██║     
-  ███████║███████╗██║ ╚████║   ██║   ██║██║ ╚████║███████╗███████╗
-  ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
+  ███████╗ ███████╗ ███╗   ██╗ ████████╗ ██╗ ███╗   ██╗ ███████╗ ██╗     
+  ██╔════╝ ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██║ ████╗  ██║ ██╔════╝ ██║     
+  ███████╗ █████╗   ██╔██╗ ██║    ██║    ██║ ██╔██╗ ██║ █████╗   ██║     
+  ╚════██║ ██╔══╝   ██║╚██╗██║    ██║    ██║ ██║╚██╗██║ ██╔══╝   ██║     
+  ███████║ ███████╗ ██║ ╚████║    ██║    ██║ ██║ ╚████║ ███████╗ ███████╗
+  ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝ ╚═╝  ╚═══╝ ╚══════╝ ╚══════╝
                                                                 
 `

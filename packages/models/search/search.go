@@ -4,9 +4,12 @@ import (
 	"log"
 	"net/http"
 	"sentinel/packages/DB"
+	"sentinel/packages/cache"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
+	"sentinel/packages/json"
 	"sentinel/packages/models/role"
+	"sentinel/packages/util"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -14,12 +17,12 @@ import (
 )
 
 type IndexedUser struct {
-	ID       string    `bson:"_id"`
-	Login    string    `bson:"login"`
-	Password string    `bson:"password"`
-	Role     role.Role `bson:"role"`
-	// If in DB this property will be nil, then here it will be 0
-	DeletedAt int `bson:"deletedAt,omitempty"`
+	ID       string    `bson:"_id" json:"_id"`
+	Login    string    `bson:"login" json:"login"`
+	Password string    `bson:"password" json:"password"`
+	Role     role.Role `bson:"role" json:"role"`
+	// If in DB this property is null, then here it will be 0
+	DeletedAt int `bson:"deletedAt,omitempty" json:"deletedAt"`
 }
 
 type Model struct {
@@ -34,20 +37,22 @@ func New(dbClient *mongo.Client) *Model {
 	}
 }
 
-func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUser, *ExternalError.Error) {
+func (m *Model) findUserBy(key string, value string, omitDeleted bool) (*IndexedUser, *ExternalError.Error) {
 	var user IndexedUser
+
+	cacheKey := util.Ternary(omitDeleted, cache.SoftDeletedUserKeyPrefix, cache.UserKeyPrefix) + value
+
+	if rawCachedUser, hit := cache.Get(cacheKey); hit {
+		if cachedUser, ok := json.DecodeString[IndexedUser](rawCachedUser); ok {
+			return &cachedUser, nil
+		}
+	}
 
 	ctx, cancel := DB.DefaultTimeoutContext()
 
 	defer cancel()
 
-	var userFilter bson.D
-
-	if omitDeleted {
-		userFilter = bson.D{{key, value}, {"deletedAt", primitive.Null{}}}
-	} else {
-		userFilter = bson.D{{key, value}}
-	}
+	userFilter := util.Ternary(omitDeleted, bson.D{{key, value}, {"deletedAt", primitive.Null{}}}, bson.D{{key, value}})
 
 	cur, err := m.collection.Find(ctx, userFilter)
 
@@ -72,17 +77,21 @@ func (m *Model) findUserBy(key string, value any, omitDeleted bool) (*IndexedUse
 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, Login:%s\n", user.ID, user.Login)
 	}
 
+	if rawUser, ok := json.Encode(user); ok {
+		cache.Set(cacheKey, rawUser)
+	}
+
 	return &user, nil
 }
 
 // Search for not deleted user with given UID
 func (m *Model) FindUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
-	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), true)
+	return m.findUserBy("_id", uid, true)
 }
 
 // Search for soft deleted user with given UID
 func (m *Model) FindSoftDeletedUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
-	return m.findUserBy("_id", DB.ObjectIDFromHex(uid), false)
+	return m.findUserBy("_id", uid, false)
 }
 
 // Search for user with given UID, regardless of his deletion status

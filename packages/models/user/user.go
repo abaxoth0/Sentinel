@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"sentinel/packages/DB"
+	"sentinel/packages/cache"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/models/auth"
@@ -109,6 +110,8 @@ func (m *Model) update(filter *Filter, upd *primitive.E, deleted bool) *External
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
 
+	cache.Delete(util.Ternary(deleted, cache.SoftDeletedUserKeyPrefix, cache.UserKeyPrefix) + filter.TargetUID)
+
 	return nil
 }
 
@@ -169,6 +172,8 @@ func (m *Model) Drop(filter *Filter) *ExternalError.Error {
 	if _, e := m.collection.DeleteOne(ctx, bson.D{{"_id", filter.TargetUID}}); e != nil {
 		return ExternalError.New("Не удалось удалить пользователя", http.StatusInternalServerError)
 	}
+
+	cache.Delete(util.Ternary(user.DeletedAt == 0, cache.SoftDeletedUserKeyPrefix, cache.UserKeyPrefix) + filter.TargetUID)
 
 	return nil
 }

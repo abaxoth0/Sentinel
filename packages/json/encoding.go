@@ -4,20 +4,25 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"strings"
 )
 
-// Decode given request body.
+// Decode given json.
 // Returns decoded json and true if there are no errors, false otherwise.
-func Decode[T decodeInput](body io.ReadCloser) (T, bool) {
+func Decode[T any](input io.Reader) (T, bool) {
 	var result T
 
-	if err := json.NewDecoder(body).Decode(&result); err != nil {
+	if err := json.NewDecoder(input).Decode(&result); err != nil {
 		log.Printf("\n[ ERROR ] Failed to decode JSON\n%s", err)
 
 		return result, false
 	}
 
 	return result, true
+}
+
+func DecodeString[T any](input string) (T, bool) {
+	return Decode[T](strings.NewReader(input))
 }
 
 // Encode passed `target` argument into json.

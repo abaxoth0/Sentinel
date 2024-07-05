@@ -1,15 +1,5 @@
 package json
 
-type decodeInput interface {
-	map[string]any |
-		AuthRequestBody |
-		UidBody |
-		LoginBody |
-		UidAndLoginBody |
-		UidAndPasswordBody |
-		UidAndRoleBody
-}
-
 type AuthRequestBody struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
