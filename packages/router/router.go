@@ -2,7 +2,6 @@ package router
 
 import (
 	"net/http"
-	"sentinel/packages/config"
 	"sentinel/packages/controllers"
 
 	"github.com/StepanAnanin/weaver/http/request"
@@ -46,9 +45,8 @@ func Init(dbClient *mongo.Client) *mux.Router {
 	// roles
 	router.HandleFunc("/roles", request.Preprocessing(controller.Role.GetRoles, []string{http.MethodGet}))
 
-	if config.Debug.Enabled {
-		router.HandleFunc("/cache/drop", request.Preprocessing(controller.Cache.Drop, []string{http.MethodDelete}))
-	}
+	// cache
+	router.HandleFunc("/cache/drop", request.Preprocessing(controller.Cache.Drop, []string{http.MethodDelete}))
 
 	return router
 }

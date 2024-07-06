@@ -11,6 +11,7 @@ type authorizationOps struct {
 	ChangeUserLogin        OperationName
 	ChangeUserPassword     OperationName
 	ChangeUserRole         OperationName
+	DropCache              OperationName
 }
 
 var AuthorizationOperations = &authorizationOps{
@@ -21,4 +22,5 @@ var AuthorizationOperations = &authorizationOps{
 	ChangeUserLogin:        "change_user_login",
 	ChangeUserPassword:     "change_user_password",
 	ChangeUserRole:         "change_user_role",
+	DropCache:              "drop_cache",
 }
