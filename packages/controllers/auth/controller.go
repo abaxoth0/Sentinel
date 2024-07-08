@@ -39,13 +39,12 @@ func New(userModel *user.Model, tokenModel *token.Model, authModel *auth.Model) 
 }
 
 func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 
@@ -53,9 +52,6 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 
 	if loginError != nil {
 		res.Message(loginError.Message, loginError.Status)
-
-		logger.Print("Invalid auth data.", req)
-
 		return
 	}
 
@@ -72,7 +68,6 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 
@@ -160,7 +155,6 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 
@@ -172,15 +166,12 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 }
 
 func (c *Controller) Verify(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 
@@ -190,9 +181,6 @@ func (c *Controller) Verify(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 
@@ -200,7 +188,6 @@ func (c *Controller) Verify(w http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 

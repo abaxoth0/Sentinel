@@ -25,7 +25,6 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 	}
 }
 
-// TODO A lot of code duplications, get rid of it
 func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
@@ -39,13 +38,12 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	res.Logged(req)
+
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 
@@ -53,25 +51,16 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 
-	if filter.RequesterRole.Verify(); err != nil {
+	if err = filter.RequesterRole.Verify(); err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 
-	if err := auth.Rulebook.DropCache.Authorize(filter.RequesterRole); err != nil {
+	if err = auth.Rulebook.DropCache.Authorize(filter.RequesterRole); err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 

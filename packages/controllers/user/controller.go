@@ -9,7 +9,6 @@ import (
 	user "sentinel/packages/models/user"
 
 	"github.com/StepanAnanin/weaver/http/response"
-	"github.com/StepanAnanin/weaver/logger"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -75,13 +74,12 @@ func (c *Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]
 }
 
 func (c *Controller) Create(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 
@@ -98,121 +96,96 @@ func (c *Controller) Create(w http.ResponseWriter, req *http.Request) {
 
 		res.Message(e.Message, e.Status)
 
-		logger.PrintError("Failed to create new user: "+e.Message, req)
-
 		return
 	}
 
 	res.OK()
-
-	logger.Print("New user created, login: "+body.Login, req)
 }
 
 func (c *Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.PrintError(err.Message, req)
-
-		return
 	}
 
 	if e := c.user.ChangeLogin(filter, body["login"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
-
-		logger.Print(e.Message, req)
+		return
 	}
 
 	res.OK()
 }
 
 func (c *Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.PrintError(err.Message, req)
-
 		return
 	}
 
 	if e := c.user.ChangePassword(filter, body["password"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
-
-		logger.Print(e.Message, req)
+		return
 	}
 
 	res.OK()
 }
 
 func (c *Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.PrintError(err.Message, req)
-
 		return
 	}
 
 	if e := c.user.ChangeRole(filter, body["role"].(string)); e != nil {
 		res.Message(e.Message, e.Status)
-
-		logger.Print(e.Message, req)
+		return
 	}
 
 	res.OK()
 }
 
 func (c *Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	_, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.PrintError(err.Message, req)
-
 		return
 	}
 
 	if e := c.user.SoftDelete(filter); e != nil {
 		res.Message(e.Message, e.Status)
-
-		logger.Print(e.Message, req)
+		return
 	}
 
 	res.OK()
 }
 
 func (c *Controller) Restore(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	_, filter, err := c.getRequestBodyAndUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.PrintError(err.Message, req)
-
 		return
 	}
 
 	if e := c.user.Restore(filter); e != nil {
 		res.Message(e.Message, e.Status)
-
-		logger.Print(e.Message, req)
+		return
 	}
 
 	res.OK()
@@ -220,7 +193,7 @@ func (c *Controller) Restore(w http.ResponseWriter, req *http.Request) {
 
 // Hard delete
 func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, bodyErr := c.buildReqBody(req)
 	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
@@ -236,16 +209,11 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 
 		res.Message(err.Message, err.Status)
 
-		logger.PrintError(err.Message, req)
-
 		return
 	}
 
 	if err := c.user.Drop(filter); err != nil {
 		res.Message(err.Message, err.Status)
-
-		logger.Print(err.Message, req)
-
 		return
 	}
 
@@ -253,13 +221,12 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 }
 
 func (c *Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, ok := json.Decode[json.LoginBody](req.Body)
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 
@@ -267,7 +234,6 @@ func (c *Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-
 		return
 	}
 
@@ -275,9 +241,6 @@ func (c *Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request
 
 	if !ok {
 		res.InternalServerError()
-
-		logger.PrintError("Failed to encode json", req)
-
 		return
 	}
 

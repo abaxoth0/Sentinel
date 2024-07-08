@@ -6,6 +6,8 @@ github.com/StepanAnanin/weaver v1.0.2 h1:bYCS1o5ICc7erITBYAog+ajGsalWxi80NW3XrZo
 github.com/StepanAnanin/weaver v1.0.2/go.mod h1:MVOX6EqkDouql9UmdhqUB759ep6mwD71ibNfqTK1zVo=
 github.com/StepanAnanin/weaver v1.0.3 h1:Nj34mAX6v1F4sMW4JrPMkeJcwUf/81qBH6UwAeBqa2U=
 github.com/StepanAnanin/weaver v1.0.3/go.mod h1:MVOX6EqkDouql9UmdhqUB759ep6mwD71ibNfqTK1zVo=
+github.com/StepanAnanin/weaver v1.0.4 h1:CBwDEr1TdyaMoGxA/FN8E/XTsONqUxX+ZTvSVJgXHTU=
+github.com/StepanAnanin/weaver v1.0.4/go.mod h1:MVOX6EqkDouql9UmdhqUB759ep6mwD71ibNfqTK1zVo=
 github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
 github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=

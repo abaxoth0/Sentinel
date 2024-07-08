@@ -30,7 +30,6 @@ func (c *Controller) GetRoles(w http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		res.InternalServerError()
-
 		return
 	}
 
