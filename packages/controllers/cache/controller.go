@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/cache"
 	"sentinel/packages/json"
-	"sentinel/packages/models/auth"
+	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 	"sentinel/packages/models/user"
 
@@ -53,8 +53,8 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err = auth.Rulebook.DropCache.Authorize(filter.RequesterRole); err != nil {
-		res.Message(err.Message, err.Status)
+	if filter.RequesterRole != role.Administrator {
+		res.Message("Недостаточно прав для выполнения данной операции", http.StatusForbidden)
 		return
 	}
 

@@ -17,8 +17,6 @@ type rulebook struct {
 	ChangeUserPassword *authorizationRules
 	// Change user role
 	ChangeUserRole *authorizationRules
-	// Clear all cache
-	DropCache *authorizationRules
 }
 
 // Used for authorization
@@ -64,11 +62,5 @@ var Rulebook = &rulebook{
 		ValidRoles:               []role.Role{role.Moderator, role.Administrator},
 		SkipRoleValidationOnSelf: false,
 		ForbidModToModOps:        true,
-	},
-	DropCache: &authorizationRules{
-		Operation:                AuthorizationOperations.DropCache,
-		ValidRoles:               []role.Role{role.Administrator},
-		SkipRoleValidationOnSelf: false,
-		ForbidModToModOps:        false,
 	},
 }
