@@ -9,7 +9,6 @@ import (
 	"sentinel/packages/models/user"
 
 	"github.com/StepanAnanin/weaver/http/response"
-	"github.com/StepanAnanin/weaver/logger"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -26,19 +25,14 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 }
 
 func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := response.New(w).Logged(req)
 
 	body, ok := json.Decode[map[string]any](req.Body)
 
 	if !ok {
 		res.InternalServerError()
-
-		logger.PrintError("Failed to decode JSON", req)
-
 		return
 	}
-
-	res.Logged(req)
 
 	accessToken, err := c.token.GetAccessToken(req)
 
