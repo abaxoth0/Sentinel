@@ -3,7 +3,6 @@ package cachecontroller
 import (
 	"net/http"
 	"sentinel/packages/cache"
-	"sentinel/packages/json"
 	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 	"sentinel/packages/models/user"
@@ -27,13 +26,6 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	body, ok := json.Decode[map[string]any](req.Body)
-
-	if !ok {
-		res.InternalServerError()
-		return
-	}
-
 	accessToken, err := c.token.GetAccessToken(req)
 
 	if err != nil {
@@ -41,7 +33,8 @@ func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	filter, err := c.token.UserFilterFromClaims(body["UID"].(string), accessToken.Claims.(jwt.MapClaims))
+	// There is no targeted user, so just pass empty string
+	filter, err := c.token.UserFilterFromClaims("", accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
 		res.Message(err.Message, err.Status)

@@ -19,9 +19,10 @@ import (
 )
 
 type user struct {
-	Login    string
-	Password string
-	Role     role.Role
+	Login     string
+	Password  string
+	Role      role.Role
+	DeletedAt int
 }
 
 type Filter struct {
@@ -67,7 +68,8 @@ func (m *Model) Create(login string, password string) (primitive.ObjectID, error
 		Login:    login,
 		Password: string(hashedPassword),
 		// TODO Add possibility to control, which role will be assigned for each new user
-		Role: role.UnconfirmedUser,
+		Role:      role.UnconfirmedUser,
+		DeletedAt: 0,
 	}
 
 	ctx, cancel := DB.DefaultTimeoutContext()
@@ -110,7 +112,7 @@ func (m *Model) update(filter *Filter, upd *primitive.E, deleted bool) *External
 		return ExternalError.New("Внутренняя ошибка сервера", http.StatusInternalServerError)
 	}
 
-	cache.Delete(util.Ternary(deleted, cache.SoftDeletedUserKeyPrefix, cache.UserKeyPrefix) + filter.TargetUID)
+	cache.Delete(cache.UserKeyPrefix + filter.TargetUID)
 
 	return nil
 }
@@ -141,7 +143,15 @@ func (m *Model) Restore(filter *Filter) *ExternalError.Error {
 		return err
 	}
 
-	upd := &primitive.E{"deletedAt", primitive.Null{}}
+	x, err := m.search.FindSoftDeletedUserByID(filter.TargetUID)
+
+	if err != nil {
+		return err
+	}
+
+	println(x.ID)
+
+	upd := &primitive.E{"deletedAt", 0}
 
 	return m.update(filter, upd, true)
 }
@@ -173,7 +183,7 @@ func (m *Model) Drop(filter *Filter) *ExternalError.Error {
 		return ExternalError.New("Не удалось удалить пользователя", http.StatusInternalServerError)
 	}
 
-	cache.Delete(util.Ternary(user.DeletedAt == 0, cache.SoftDeletedUserKeyPrefix, cache.UserKeyPrefix) + filter.TargetUID)
+	cache.Delete(cache.UserKeyPrefix + filter.TargetUID)
 
 	return nil
 }
@@ -240,13 +250,13 @@ func (m *Model) ChangeRole(filter *Filter, newRole string) *ExternalError.Error 
 func (m *Model) CheckIsLoginExists(login string) (bool, *ExternalError.Error) {
 	if _, err := m.search.FindUserByLogin(login); err != nil {
 		if err.Status == http.StatusNotFound {
-			return true, nil
+			return false, nil
 		}
 
-		return false, err
+		return true, err
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (m *Model) isUserAdmin(uid string) (bool, *ExternalError.Error) {

@@ -83,4 +83,3 @@ func Drop() error {
 }
 
 const UserKeyPrefix string = "user_"
-const SoftDeletedUserKeyPrefix string = "sd_user_"

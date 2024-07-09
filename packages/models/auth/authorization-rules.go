@@ -4,17 +4,16 @@ import (
 	"net/http"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/models/role"
+	"slices"
 )
 
 type authorizationRules struct {
 	// Unique name of operation.
 	Operation OperationName
+
 	// Array of roles that allow to perform this operation.
 	ValidRoles []role.Role
-	// If true, then role search in `ValidRoles` will be skiped,
-	// but only if user performs operation on himself.
-	// (examples: user want to change login, password or even delete his profile)
-	SkipRoleValidationOnSelf bool
+
 	// Forbid moderator to perform operations with another moderator.
 	ForbidModToModOps bool
 }
@@ -31,19 +30,8 @@ func (authRules authorizationRules) Authorize(userRole role.Role) *ExternalError
 		return ExternalError.New("Для данной операции запрещено взаимодействие вида \"модератор-модератор\"", http.StatusForbidden)
 	}
 
-	if !authRules.SkipRoleValidationOnSelf {
-		found := false
-
-		for _, validRole := range authRules.ValidRoles {
-			if validRole == userRole {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			return ExternalError.New("Недостаточно прав для выполнения данной операции", http.StatusForbidden)
-		}
+	if !slices.Contains(authRules.ValidRoles, userRole) {
+		return ExternalError.New("Недостаточно прав для выполнения данной операции", http.StatusForbidden)
 	}
 
 	return nil

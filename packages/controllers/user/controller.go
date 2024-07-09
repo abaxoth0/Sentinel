@@ -60,7 +60,14 @@ func (c *Controller) buildUserFilter(tartetUID string, req *http.Request) (*user
 
 func (c *Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
 	body, bodyErr := c.buildReqBody(req)
-	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
+
+	uid, ok := body["uid"].(string)
+
+	if !ok {
+		return map[string]any{}, &user.Filter{}, ExternalError.New("Missing UID ('uid' property)", http.StatusBadRequest)
+	}
+
+	filter, filterErr := c.buildUserFilter(uid, req)
 
 	if bodyErr != nil {
 		return map[string]any{}, &user.Filter{}, bodyErr
