@@ -140,7 +140,6 @@ func (m *Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	}
 
 	if expired {
-		// TODO
 		// Not sure that status 409 is OK for this case, currently this tells user that there are conflict with server and him,
 		// and reason of conflict in next: User assumes that he authorized but it's wrong, cuz refresh token expired.
 		// More likely will be better to use status 401 (unathorized) in this case, but once againg - i'm not sure.

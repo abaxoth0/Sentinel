@@ -18,8 +18,6 @@ type authorizationRules struct {
 	ForbidModToModOps bool
 }
 
-// TODO Can be improved by adding new model
-
 // Returns true if role is sufficient to perform this operation, false otherwise.
 //
 // Before using this method ensure that role is valid via "Verify" method of Role type (role.Role).
