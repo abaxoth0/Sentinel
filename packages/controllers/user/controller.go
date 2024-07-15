@@ -25,6 +25,7 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 }
 
 // Retrieves untyped request body from given request
+// TODO is this method realy needed? can use just `json.Decode(...)`?
 func (c *Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalError.Error) {
 	body, ok := json.Decode[map[string]any](req.Body)
 
@@ -245,6 +246,40 @@ func (c *Controller) CheckIsLoginExists(w http.ResponseWriter, req *http.Request
 	}
 
 	resBody, ok := json.Encode(json.LoginExistanceResponseBody{Exists: isExists})
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	res.SendBody(resBody)
+}
+
+func (c *Controller) GetRole(w http.ResponseWriter, req *http.Request) {
+	res := response.New(w).Logged(req)
+
+	body, ok := json.Decode[json.UidBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	filter, err := c.buildUserFilter(body.UID, req)
+
+	if err != nil {
+		res.Message(err.Message, err.Status)
+		return
+	}
+
+	role, err := c.user.GetRole(filter)
+
+	if err != nil {
+		res.Message(err.Message, err.Status)
+		return
+	}
+
+	resBody, ok := json.Encode(json.UserRoleResponseBody{Role: role})
 
 	if !ok {
 		res.InternalServerError()

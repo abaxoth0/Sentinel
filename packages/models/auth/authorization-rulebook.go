@@ -17,6 +17,7 @@ type rulebook struct {
 	ChangeUserPassword *authorizationRules
 	// Change user role
 	ChangeUserRole *authorizationRules
+	GetUserRole    *authorizationRules
 }
 
 // Used for authorization
@@ -55,5 +56,10 @@ var Rulebook = &rulebook{
 		Operation:         AuthorizationOperations.ChangeUserRole,
 		ValidRoles:        []role.Role{role.Moderator, role.Administrator},
 		ForbidModToModOps: true,
+	},
+	GetUserRole: &authorizationRules{
+		Operation:         AuthorizationOperations.GetUserRole,
+		ValidRoles:        []role.Role{role.Moderator, role.Administrator},
+		ForbidModToModOps: false,
 	},
 }

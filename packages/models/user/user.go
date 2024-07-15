@@ -259,6 +259,22 @@ func (m *Model) CheckIsLoginExists(login string) (bool, *ExternalError.Error) {
 	return true, nil
 }
 
+func (m *Model) GetRole(filter *Filter) (role.Role, *ExternalError.Error) {
+	var emptyRole role.Role
+
+	if err := auth.Rulebook.GetUserRole.Authorize(filter.RequesterRole); err != nil {
+		return emptyRole, err
+	}
+
+	user, err := m.search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return emptyRole, err
+	}
+
+	return user.Role, nil
+}
+
 func (m *Model) isUserAdmin(uid string) (bool, *ExternalError.Error) {
 	targetUser, err := m.search.FindUserByID(uid)
 

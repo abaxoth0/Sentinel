@@ -41,6 +41,8 @@ func Init(dbClient *mongo.Client) *mux.Router {
 
 	router.HandleFunc("/user/check/login", request.Preprocessing(controller.User.CheckIsLoginExists, []string{http.MethodPost}))
 
+	router.HandleFunc("/user/check/role", request.Preprocessing(controller.User.GetRole, []string{http.MethodPost}))
+
 	// roles
 	router.HandleFunc("/roles", request.Preprocessing(controller.Role.GetRoles, []string{http.MethodGet}))
 
