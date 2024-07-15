@@ -40,10 +40,9 @@ func main() {
 	fmt.Printf("  Authentication/authorization service (v%s)\n\n", config.AppVersion)
 
 	if config.Debug.Enabled {
-		fmt.Printf("[ CRITICAL WARNING ] Debug mode enabled! Some functions may work different and return unexpected values. Builded program with enabled debug mode is not intended for production deployment! \n\n")
+		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected values. \n\n")
 	}
 
-	// Starting HTTP server
 	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
 		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")
 

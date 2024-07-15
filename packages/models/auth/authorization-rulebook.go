@@ -3,21 +3,15 @@ package auth
 import "sentinel/packages/models/role"
 
 type rulebook struct {
+	SoftDeleteUser         *authorizationRules
+	RestoreSoftDeletedUser *authorizationRules
+	DropUser               *authorizationRules
+	ChangeUserLogin        *authorizationRules
+	ChangeUserPassword     *authorizationRules
+	ChangeUserRole         *authorizationRules
+	GetUserRole            *authorizationRules
 	// No rules
 	Clear *authorizationRules
-	// User soft delete operation rules
-	SoftDeleteUser *authorizationRules
-	// RestoreSoftDeletedUser soft deleted user
-	RestoreSoftDeletedUser *authorizationRules
-	// Hard delete user
-	DropUser *authorizationRules
-	// Change user login
-	ChangeUserLogin *authorizationRules
-	// Change user password
-	ChangeUserPassword *authorizationRules
-	// Change user role
-	ChangeUserRole *authorizationRules
-	GetUserRole    *authorizationRules
 }
 
 // Used for authorization

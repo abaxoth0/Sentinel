@@ -42,7 +42,6 @@ type cacheConfig struct {
 }
 
 type debugConfig struct {
-	// Must be false only on project deployment.
 	Enabled bool
 }
 

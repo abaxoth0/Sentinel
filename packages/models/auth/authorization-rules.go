@@ -18,10 +18,7 @@ type authorizationRules struct {
 	ForbidModToModOps bool
 }
 
-// Returns true if role is sufficient to perform this operation, false otherwise.
-//
 // Before using this method ensure that role is valid via "Verify" method of Role type (role.Role).
-// (Better to do this inside of controller)
 func (authRules authorizationRules) Authorize(userRole role.Role) *ExternalError.Error {
 	// Is Moderator-Moderator operation forbidden
 	if authRules.ForbidModToModOps && userRole == role.Moderator {

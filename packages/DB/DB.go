@@ -19,7 +19,7 @@ var Context context.Context
 
 var UserCollection *mongo.Collection
 
-// Connect to database. returns pointer to db client and context, used by this connection.
+// Connect to database. Used to initialize public variables in this package (by default they all are nil)
 func Connect() {
 	if isConnected {
 		log.Fatalln("[ DATABASE ] Critical error: connection already established")

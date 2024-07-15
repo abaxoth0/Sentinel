@@ -64,11 +64,6 @@ func Login(w http.ResponseWriter, req *http.Request) {
 	logger.Print("Authentication successful, user id: "+iuser.ID, req)
 }
 
-// This method terminates authentication.
-//
-// Tokens not used there, cuz it's not matter are they valid or expired, and there are used no methods, that require them.
-// Some redundant functional will not change result, it can only add some new prolems. For example:
-// User can just stuck, without possibility to logout, cuz this function won't work or will work incorrect.
 func Logout(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 

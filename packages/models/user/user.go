@@ -37,8 +37,6 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 	}
 
 	if _, err := search.FindUserByLogin(login); err == nil {
-		// Invalid login or password, currently we know only about login,
-		// but there are no point to tell user about this, due to security reasons.
 		return uid, ExternalError.New("Пользователь с таким логином уже существует.", http.StatusConflict)
 	}
 
@@ -102,7 +100,6 @@ func update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error
 }
 
 func SoftDelete(filter *Filter) *ExternalError.Error {
-	// If user want to delete not himself, but another user and he isn't authorize to do that
 	if filter.TargetUID != filter.RequesterUID {
 		if err := auth.Rulebook.SoftDeleteUser.Authorize(filter.RequesterRole); err != nil {
 			return err
@@ -142,7 +139,6 @@ func Restore(filter *Filter) *ExternalError.Error {
 
 // Hard delete
 func Drop(filter *Filter) *ExternalError.Error {
-	// If user want to delete not himself, but another user and he isn't authorize to do that
 	if filter.TargetUID != filter.RequesterUID {
 		if err := auth.Rulebook.DropUser.Authorize(filter.RequesterRole); err != nil {
 			return err
@@ -177,10 +173,6 @@ func ChangeLogin(filter *Filter, newlogin string) *ExternalError.Error {
 		return err
 	}
 
-	// Need to ensure that new login is not already used by some other user,
-	// for that err must be not nil and have a type of ExternalError,
-	// if this both condition satisfied then user with this login wasn't found.
-	// (which means that it can be used)
 	_, err := search.FindUserByLogin(newlogin)
 
 	// user with new login was found
