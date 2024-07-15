@@ -27,7 +27,7 @@ func main() {
 
 	log.Println("[ SERVER ] Initializng router...")
 
-	Router := router.Init()
+	Router := router.Create()
 
 	http.Handle("/", Router)
 

@@ -11,8 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Defines endpoints and applying handlers to them. Also creates all controllers.
-func Init() *mux.Router {
+func Create() *mux.Router {
 	router := mux.NewRouter()
 
 	// auth
