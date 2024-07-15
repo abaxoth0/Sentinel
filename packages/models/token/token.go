@@ -13,17 +13,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"go.mongodb.org/mongo-driver/mongo"
 )
-
-// There are no need to store tokens in db, doing so will
-// just cause problems with auth on multiple devices.
-// (https://stackoverflow.com/questions/73257330/multiple-device-login-using-jwt)
-type Model struct{}
-
-func New(dbClient *mongo.Client) *Model {
-	return &Model{}
-}
 
 type SignedToken struct {
 	Value string
@@ -42,7 +32,7 @@ const IssuerKey string = "iss"
 const SubjectKey string = "sub"
 
 // Generate access and refresh tokens. (they returns in same order as here)
-func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
+func Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 	accessTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
 		IssuedAt: time.Now().Unix(),
 		// For certain values see config
@@ -91,7 +81,7 @@ func (m *Model) Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
-func (m *Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
+func GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
 	var r *jwt.Token
 
 	authHeaderValue := req.Header.Get("Authorization")
@@ -102,7 +92,7 @@ func (m *Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Er
 
 	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
 
-	token, expired := m.parseAccessToken(accessTokenStr)
+	token, expired := parseAccessToken(accessTokenStr)
 
 	if !token.Valid {
 		return r, ExternalError.New("Invalid access token", http.StatusBadRequest)
@@ -119,7 +109,7 @@ func (m *Model) GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Er
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error, this error is either http.ErrNoCookie, either ExternalError.Error
-func (m *Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
+func GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	var emptyToken *jwt.Token
 
 	authCookie, err := req.Cookie(RefreshTokenKey)
@@ -133,7 +123,7 @@ func (m *Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 		return emptyToken, err
 	}
 
-	token, expired := m.parseRefreshToken(authCookie.Value)
+	token, expired := parseRefreshToken(authCookie.Value)
 
 	if !token.Valid {
 		return emptyToken, ExternalError.New("Invalid refresh token", http.StatusBadRequest)
@@ -149,7 +139,7 @@ func (m *Model) GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	return token, nil
 }
 
-func (m *Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
+func parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.AccessTokenPublicKey, nil
 	})
@@ -159,7 +149,7 @@ func (m *Model) parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	return token, exp
 }
 
-func (m *Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
+func parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
 		return *config.JWT.RefreshTokenPublicKey, nil
 	})
@@ -170,7 +160,7 @@ func (m *Model) parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 }
 
 // IMPORTANT: Use this function only if token is valid.
-func (m *Model) PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Error) {
+func PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Error) {
 	var r *user.Payload
 
 	if err := verifyClaims(claims); err != nil {
@@ -184,7 +174,7 @@ func (m *Model) PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *Externa
 	}, nil
 }
 
-func (m *Model) UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter, *ExternalError.Error) {
+func UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter, *ExternalError.Error) {
 	var r *user.Filter
 
 	if err := verifyClaims(claims); err != nil {

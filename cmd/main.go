@@ -19,15 +19,15 @@ func main() {
 		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux.")
 	}
 
-	dbClient, ctx := DB.Connect()
+	DB.Connect()
 
-	defer dbClient.Disconnect(ctx)
+	defer DB.Client.Disconnect(DB.Context)
 
 	cache.Init()
 
 	log.Println("[ SERVER ] Initializng router...")
 
-	Router := router.Init(dbClient)
+	Router := router.Init()
 
 	http.Handle("/", Router)
 
@@ -47,7 +47,7 @@ func main() {
 	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
 		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")
 
-		dbClient.Disconnect(ctx)
+		DB.Client.Disconnect(DB.Context)
 
 		panic(err)
 	}

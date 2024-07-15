@@ -20,25 +20,11 @@ import (
 	If access token expired response will have status 401 (Unauthorized).
 
 	If refresh token expired response will have status 409 (Conflict) also in this case authentication cookie will be deleted.
-	Refresh token used only in "Refresh" method. (And mustn't be used in any other function, method, etc.)
+	Refresh token used only in "Refresh" method. (And mustn't be used in any other function, method, et)
 
 */
 
-type Controller struct {
-	user  *user.Model
-	token *token.Model
-	auth  *auth.Model
-}
-
-func New(userModel *user.Model, tokenModel *token.Model, authModel *auth.Model) *Controller {
-	return &Controller{
-		user:  userModel,
-		token: tokenModel,
-		auth:  authModel,
-	}
-}
-
-func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
+func Login(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
@@ -48,14 +34,14 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	iuser, loginError := c.auth.Login(body.Login, body.Password)
+	iuser, loginError := auth.Login(body.Login, body.Password)
 
 	if loginError != nil {
 		res.Message(loginError.Message, loginError.Status)
 		return
 	}
 
-	accessToken, refreshToken := c.token.Generate(&user.Payload{
+	accessToken, refreshToken := token.Generate(&user.Payload{
 		ID:    iuser.ID,
 		Login: iuser.Login,
 		Role:  iuser.Role,
@@ -83,7 +69,7 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 // Tokens not used there, cuz it's not matter are they valid or expired, and there are used no methods, that require them.
 // Some redundant functional will not change result, it can only add some new prolems. For example:
 // User can just stuck, without possibility to logout, cuz this function won't work or will work incorrect.
-func (c *Controller) Logout(w http.ResponseWriter, req *http.Request) {
+func Logout(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
 	authCookie, err := req.Cookie(token.RefreshTokenKey)
@@ -107,10 +93,10 @@ func (c *Controller) Logout(w http.ResponseWriter, req *http.Request) {
 	logger.Print("User logged out.", req)
 }
 
-func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
+func Refresh(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w)
 
-	oldRefreshToken, e := c.token.GetRefreshToken(req)
+	oldRefreshToken, e := token.GetRefreshToken(req)
 
 	// "e" is either http.ErrNoCookie, either ExternalError.Error
 	if e != nil {
@@ -136,7 +122,7 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	}
 
 	claims := oldRefreshToken.Claims.(jwt.MapClaims)
-	payload, err := c.token.PayloadFromClaims(claims)
+	payload, err := token.PayloadFromClaims(claims)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -146,7 +132,7 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	accessToken, refreshToken := c.token.Generate(payload)
+	accessToken, refreshToken := token.Generate(payload)
 
 	resBody, ok := json.Encode(json.TokenResponseBody{
 		Message:     "Токены успешно обновлены",
@@ -165,10 +151,10 @@ func (c *Controller) Refresh(w http.ResponseWriter, req *http.Request) {
 	logger.Print("Tokens successfuly refreshed.", req)
 }
 
-func (c *Controller) Verify(w http.ResponseWriter, req *http.Request) {
+func Verify(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	accessToken, err := c.token.GetAccessToken(req)
+	accessToken, err := token.GetAccessToken(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -177,7 +163,7 @@ func (c *Controller) Verify(w http.ResponseWriter, req *http.Request) {
 
 	claims := accessToken.Claims.(jwt.MapClaims)
 
-	payload, err := c.token.PayloadFromClaims(claims)
+	payload, err := token.PayloadFromClaims(claims)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)

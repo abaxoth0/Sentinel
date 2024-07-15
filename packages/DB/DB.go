@@ -12,8 +12,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+var isConnected = false
+
+var Client *mongo.Client
+var Context context.Context
+
+var UserCollection *mongo.Collection
+
 // Connect to database. returns pointer to db client and context, used by this connection.
-func Connect() (*mongo.Client, context.Context) {
+func Connect() {
+	if isConnected {
+		log.Fatalln("[ DATABASE ] Critical error: connection already established")
+	}
+
 	ctx := context.Background()
 
 	log.Print("[ DATABASE ] Connecting...")
@@ -36,7 +47,11 @@ func Connect() (*mongo.Client, context.Context) {
 
 	log.Print("[ DATABASE ] Checking connection: OK")
 
-	return client, ctx
+	Client = client
+	Context = ctx
+	UserCollection = Client.Database(config.DB.Name).Collection(config.DB.UserCollectionName)
+
+	isConnected = true
 }
 
 func ObjectIDFromHex(hex string) primitive.ObjectID {

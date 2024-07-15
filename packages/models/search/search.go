@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"sentinel/packages/DB"
 	"sentinel/packages/cache"
-	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/json"
 	"sentinel/packages/models/role"
@@ -13,7 +12,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type IndexedUser struct {
@@ -24,19 +22,7 @@ type IndexedUser struct {
 	DeletedAt int       `bson:"deletedAt" json:"deletedAt"`
 }
 
-type Model struct {
-	dbClient   *mongo.Client
-	collection *mongo.Collection
-}
-
-func New(dbClient *mongo.Client) *Model {
-	return &Model{
-		dbClient:   dbClient,
-		collection: dbClient.Database(config.DB.Name).Collection(config.DB.UserCollectionName),
-	}
-}
-
-func (m *Model) findUserBy(key string, value string, deleted bool) (*IndexedUser, *ExternalError.Error) {
+func findUserBy(key string, value string, deleted bool) (*IndexedUser, *ExternalError.Error) {
 	var user IndexedUser
 
 	cacheKey := cache.UserKeyPrefix + value
@@ -68,7 +54,7 @@ func (m *Model) findUserBy(key string, value string, deleted bool) (*IndexedUser
 
 	filter := util.Ternary(isKeyID, bson.D{{key, uid}}, bson.D{{key, value}})
 
-	cur, err := m.collection.Find(ctx, filter)
+	cur, err := DB.UserCollection.Find(ctx, filter)
 
 	if err != nil {
 		log.Fatalln(err)
@@ -107,18 +93,18 @@ func (m *Model) findUserBy(key string, value string, deleted bool) (*IndexedUser
 }
 
 // Search for not deleted user with given UID
-func (m *Model) FindUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
-	return m.findUserBy("_id", uid, false)
+func FindUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+	return findUserBy("_id", uid, false)
 }
 
 // Search for soft deleted user with given UID
-func (m *Model) FindSoftDeletedUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
-	return m.findUserBy("_id", uid, true)
+func FindSoftDeletedUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+	return findUserBy("_id", uid, true)
 }
 
 // Search for user with given UID, regardless of his deletion status
-func (m *Model) FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
-	out, err := m.FindUserByID(uid)
+func FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+	out, err := FindUserByID(uid)
 
 	if err == nil {
 		return out, err
@@ -128,9 +114,9 @@ func (m *Model) FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error)
 		return nil, err
 	}
 
-	return m.FindSoftDeletedUserByID(uid)
+	return FindSoftDeletedUserByID(uid)
 }
 
-func (m *Model) FindUserByLogin(login string) (*IndexedUser, *ExternalError.Error) {
-	return m.findUserBy("login", login, false)
+func FindUserByLogin(login string) (*IndexedUser, *ExternalError.Error) {
+	return findUserBy("login", login, false)
 }
