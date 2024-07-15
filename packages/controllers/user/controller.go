@@ -12,6 +12,8 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+// TODO get rid of code duplication
+
 type Controller struct {
 	user  *user.Model
 	token *token.Model
@@ -22,18 +24,6 @@ func New(userModel *user.Model, tokenModel *token.Model) *Controller {
 		user:  userModel,
 		token: tokenModel,
 	}
-}
-
-// Retrieves untyped request body from given request
-// TODO is this method realy needed? can use just `json.Decode(...)`?
-func (c *Controller) buildReqBody(req *http.Request) (map[string]any, *ExternalError.Error) {
-	body, ok := json.Decode[map[string]any](req.Body)
-
-	if !ok {
-		return map[string]any{}, ExternalError.New("Internal Server Error (failed to decode JSON)", http.StatusInternalServerError)
-	}
-
-	return body, nil
 }
 
 func (c *Controller) buildUserFilter(tartetUID string, req *http.Request) (*user.Filter, *ExternalError.Error) {
@@ -57,28 +47,6 @@ func (c *Controller) buildUserFilter(tartetUID string, req *http.Request) (*user
 	}
 
 	return filter, nil
-}
-
-func (c *Controller) getRequestBodyAndUserFilter(req *http.Request) (map[string]any, *user.Filter, *ExternalError.Error) {
-	body, bodyErr := c.buildReqBody(req)
-
-	uid, ok := body["uid"].(string)
-
-	if !ok {
-		return map[string]any{}, &user.Filter{}, ExternalError.New("Missing UID ('uid' property)", http.StatusBadRequest)
-	}
-
-	filter, filterErr := c.buildUserFilter(uid, req)
-
-	if bodyErr != nil {
-		return map[string]any{}, &user.Filter{}, bodyErr
-	}
-
-	if filterErr != nil {
-		return map[string]any{}, &user.Filter{}, filterErr
-	}
-
-	return body, filter, nil
 }
 
 func (c *Controller) Create(w http.ResponseWriter, req *http.Request) {
@@ -113,13 +81,20 @@ func (c *Controller) Create(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	body, filter, err := c.getRequestBodyAndUserFilter(req)
+	body, ok := json.Decode[json.UidAndLoginBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	filter, err := c.buildUserFilter(body.UID, req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
 	}
 
-	if e := c.user.ChangeLogin(filter, body["login"].(string)); e != nil {
+	if e := c.user.ChangeLogin(filter, body.Login); e != nil {
 		res.Message(e.Message, e.Status)
 		return
 	}
@@ -130,14 +105,21 @@ func (c *Controller) ChangeLogin(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	body, filter, err := c.getRequestBodyAndUserFilter(req)
+	body, ok := json.Decode[json.UidAndPasswordBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	filter, err := c.buildUserFilter(body.UID, req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
 		return
 	}
 
-	if e := c.user.ChangePassword(filter, body["password"].(string)); e != nil {
+	if e := c.user.ChangePassword(filter, body.Password); e != nil {
 		res.Message(e.Message, e.Status)
 		return
 	}
@@ -148,14 +130,21 @@ func (c *Controller) ChangePassword(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	body, filter, err := c.getRequestBodyAndUserFilter(req)
+	body, ok := json.Decode[json.UidAndRoleBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	filter, err := c.buildUserFilter(body.UID, req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
 		return
 	}
 
-	if e := c.user.ChangeRole(filter, body["role"].(string)); e != nil {
+	if e := c.user.ChangeRole(filter, body.Role); e != nil {
 		res.Message(e.Message, e.Status)
 		return
 	}
@@ -166,7 +155,14 @@ func (c *Controller) ChangeRole(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	_, filter, err := c.getRequestBodyAndUserFilter(req)
+	body, ok := json.Decode[json.UidBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	filter, err := c.buildUserFilter(body.UID, req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -184,7 +180,14 @@ func (c *Controller) SoftDelete(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) Restore(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	_, filter, err := c.getRequestBodyAndUserFilter(req)
+	body, ok := json.Decode[json.UidBody](req.Body)
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	filter, err := c.buildUserFilter(body.UID, req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -203,20 +206,17 @@ func (c *Controller) Restore(w http.ResponseWriter, req *http.Request) {
 func (c *Controller) Drop(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 
-	body, bodyErr := c.buildReqBody(req)
-	filter, filterErr := c.buildUserFilter(body["UID"].(string), req)
+	body, ok := json.Decode[json.UidBody](req.Body)
 
-	if bodyErr != nil || filterErr != nil {
-		var err *ExternalError.Error
+	if !ok {
+		res.InternalServerError()
+		return
+	}
 
-		if bodyErr != nil {
-			err = bodyErr
-		} else {
-			err = filterErr
-		}
+	filter, err := c.buildUserFilter(body.UID, req)
 
+	if err != nil {
 		res.Message(err.Message, err.Status)
-
 		return
 	}
 
