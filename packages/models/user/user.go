@@ -50,8 +50,7 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 		Login:    login,
 		Password: string(hashedPassword),
 		// TODO Add possibility to control, which role will be assigned for each new user
-		Role:      role.UnconfirmedUser,
-		DeletedAt: 0,
+		Role: role.UnconfirmedUser,
 	}
 
 	ctx, cancel := DB.DefaultTimeoutContext()
@@ -114,9 +113,21 @@ func SoftDelete(filter *Filter) *ExternalError.Error {
 		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
 	}
 
-	upd := &primitive.E{"deletedAt", util.UnixTimeNow()}
+	user, err := search.FindUserByID(filter.TargetUID)
 
-	return update(filter, upd, false)
+	if err != nil {
+		return err
+	}
+
+	user.DeletedAt = int(util.UnixTimeNow())
+
+	err = DB.CollectionTransfer(user, DB.UserCollection, DB.DeletedUserCollection, func() { user.DeletedAt = 0 })
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Restore(filter *Filter) *ExternalError.Error {
@@ -124,17 +135,22 @@ func Restore(filter *Filter) *ExternalError.Error {
 		return err
 	}
 
-	x, err := search.FindSoftDeletedUserByID(filter.TargetUID)
+	user, err := search.FindSoftDeletedUserByID(filter.TargetUID)
 
 	if err != nil {
 		return err
 	}
 
-	println(x.ID)
+	deletedAtTimestamp := user.DeletedAt
+	user.DeletedAt = 0
 
-	upd := &primitive.E{"deletedAt", 0}
+	err = DB.CollectionTransfer(user, DB.DeletedUserCollection, DB.UserCollection, func() { user.DeletedAt = deletedAtTimestamp })
 
-	return update(filter, upd, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Hard delete
@@ -146,6 +162,7 @@ func Drop(filter *Filter) *ExternalError.Error {
 	}
 
 	user, err := search.FindAnyUserByID(filter.TargetUID)
+	deleted := user.DeletedAt == 0
 
 	if err != nil {
 		return err
@@ -159,11 +176,14 @@ func Drop(filter *Filter) *ExternalError.Error {
 
 	defer cancel()
 
-	if _, e := DB.UserCollection.DeleteOne(ctx, bson.D{{"_id", filter.TargetUID}}); e != nil {
+	collection := util.Ternary(deleted, DB.DeletedUserCollection, DB.UserCollection)
+
+	if _, e := collection.DeleteOne(ctx, bson.D{{"_id", filter.TargetUID}}); e != nil {
 		return ExternalError.New("Не удалось удалить пользователя", http.StatusInternalServerError)
 	}
 
-	cache.Delete(cache.UserKeyPrefix + filter.TargetUID)
+	cacheKeyPrefix := util.Ternary(deleted, cache.DeletedUserKeyPrefix, cache.UserKeyPrefix)
+	cache.Delete(cacheKeyPrefix + filter.TargetUID)
 
 	return nil
 }

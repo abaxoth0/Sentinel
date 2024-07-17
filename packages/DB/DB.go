@@ -3,9 +3,12 @@ package DB
 import (
 	"context"
 	"log"
+	"net/http"
 	"sentinel/packages/config"
+	ExternalError "sentinel/packages/error"
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -18,6 +21,7 @@ var Client *mongo.Client
 var Context context.Context
 
 var UserCollection *mongo.Collection
+var DeletedUserCollection *mongo.Collection
 
 // Connect to database. Used to initialize public variables in this package (by default they all are nil)
 func Connect() {
@@ -50,8 +54,45 @@ func Connect() {
 	Client = client
 	Context = ctx
 	UserCollection = Client.Database(config.DB.Name).Collection(config.DB.UserCollectionName)
+	DeletedUserCollection = Client.Database(config.DB.Name).Collection(config.DB.DeletedUserCollectionName)
 
 	isConnected = true
+}
+
+type bsonIndexed struct {
+	ID string `bson:"_id"`
+}
+
+// `errCallback` (can be nil) will be used if transfer failed,
+// and it will be called only on error of inserting `document` back into the `source`.
+func CollectionTransfer(document any, source *mongo.Collection, target *mongo.Collection, errCallback func()) *ExternalError.Error {
+	indexedDocument, ok := document.(bsonIndexed)
+
+	if !ok {
+		return ExternalError.New("Internal Server Error (type assertation failed)", http.StatusInternalServerError)
+	}
+
+	ctx, cancel := DefaultTimeoutContext()
+
+	defer cancel()
+
+	if _, err := source.DeleteOne(ctx, bson.D{{"_id", indexedDocument.ID}}); err != nil {
+		return ExternalError.New("Transfer failed", http.StatusInternalServerError)
+	}
+
+	if _, err := target.InsertOne(ctx, document); err != nil {
+		if errCallback != nil {
+			errCallback()
+		}
+
+		if _, err := source.InsertOne(ctx, document); err != nil {
+			log.Fatalln("[ CRITICAL ERROR] Transfer failed, user data lost")
+		}
+
+		return ExternalError.New("Transfer failed", http.StatusInternalServerError)
+	}
+
+	return nil
 }
 
 func ObjectIDFromHex(hex string) primitive.ObjectID {

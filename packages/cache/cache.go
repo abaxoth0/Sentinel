@@ -83,3 +83,4 @@ func Drop() error {
 }
 
 const UserKeyPrefix string = "user_"
+const DeletedUserKeyPrefix string = "sd_user_"

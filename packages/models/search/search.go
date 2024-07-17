@@ -12,6 +12,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type IndexedUser struct {
@@ -19,13 +20,13 @@ type IndexedUser struct {
 	Login     string    `bson:"login" json:"login"`
 	Password  string    `bson:"password" json:"password"`
 	Role      role.Role `bson:"role" json:"role"`
-	DeletedAt int       `bson:"deletedAt" json:"deletedAt"`
+	DeletedAt int       `bson:"deletedAt,omitmepty" json:"deletedAt"`
 }
 
 func findUserBy(key string, value string, deleted bool) (*IndexedUser, *ExternalError.Error) {
 	var user IndexedUser
 
-	cacheKey := cache.UserKeyPrefix + value
+	cacheKey := util.Ternary(deleted, cache.DeletedUserKeyPrefix, cache.UserKeyPrefix) + value
 
 	if rawCachedUser, hit := cache.Get(cacheKey); hit {
 		if cachedUser, ok := json.DecodeString[IndexedUser](rawCachedUser); ok {
@@ -43,18 +44,25 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 	isKeyID := key == "_id"
 
 	if isKeyID {
-		u, e := primitive.ObjectIDFromHex(value)
+		objectID, e := primitive.ObjectIDFromHex(value)
 
 		if e != nil {
 			return &user, ExternalError.New("Invalid UID", http.StatusBadRequest)
 		}
 
-		uid = u
+		uid = objectID
 	}
 
 	filter := util.Ternary(isKeyID, bson.D{{key, uid}}, bson.D{{key, value}})
 
-	cur, err := DB.UserCollection.Find(ctx, filter)
+	var cur *mongo.Cursor
+	var err error
+
+	if deleted {
+		cur, err = DB.UserCollection.Find(ctx, filter)
+	} else {
+		cur, err = DB.DeletedUserCollection.Find(ctx, filter)
+	}
 
 	if err != nil {
 		log.Fatalln(err)
@@ -75,14 +83,6 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 	// user will be non-empty, but error will still presence
 	if err := cur.Close(ctx); err != nil {
 		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, Login:%s\n", user.ID, user.Login)
-	}
-
-	if deleted && user.DeletedAt == 0 {
-		return &IndexedUser{}, ExternalError.New("Пользователь не был найден", http.StatusNotFound)
-	}
-
-	if !deleted && user.DeletedAt != 0 {
-		return &IndexedUser{}, ExternalError.New("Пользователь не был найден", http.StatusNotFound)
 	}
 
 	if rawUser, ok := json.Encode(user); ok {

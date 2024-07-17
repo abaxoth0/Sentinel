@@ -12,12 +12,13 @@ import (
 )
 
 type databaseConfig struct {
-	Name                string
-	UserCollectionName  string
-	Username            string
-	Password            string
-	URI                 string
-	QueryDefaultTimeout time.Duration
+	Name                      string
+	UserCollectionName        string
+	DeletedUserCollectionName string
+	Username                  string
+	Password                  string
+	URI                       string
+	QueryDefaultTimeout       time.Duration
 }
 
 type httpServerConfig struct {
@@ -60,12 +61,13 @@ var AppVersion, DB, HTTP, JWT, Cache, Debug = (func() (string, *databaseConfig, 
 		panic(err)
 	}
 
-	requiredVariables := [18]string{
+	requiredVariables := [19]string{
 		"VERSION",
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
 		"DB_NAME",
 		"DB_USER_COLLECTION_NAME",
+		"DB_DELETED_USER_COLLECTION_NAME",
 		"DB_USER_NAME",
 		"DB_PASSWORD",
 		"DB_URI",
@@ -91,12 +93,13 @@ var AppVersion, DB, HTTP, JWT, Cache, Debug = (func() (string, *databaseConfig, 
 	queryTimeoutMultiplier, _ := strconv.ParseInt(getEnv("DB_DEFAULT_TIMEOUT"), 10, 64)
 
 	DbConfig := databaseConfig{
-		Name:                getEnv("DB_NAME"),
-		UserCollectionName:  getEnv("DB_USER_COLLECTION_NAME"),
-		Username:            getEnv("DB_USER_NAME"),
-		Password:            getEnv("DB_PASSWORD"),
-		URI:                 getEnv("DB_URI"),
-		QueryDefaultTimeout: time.Second * time.Duration(queryTimeoutMultiplier),
+		Name:                      getEnv("DB_NAME"),
+		UserCollectionName:        getEnv("DB_USER_COLLECTION_NAME"),
+		DeletedUserCollectionName: getEnv("DB_DELETED_USER_COLLECTION_NAME"),
+		Username:                  getEnv("DB_USER_NAME"),
+		Password:                  getEnv("DB_PASSWORD"),
+		URI:                       getEnv("DB_URI"),
+		QueryDefaultTimeout:       time.Second * time.Duration(queryTimeoutMultiplier),
 	}
 
 	HttpConfig := httpServerConfig{
