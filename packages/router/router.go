@@ -32,6 +32,7 @@ func Create() *mux.Router {
 
 	router.HandleFunc("/user/drop", request.Preprocessing(User.Drop, []string{http.MethodDelete}))
 
+	// TODO Check who can change properties of admin users (no one must do that)
 	router.HandleFunc("/user/drop/all-soft-deleted", request.Preprocessing(User.DropAllDeleted, []string{http.MethodDelete}))
 
 	router.HandleFunc("/user/change/login", request.Preprocessing(User.ChangeLogin, []string{http.MethodPatch}))

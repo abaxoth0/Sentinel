@@ -75,8 +75,15 @@ func update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error
 			return err
 		}
 	} else {
-		if _, err := search.FindUserByID(filter.TargetUID); err != nil {
+		user, err := search.FindUserByID(filter.TargetUID)
+
+		if err != nil {
 			return err
+		}
+
+		// If targeted user admin and requester isn't himself
+		if user.Role == role.Administrator && filter.RequesterUID != filter.TargetUID {
+			return ExternalError.New("Недостаточно прав для выполнения данной операции (Только сам администратор может изменять свойства своего аккаунта)", http.StatusForbidden)
 		}
 	}
 
