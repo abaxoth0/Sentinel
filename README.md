@@ -41,6 +41,8 @@
 
 -   /user/drop [ DELETE ] — Used to hard delete user with passed uid. User must be authenticated and if he want to hard delete any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string). **IMPORTANT: Users with admin role cannot be deleted**.
 
+-   /user/drop/all-soft-deleted [ DELETE ] — Used to hard delete all soft deleted users. User must be authenticated and must be administrator to do that.
+
 -   /user/change/login [ PATCH ] — Used to change login of user with passed uid. User must be authenticated and if he want to change login of any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string), login (unique string). **IMPORTANT: Users with admin role cannot be modified by any other users than themselves**.
 
 -   /user/change/password [ PATCH ] — Used to change password of user with passed uid. User must be authenticated and if he want to change password of any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string), password (string). **IMPORTANT: Users with admin role cannot be modified by any other users than themselves**.
