@@ -6,6 +6,7 @@ type rulebook struct {
 	SoftDeleteUser         *authorizationRules
 	RestoreSoftDeletedUser *authorizationRules
 	DropUser               *authorizationRules
+	DropAllDeletedUsers    *authorizationRules
 	ChangeUserLogin        *authorizationRules
 	ChangeUserPassword     *authorizationRules
 	ChangeUserRole         *authorizationRules
@@ -35,6 +36,11 @@ var Rulebook = &rulebook{
 		Operation:         AuthorizationOperations.DropUser,
 		ValidRoles:        []role.Role{role.Moderator, role.Administrator},
 		ForbidModToModOps: true,
+	},
+	DropAllDeletedUsers: &authorizationRules{
+		Operation:         AuthorizationOperations.DropAllDeletedUsers,
+		ValidRoles:        []role.Role{role.Administrator},
+		ForbidModToModOps: false,
 	},
 	ChangeUserLogin: &authorizationRules{
 		Operation:         AuthorizationOperations.ChangeUserLogin,

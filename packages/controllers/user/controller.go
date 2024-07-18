@@ -174,6 +174,31 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
+func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
+	res := response.New(w).Logged(req)
+
+	accessToken, err := token.GetAccessToken(req)
+
+	if err != nil {
+		res.Message(err.Message, err.Status)
+		return
+	}
+
+	requester, err := token.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
+
+	if err != nil {
+		res.Message(err.Message, err.Status)
+		return
+	}
+
+	if err := user.DropAllDeleted(requester.Role); err != nil {
+		res.Message(err.Message, err.Status)
+		return
+	}
+
+	res.OK()
+}
+
 func GetRole(w http.ResponseWriter, req *http.Request) {
 	res := response.New(w).Logged(req)
 	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)

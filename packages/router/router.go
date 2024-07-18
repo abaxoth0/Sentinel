@@ -30,7 +30,9 @@ func Create() *mux.Router {
 
 	router.HandleFunc("/user/restore", request.Preprocessing(User.Restore, []string{http.MethodPut}))
 
-	router.HandleFunc("/user/drop", request.Preprocessing(User.Drop, []string{http.MethodPost}))
+	router.HandleFunc("/user/drop", request.Preprocessing(User.Drop, []string{http.MethodDelete}))
+
+	router.HandleFunc("/user/drop/all-soft-deleted", request.Preprocessing(User.DropAllDeleted, []string{http.MethodDelete}))
 
 	router.HandleFunc("/user/change/login", request.Preprocessing(User.ChangeLogin, []string{http.MethodPatch}))
 

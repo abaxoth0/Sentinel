@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"sentinel/packages/DB"
@@ -184,6 +185,24 @@ func Drop(filter *Filter) *ExternalError.Error {
 
 	cacheKeyPrefix := util.Ternary(deleted, cache.DeletedUserKeyPrefix, cache.UserKeyPrefix)
 	cache.Delete(cacheKeyPrefix + filter.TargetUID)
+
+	return nil
+}
+
+func DropAllDeleted(requesterRole role.Role) *ExternalError.Error {
+	if err := requesterRole.Verify(); err != nil {
+		return err
+	}
+
+	if err := auth.Rulebook.DropAllDeletedUsers.Authorize(requesterRole); err != nil {
+		return err
+	}
+
+	_, err := DB.DeletedUserCollection.DeleteMany(context.TODO(), bson.D{})
+
+	if err != nil {
+		return ExternalError.New("Operation failed (Internal Server Error)", http.StatusInternalServerError)
+	}
 
 	return nil
 }
