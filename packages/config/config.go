@@ -54,7 +54,7 @@ func getEnv(key string) string {
 	return env
 }
 
-var AppVersion, DB, HTTP, JWT, Cache, Debug = (func() (string, *databaseConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
+var DB, HTTP, JWT, Cache, Debug = (func() (*databaseConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
 	log.Println("[ CONFIG ] Initializing...")
 
 	if err := godotenv.Load(); err != nil {
@@ -148,9 +148,7 @@ var AppVersion, DB, HTTP, JWT, Cache, Debug = (func() (string, *databaseConfig, 
 		Enabled: getEnv("DEBUG_ENABLED") == "true",
 	}
 
-	v := getEnv("VERSION")
-
 	log.Println("[ CONFIG ] Initializing: OK")
 
-	return v, &DbConfig, &HttpConfig, &JWTConfig, &CacheConfig, &DebugConfig
+	return &DbConfig, &HttpConfig, &JWTConfig, &CacheConfig, &DebugConfig
 })()

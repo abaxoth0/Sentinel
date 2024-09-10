@@ -53,7 +53,7 @@ func Create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err := user.Create(body.Login, body.Password)
+	uid, err := user.Create(body.Login, body.Password)
 
 	if err != nil {
 		ok, e := ExternalError.Is(err)
@@ -69,7 +69,14 @@ func Create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res.OK()
+	resBody, ok := json.Encode(json.UidBody{UID: uid.Hex()})
+
+	if !ok {
+		res.InternalServerError()
+		return
+	}
+
+	res.SendBody(resBody)
 }
 
 func ChangeLogin(w http.ResponseWriter, req *http.Request) {

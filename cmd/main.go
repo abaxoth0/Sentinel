@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	ver := "0.9.9.6a"
+
 	// Program wasn't run and/or tested on Windows.
 	// (Probably it will work, but required minor code modifications)
 	if runtime.GOOS != "linux" {
@@ -37,7 +39,7 @@ func main() {
 
 	fmt.Print(logo)
 
-	fmt.Printf("  Authentication/authorization service (v%s)\n", config.AppVersion)
+	fmt.Printf("  Authentication/authorization service (v%s)\n", ver)
 
 	fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
