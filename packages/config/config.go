@@ -61,8 +61,7 @@ var DB, HTTP, JWT, Cache, Debug = (func() (*databaseConfig, *httpServerConfig, *
 		panic(err)
 	}
 
-	requiredVariables := [19]string{
-		"VERSION",
+	requiredVariables := [18]string{
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
 		"DB_NAME",
