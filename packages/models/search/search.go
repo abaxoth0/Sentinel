@@ -59,9 +59,9 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 	var err error
 
 	if deleted {
-		cur, err = DB.UserCollection.Find(ctx, filter)
-	} else {
 		cur, err = DB.DeletedUserCollection.Find(ctx, filter)
+	} else {
+		cur, err = DB.UserCollection.Find(ctx, filter)
 	}
 
 	if err != nil {
