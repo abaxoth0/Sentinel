@@ -37,7 +37,9 @@ func main() {
 
 	fmt.Print(logo)
 
-	fmt.Printf("  Authentication/authorization service (v%s)\n\n", config.AppVersion)
+	fmt.Printf("  Authentication/authorization service (v%s)\n", config.AppVersion)
+
+	fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
 	if config.Debug.Enabled {
 		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected values. \n\n")
