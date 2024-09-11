@@ -10,6 +10,8 @@ import (
 	"sentinel/packages/config"
 	"sentinel/packages/router"
 	"sentinel/packages/util"
+
+	"github.com/StepanAnanin/weaver"
 )
 
 func main() {
@@ -46,6 +48,8 @@ func main() {
 	if config.Debug.Enabled {
 		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected values. \n\n")
 	}
+
+	weaver.Settings.DefaultOrigin = config.HTTP.AllowedOrigin
 
 	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
 		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")

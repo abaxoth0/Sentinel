@@ -22,7 +22,8 @@ type databaseConfig struct {
 }
 
 type httpServerConfig struct {
-	Port string
+	Port          string
+	AllowedOrigin string
 }
 
 type jwtConfing struct {
@@ -61,7 +62,8 @@ var DB, HTTP, JWT, Cache, Debug = (func() (*databaseConfig, *httpServerConfig, *
 		panic(err)
 	}
 
-	requiredVariables := [18]string{
+	requiredVariables := [19]string{
+		"ALLOWED_ORIGIN",
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
 		"DB_NAME",
@@ -102,7 +104,8 @@ var DB, HTTP, JWT, Cache, Debug = (func() (*databaseConfig, *httpServerConfig, *
 	}
 
 	HttpConfig := httpServerConfig{
-		Port: getEnv("SERVER_PORT"),
+		Port:          getEnv("SERVER_PORT"),
+		AllowedOrigin: getEnv("ALLOWED_ORIGIN"),
 	}
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodEdDSA.Alg(), func() jwt.SigningMethod { return jwt.SigningMethodEdDSA })
