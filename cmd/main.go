@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	ver := "0.9.9.6a"
+	ver := "0.9.9.7"
 
 	// Program wasn't run and/or tested on Windows.
 	// (Probably it will work, but required minor code modifications)

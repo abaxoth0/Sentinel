@@ -9,9 +9,7 @@ import (
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
 
-	"github.com/StepanAnanin/weaver/http/cookie"
-	"github.com/StepanAnanin/weaver/http/response"
-	"github.com/StepanAnanin/weaver/logger"
+	"github.com/StepanAnanin/weaver"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -25,7 +23,7 @@ import (
 */
 
 func Login(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
@@ -61,11 +59,11 @@ func Login(w http.ResponseWriter, req *http.Request) {
 
 	res.SendBody(resBody)
 
-	logger.Print("Authentication successful, user id: "+iuser.ID, req)
+	weaver.LogRequest("Authentication successful, user id: "+iuser.ID, req)
 }
 
 func Logout(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := weaver.NewResponse(w)
 
 	authCookie, err := req.Cookie(token.RefreshTokenKey)
 
@@ -76,20 +74,20 @@ func Logout(w http.ResponseWriter, req *http.Request) {
 
 		res.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusBadRequest)
 
-		logger.Print("Missing refresh token", req)
+		weaver.LogRequest("Missing refresh token", req)
 
 		return
 	}
 
-	cookie.Delete(authCookie, w)
+	weaver.DeleteCookie(authCookie, w)
 
 	res.OK()
 
-	logger.Print("User logged out.", req)
+	weaver.LogRequest("User logged out.", req)
 }
 
 func Refresh(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := weaver.NewResponse(w)
 
 	oldRefreshToken, e := token.GetRefreshToken(req)
 
@@ -99,18 +97,18 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 		if errors.Is(e, http.ErrNoCookie) {
 			res.Message("Вы не авторизованы (authentication cookie wasn't found)", http.StatusUnauthorized)
 
-			logger.Print("Auth cookie wasn't found", req)
+			weaver.LogRequest("Auth cookie wasn't found", req)
 		}
 
 		if isExternal, e := ExternalError.Is(e); isExternal {
 			// This cookie used inside of "GetRefreshToken" method so we know that it's exists.
 			authCookie, _ := req.Cookie(token.RefreshTokenKey)
 
-			cookie.Delete(authCookie, w)
+			weaver.DeleteCookie(authCookie, w)
 
 			res.Message(e.Message, e.Status)
 
-			logger.Print(e.Message, req)
+			weaver.LogRequest(e.Message, req)
 		}
 
 		return
@@ -122,7 +120,7 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		res.Message(err.Message, err.Status)
 
-		logger.Print(err.Message, req)
+		weaver.LogRequest(err.Message, req)
 
 		return
 	}
@@ -143,11 +141,11 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 
 	res.SendBody(resBody)
 
-	logger.Print("Tokens successfuly refreshed.", req)
+	weaver.LogRequest("Tokens successfuly refreshed.", req)
 }
 
 func Verify(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 
 	accessToken, err := token.GetAccessToken(req)
 
@@ -174,5 +172,5 @@ func Verify(w http.ResponseWriter, req *http.Request) {
 
 	res.SendBody(body)
 
-	logger.Print("Authentication verified for \""+payload.ID+"\".", req)
+	weaver.LogRequest("Authentication verified for \""+payload.ID+"\".", req)
 }

@@ -8,7 +8,7 @@ import (
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
 
-	"github.com/StepanAnanin/weaver/http/response"
+	"github.com/StepanAnanin/weaver"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -45,7 +45,7 @@ func buildUserFilterAndReqBody[T any](req *http.Request) (*user.Filter, T, *Exte
 }
 
 func Create(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
 	if !ok {
@@ -80,7 +80,7 @@ func Create(w http.ResponseWriter, req *http.Request) {
 }
 
 func ChangeLogin(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, body, err := buildUserFilterAndReqBody[json.UidAndLoginBody](req)
 
 	if err != nil {
@@ -96,7 +96,7 @@ func ChangeLogin(w http.ResponseWriter, req *http.Request) {
 }
 
 func ChangePassword(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, body, err := buildUserFilterAndReqBody[json.UidAndPasswordBody](req)
 
 	if err != nil {
@@ -113,7 +113,7 @@ func ChangePassword(w http.ResponseWriter, req *http.Request) {
 }
 
 func ChangeRole(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, body, err := buildUserFilterAndReqBody[json.UidAndRoleBody](req)
 
 	if err != nil {
@@ -130,7 +130,7 @@ func ChangeRole(w http.ResponseWriter, req *http.Request) {
 }
 
 func SoftDelete(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
 
 	if err != nil {
@@ -147,7 +147,7 @@ func SoftDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 func Restore(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
 
 	if err != nil {
@@ -165,7 +165,7 @@ func Restore(w http.ResponseWriter, req *http.Request) {
 
 // Hard delete
 func Drop(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
 
 	if err != nil {
@@ -182,7 +182,7 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 }
 
 func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 
 	accessToken, err := token.GetAccessToken(req)
 
@@ -207,7 +207,7 @@ func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetRole(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
 
 	if err != nil {
@@ -233,7 +233,7 @@ func GetRole(w http.ResponseWriter, req *http.Request) {
 }
 
 func CheckIsLoginExists(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 	body, ok := json.Decode[json.LoginBody](req.Body)
 
 	if !ok {

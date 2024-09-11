@@ -5,12 +5,11 @@ import (
 	"sentinel/packages/json"
 	"sentinel/packages/models/role"
 
-	"github.com/StepanAnanin/weaver/http/response"
-	"github.com/StepanAnanin/weaver/logger"
+	"github.com/StepanAnanin/weaver"
 )
 
 func GetRoles(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w)
+	res := weaver.NewResponse(w)
 
 	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List})
 
@@ -20,8 +19,8 @@ func GetRoles(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := res.SendBody(encdoedRoles); err != nil {
-		logger.PrintError("Failed to send OK response", req)
+		weaver.LogRequestError("Failed to send OK response", req)
 	}
 
-	logger.Print("OK", req)
+	weaver.LogRequest("OK", req)
 }

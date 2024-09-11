@@ -6,12 +6,12 @@ import (
 	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 
-	"github.com/StepanAnanin/weaver/http/response"
+	"github.com/StepanAnanin/weaver"
 	"github.com/golang-jwt/jwt"
 )
 
 func Drop(w http.ResponseWriter, req *http.Request) {
-	res := response.New(w).Logged(req)
+	res := weaver.NewResponse(w).Logged(req)
 
 	accessToken, err := token.GetAccessToken(req)
 
