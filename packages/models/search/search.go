@@ -10,6 +10,7 @@ import (
 	"sentinel/packages/models/role"
 	"sentinel/packages/util"
 
+	emongo "github.com/StepanAnanin/EssentialMongoDB"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,7 +35,7 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 		}
 	}
 
-	ctx, cancel := DB.DefaultTimeoutContext()
+	ctx, cancel := emongo.DefaultTimeoutContext()
 
 	defer cancel()
 

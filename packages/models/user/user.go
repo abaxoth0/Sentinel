@@ -12,6 +12,7 @@ import (
 	"sentinel/packages/models/search"
 	"sentinel/packages/util"
 
+	emongo "github.com/StepanAnanin/EssentialMongoDB"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -54,7 +55,7 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 		Role: role.UnconfirmedUser,
 	}
 
-	ctx, cancel := DB.DefaultTimeoutContext()
+	ctx, cancel := emongo.DefaultTimeoutContext()
 
 	defer cancel()
 
@@ -87,13 +88,13 @@ func update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error
 		}
 	}
 
-	ctx, cancel := DB.DefaultTimeoutContext()
+	ctx, cancel := emongo.DefaultTimeoutContext()
 
 	defer cancel()
 
 	update := bson.D{{"$set", bson.D{*upd}}}
 
-	_, updError := DB.UserCollection.UpdateByID(ctx, DB.ObjectIDFromHex(filter.TargetUID), update)
+	_, updError := DB.UserCollection.UpdateByID(ctx, emongo.ObjectIDFromHex(filter.TargetUID), update)
 
 	if updError != nil {
 		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.TargetUID + "\" - " + updError.Error())
@@ -129,7 +130,9 @@ func SoftDelete(filter *Filter) *ExternalError.Error {
 
 	user.DeletedAt = int(util.UnixTimeNow())
 
-	err = DB.CollectionTransfer(user, DB.UserCollection, DB.DeletedUserCollection, func() { user.DeletedAt = 0 })
+	if e := emongo.DocumentTransfer(user, DB.UserCollection, DB.DeletedUserCollection, func() { user.DeletedAt = 0 }); e != nil {
+		err = ExternalError.New(e.Error(), http.StatusInternalServerError)
+	}
 
 	if err != nil {
 		return err
@@ -152,7 +155,9 @@ func Restore(filter *Filter) *ExternalError.Error {
 	deletedAtTimestamp := user.DeletedAt
 	user.DeletedAt = 0
 
-	err = DB.CollectionTransfer(user, DB.DeletedUserCollection, DB.UserCollection, func() { user.DeletedAt = deletedAtTimestamp })
+	if e := emongo.DocumentTransfer(user, DB.DeletedUserCollection, DB.UserCollection, func() { user.DeletedAt = deletedAtTimestamp }); e != nil {
+		err = ExternalError.New(e.Error(), http.StatusInternalServerError)
+	}
 
 	if err != nil {
 		return err
@@ -180,7 +185,7 @@ func Drop(filter *Filter) *ExternalError.Error {
 		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
 	}
 
-	ctx, cancel := DB.DefaultTimeoutContext()
+	ctx, cancel := emongo.DefaultTimeoutContext()
 
 	defer cancel()
 

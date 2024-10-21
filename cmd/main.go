@@ -11,11 +11,12 @@ import (
 	"sentinel/packages/router"
 	"sentinel/packages/util"
 
+	emongo "github.com/StepanAnanin/EssentialMongoDB"
 	"github.com/StepanAnanin/weaver"
 )
 
 func main() {
-	ver := "0.9.9.7"
+	ver := "0.9.9.8"
 
 	// Program wasn't run and/or tested on Windows.
 	// (Probably it will work, but required minor code modifications)
@@ -25,7 +26,9 @@ func main() {
 
 	DB.Connect()
 
-	defer DB.Client.Disconnect(DB.Context)
+	emongo.Config.DefaultQueryTimeout = config.DB.QueryDefaultTimeout
+
+	defer DB.Disconnect()
 
 	cache.Init()
 
@@ -54,7 +57,7 @@ func main() {
 	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
 		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")
 
-		DB.Client.Disconnect(DB.Context)
+		DB.Disconnect()
 
 		panic(err)
 	}
