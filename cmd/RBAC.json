@@ -1,0 +1,40 @@
+{
+    "roles": [
+        {
+            "name": "unconfirmed_user",
+            "permissions": ["SD"]
+        },
+        {
+            "name": "restricted_user",
+            "permissions": ["SR"]
+        },
+        {
+            "name": "user",
+            "permissions": ["SR", "SU", "SD"]
+        },
+        {
+            "name": "support",
+            "permissions": ["R", "SU"]
+        },
+        {
+            "name": "moderator",
+            "permissions": ["C", "R", "U", "D", "M"]
+        },
+        {
+            "name": "admin",
+            "permissions": ["C", "R", "U", "D", "A"]
+        }
+    ],
+    "services": [
+        {
+            "id": "2fd9f71c-4ced-4607-af47-7e8cc21725a9",
+            "name": "post-service",
+            "roles": [
+                {
+                    "name": "unconfirmed_user",
+                    "permissions": ["SR"]
+                }
+            ]
+        }
+    ]
+}
