@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sentinel/packages/config"
 	ExternalError "sentinel/packages/error"
-	"sentinel/packages/models/role"
 	"sentinel/packages/models/user"
 	"sentinel/packages/util"
 	"strings"
@@ -170,7 +169,7 @@ func PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Erro
 	return &user.Payload{
 		ID:    claims[IdKey].(string),
 		Login: claims[IssuerKey].(string),
-		Role:  role.Role(claims[SubjectKey].(string)),
+		Role:  claims[SubjectKey].(string),
 	}, nil
 }
 
@@ -184,6 +183,6 @@ func UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter,
 	return &user.Filter{
 		TargetUID:     targetUID,
 		RequesterUID:  claims[IdKey].(string),
-		RequesterRole: role.Role(claims[SubjectKey].(string)),
+		RequesterRole: claims[SubjectKey].(string),
 	}, nil
 }

@@ -7,7 +7,6 @@ import (
 	"sentinel/packages/cache"
 	ExternalError "sentinel/packages/error"
 	"sentinel/packages/json"
-	"sentinel/packages/models/role"
 	"sentinel/packages/util"
 
 	emongo "github.com/StepanAnanin/EssentialMongoDB"
@@ -17,11 +16,11 @@ import (
 )
 
 type IndexedUser struct {
-	ID        string    `bson:"_id" json:"_id"`
-	Login     string    `bson:"login" json:"login"`
-	Password  string    `bson:"password" json:"password"`
-	Role      role.Role `bson:"role" json:"role"`
-	DeletedAt int       `bson:"deletedAt,omitmepty" json:"deletedAt"`
+	ID        string `bson:"_id" json:"_id"`
+	Login     string `bson:"login" json:"login"`
+	Password  string `bson:"password" json:"password"`
+	Role      string `bson:"role" json:"role"`
+	DeletedAt int    `bson:"deletedAt,omitmepty" json:"deletedAt"`
 }
 
 func findUserBy(key string, value string, deleted bool) (*IndexedUser, *ExternalError.Error) {

@@ -1,44 +1,57 @@
 package role
 
-import externalerror "sentinel/packages/error"
+import (
+	"net/http"
+	ExternalError "sentinel/packages/error"
+)
 
-type Role string
-
-// This is banned user
-const RestrictedUser Role = "restricted_user"
-
-// This is an user who didn't yet activated his account
-const UnconfirmedUser Role = "unconfirmed_user"
-
-const DefaultUser Role = "user"
-
-// Optional role
-const Manager Role = "manager"
-
-const Support Role = "support"
-
-const Moderator Role = "moderator"
-
-// Can all
-const Administrator Role = "admin"
-
-// Array with all roles
-var List = [7]Role{
-	RestrictedUser,
-	UnconfirmedUser,
-	DefaultUser,
-	Manager,
-	Support,
-	Moderator,
-	Administrator,
-}
-
-func (role Role) Verify() *externalerror.Error {
-	for _, r := range List {
-		if r == role {
-			return nil
+func ParseRole(roleName string) (*role, *ExternalError.Error) {
+	for _, rbacRole := range RBAC.Roles {
+		if rbacRole.Name == roleName {
+			return &rbacRole, nil
 		}
 	}
 
-	return externalerror.New("Ошибка авторизации: неверная роль, попробуйте переавторизоваться", 400)
+	return nil, ExternalError.New("Роль \""+roleName+"\" не надена", http.StatusBadRequest)
+}
+
+func GetServiceRoles(serviceID string) ([]role, *ExternalError.Error) {
+	var service *service = nil
+
+	for _, rbacService := range RBAC.Services {
+		if rbacService.ID == serviceID {
+			service = &rbacService
+			break
+		}
+	}
+
+	if service == nil {
+		return nil, ExternalError.New("service with id \""+serviceID+"\" wasn't found", http.StatusBadRequest)
+	}
+
+	roles := []role{}
+
+	// TODO now it's works for O(n**2), try to optimize it.
+	// Although it's not so important, RBAC schema isn't big enoungh to see a real difference in performance.
+	for _, serviceRole := range service.Roles {
+		for _, globalRole := range RBAC.Roles {
+			if serviceRole.Name == globalRole.Name {
+				roles = append(roles, serviceRole)
+			} else {
+				roles = append(roles, globalRole)
+			}
+		}
+	}
+
+	return roles, nil
+}
+
+func GetAuthRole(roleName string) (*role, *ExternalError.Error) {
+	for _, globalRole := range RBAC.Roles {
+		if globalRole.Name == roleName {
+			return &globalRole, nil
+		}
+	}
+
+	return nil, ExternalError.New("role with name \""+roleName+"\" wasn't found", http.StatusBadRequest)
 }

@@ -3,7 +3,6 @@ package cachecontroller
 import (
 	"net/http"
 	"sentinel/packages/cache"
-	"sentinel/packages/models/role"
 	"sentinel/packages/models/token"
 
 	"github.com/StepanAnanin/weaver"
@@ -28,13 +27,9 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err = filter.RequesterRole.Verify(); err != nil {
-		res.Message(err.Message, err.Status)
-		return
-	}
-
-	if filter.RequesterRole != role.Administrator {
-		res.Message("Недостаточно прав для выполнения данной операции", http.StatusForbidden)
+	// TODO temporary solution
+	if filter.RequesterRole != "admin" {
+		res.Forbidden("Only admin can drop cache.")
 		return
 	}
 

@@ -13,19 +13,18 @@ import (
 )
 
 func buildUserFilterAndReqBody[T any](req *http.Request) (*user.Filter, T, *ExternalError.Error) {
-	var emptyFilter *user.Filter
 	var emptyReqBody T
 
 	rawBody, ok := json.Decode[any](req.Body)
 
 	if !ok {
-		return emptyFilter, emptyReqBody, ExternalError.New("Failed to decode JSON", http.StatusBadRequest)
+		return nil, emptyReqBody, ExternalError.New("Failed to decode JSON", http.StatusBadRequest)
 	}
 
 	accessToken, err := token.GetAccessToken(req)
 
 	if err != nil {
-		return emptyFilter, emptyReqBody, err
+		return nil, emptyReqBody, err
 	}
 
 	body, _ := rawBody.(json.UidBody)
@@ -34,11 +33,7 @@ func buildUserFilterAndReqBody[T any](req *http.Request) (*user.Filter, T, *Exte
 	filter, err := token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
-		return emptyFilter, emptyReqBody, err
-	}
-
-	if err := filter.RequesterRole.Verify(); err != nil {
-		return emptyFilter, emptyReqBody, err
+		return nil, emptyReqBody, err
 	}
 
 	return filter, rawBody.(T), nil
@@ -222,7 +217,7 @@ func GetRole(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resBody, ok := json.Encode(json.UserRoleResponseBody{Role: role})
+	resBody, ok := json.Encode(json.UserRoleResponseBody{Role: string(role)})
 
 	if !ok {
 		res.InternalServerError()

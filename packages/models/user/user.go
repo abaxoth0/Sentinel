@@ -11,6 +11,7 @@ import (
 	"sentinel/packages/models/role"
 	"sentinel/packages/models/search"
 	"sentinel/packages/util"
+	"slices"
 
 	emongo "github.com/StepanAnanin/EssentialMongoDB"
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,14 +22,14 @@ import (
 type user struct {
 	Login     string
 	Password  string
-	Role      role.Role
+	Role      string
 	DeletedAt int
 }
 
 type Filter struct {
 	TargetUID     string
 	RequesterUID  string
-	RequesterRole role.Role
+	RequesterRole string
 }
 
 func Create(login string, password string) (primitive.ObjectID, error) {
@@ -51,8 +52,9 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 	user := user{
 		Login:    login,
 		Password: string(hashedPassword),
+		// TODO FIX that, remove hardcode
 		// TODO Add possibility to control, which role will be assigned for each new user
-		Role: role.UnconfirmedUser,
+		Role: "unconfirmed_user",
 	}
 
 	ctx, cancel := emongo.DefaultTimeoutContext()
@@ -76,15 +78,10 @@ func update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error
 			return err
 		}
 	} else {
-		user, err := search.FindUserByID(filter.TargetUID)
+		_, err := search.FindUserByID(filter.TargetUID)
 
 		if err != nil {
 			return err
-		}
-
-		// If targeted user admin and requester isn't himself
-		if user.Role == role.Administrator && filter.RequesterUID != filter.TargetUID {
-			return ExternalError.New("Недостаточно прав для выполнения данной операции (Только сам администратор может изменять свойства своего аккаунта)", http.StatusForbidden)
 		}
 	}
 
@@ -108,18 +105,14 @@ func update(filter *Filter, upd *primitive.E, deleted bool) *ExternalError.Error
 }
 
 func SoftDelete(filter *Filter) *ExternalError.Error {
-	if filter.TargetUID != filter.RequesterUID {
-		if err := auth.Rulebook.SoftDeleteUser.Authorize(filter.RequesterRole); err != nil {
-			return err
-		}
+	targetUser, err := search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
 	}
 
-	if isAdmin, err := isUserAdmin(filter.TargetUID); isAdmin {
-		if err != nil {
-			return err
-		}
-
-		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
+	if err := auth.Rulebook.SoftDeleteUser.Authorize(filter.RequesterRole, targetUser.Role); err != nil {
+		return err
 	}
 
 	user, err := search.FindUserByID(filter.TargetUID)
@@ -142,7 +135,13 @@ func SoftDelete(filter *Filter) *ExternalError.Error {
 }
 
 func Restore(filter *Filter) *ExternalError.Error {
-	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole); err != nil {
+	targetUser, err := search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
+	}
+
+	if err := auth.Rulebook.RestoreSoftDeletedUser.Authorize(filter.RequesterRole, targetUser.Role); err != nil {
 		return err
 	}
 
@@ -168,10 +167,14 @@ func Restore(filter *Filter) *ExternalError.Error {
 
 // Hard delete
 func Drop(filter *Filter) *ExternalError.Error {
-	if filter.TargetUID != filter.RequesterUID {
-		if err := auth.Rulebook.DropUser.Authorize(filter.RequesterRole); err != nil {
-			return err
-		}
+	targetUser, err := search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
+	}
+
+	if err := auth.Rulebook.DropUser.Authorize(filter.RequesterRole, targetUser.Role); err != nil {
+		return err
 	}
 
 	user, err := search.FindAnyUserByID(filter.TargetUID)
@@ -181,7 +184,13 @@ func Drop(filter *Filter) *ExternalError.Error {
 		return err
 	}
 
-	if user.Role == role.Administrator {
+	userRole, err := role.GetAuthRole(user.Role)
+
+	if err != nil {
+		return err
+	}
+
+	if slices.Contains(userRole.Permissions, role.AdminPermission) {
 		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
 	}
 
@@ -201,12 +210,8 @@ func Drop(filter *Filter) *ExternalError.Error {
 	return nil
 }
 
-func DropAllDeleted(requesterRole role.Role) *ExternalError.Error {
-	if err := requesterRole.Verify(); err != nil {
-		return err
-	}
-
-	if err := auth.Rulebook.DropAllDeletedUsers.Authorize(requesterRole); err != nil {
+func DropAllDeleted(requesterRole string) *ExternalError.Error {
+	if err := auth.Rulebook.DropAllDeletedUsers.Authorize(requesterRole, "none"); err != nil {
 		return err
 	}
 
@@ -220,11 +225,17 @@ func DropAllDeleted(requesterRole role.Role) *ExternalError.Error {
 }
 
 func ChangeLogin(filter *Filter, newlogin string) *ExternalError.Error {
-	if err := auth.Rulebook.ChangeUserLogin.Authorize(filter.RequesterRole); err != nil {
+	targetUser, err := search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
+	}
+
+	if err := auth.Rulebook.ChangeUserLogin.Authorize(filter.RequesterRole, targetUser.Role); err != nil {
 		return err
 	}
 
-	_, err := search.FindUserByLogin(newlogin)
+	_, err = search.FindUserByLogin(newlogin)
 
 	// user with new login was found
 	if err == nil {
@@ -237,7 +248,13 @@ func ChangeLogin(filter *Filter, newlogin string) *ExternalError.Error {
 }
 
 func ChangePassword(filter *Filter, newPassword string) *ExternalError.Error {
-	if err := auth.Rulebook.ChangeUserPassword.Authorize(filter.RequesterRole); err != nil {
+	targetUser, err := search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
+	}
+
+	if err := auth.Rulebook.ChangeUserPassword.Authorize(filter.RequesterRole, targetUser.Role); err != nil {
 		return err
 	}
 
@@ -245,9 +262,9 @@ func ChangePassword(filter *Filter, newPassword string) *ExternalError.Error {
 		return err
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+	hashedPassword, e := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
 
-	if err != nil {
+	if e != nil {
 		return ExternalError.New("Не удалось изменить пароль: Внутреняя ошибка сервера.", http.StatusInternalServerError)
 	}
 
@@ -257,16 +274,14 @@ func ChangePassword(filter *Filter, newPassword string) *ExternalError.Error {
 }
 
 func ChangeRole(filter *Filter, newRole string) *ExternalError.Error {
-	if err := auth.Rulebook.ChangeUserRole.Authorize(filter.RequesterRole); err != nil {
-		return err
+	targetUser, err := search.FindUserByID(filter.TargetUID)
+
+	if err != nil {
+		return ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
 	}
 
-	if isAdmin, err := isUserAdmin(filter.TargetUID); isAdmin {
-		if err != nil {
-			return err
-		}
-
-		return ExternalError.New("Невозможно изменить роль администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
+	if err := auth.Rulebook.ChangeUserRole.Authorize(filter.RequesterRole, targetUser.Role); err != nil {
+		return err
 	}
 
 	upd := &primitive.E{"role", newRole}
@@ -286,28 +301,18 @@ func CheckIsLoginExists(login string) (bool, *ExternalError.Error) {
 	return true, nil
 }
 
-func GetRole(filter *Filter) (role.Role, *ExternalError.Error) {
-	var emptyRole role.Role
-
-	if err := auth.Rulebook.GetUserRole.Authorize(filter.RequesterRole); err != nil {
-		return emptyRole, err
-	}
+func GetRole(filter *Filter) (string, *ExternalError.Error) {
+	var emptyRole string
 
 	user, err := search.FindUserByID(filter.TargetUID)
 
 	if err != nil {
+		return emptyRole, ExternalError.New("Запрошенный пользователь не был найден", http.StatusNotFound)
+	}
+
+	if err := auth.Rulebook.GetUserRole.Authorize(filter.RequesterRole, user.Role); err != nil {
 		return emptyRole, err
 	}
 
 	return user.Role, nil
-}
-
-func isUserAdmin(uid string) (bool, *ExternalError.Error) {
-	targetUser, err := search.FindUserByID(uid)
-
-	if err != nil {
-		return false, err
-	}
-
-	return targetUser.Role == role.Administrator, nil
 }

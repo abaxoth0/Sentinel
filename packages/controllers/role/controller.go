@@ -1,6 +1,7 @@
 package rolecontroller
 
 import (
+	"errors"
 	"net/http"
 	"sentinel/packages/json"
 	"sentinel/packages/models/role"
@@ -11,7 +12,24 @@ import (
 func GetRoles(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w)
 
-	encdoedRoles, ok := json.Encode(role.ListJSON{Roles: role.List})
+	cookieServiceID, err := req.Cookie("serviceID")
+
+	if err != nil {
+		if !errors.Is(err, http.ErrNoCookie) {
+			res.BadRequest("Cookie serviceID wasn't found")
+		}
+	}
+
+	serviceID := cookieServiceID.Value
+
+	roles, e := role.GetServiceRoles(serviceID)
+
+	if e != nil {
+		res.Message(e.Message, e.Status)
+		return
+	}
+
+	encdoedRoles, ok := json.Encode(roles)
 
 	if !ok {
 		res.InternalServerError()

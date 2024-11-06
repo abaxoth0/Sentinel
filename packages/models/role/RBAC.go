@@ -6,46 +6,14 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
-	externalerror "sentinel/packages/error"
 	"sentinel/packages/json"
 	"slices"
 )
 
-type permission string
-
-const CreatePermission permission = "C"
-const SelfCreatePermission permission = "SC"
-
-const ReadPermission permission = "R"
-const SelfReadPermission permission = "SR"
-
-const UpdatePermission permission = "U"
-const SelfUpdatePermission permission = "SU"
-
-const DeletePermission permission = "D"
-const SelfDeletePermission permission = "SD"
-
-const ModeratorPermission permission = "M"
-const AdminPermission permission = "A"
-
-var permissions []permission = []permission{
-	CreatePermission,
-	SelfCreatePermission,
-	ReadPermission,
-	SelfReadPermission,
-	UpdatePermission,
-	SelfUpdatePermission,
-	DeletePermission,
-	SelfDeletePermission,
-	ModeratorPermission,
-	AdminPermission,
-}
-
 type role struct {
 	Name        string       `json:"name"`
-	Permissions []permission `json:"permissions"`
+	Permissions []Permission `json:"permissions"`
 }
 
 type service struct {
@@ -117,7 +85,7 @@ func loadRBAC() *rbac {
 func checkRBAC(RBAC *rbac) error {
 	for _, globalRole := range RBAC.Roles {
 		for _, permission := range globalRole.Permissions {
-			if !slices.Contains(permissions, permission) {
+			if !slices.Contains(Permissions, permission) {
 				err := fmt.Sprintf("invalid permission \"%s\" in global role: \"%s\"", string(permission), globalRole.Name)
 				return errors.New(err)
 			}
@@ -127,7 +95,7 @@ func checkRBAC(RBAC *rbac) error {
 	for _, service := range RBAC.Services {
 		for _, serviceRole := range service.Roles {
 			for _, permission := range serviceRole.Permissions {
-				if !slices.Contains(permissions, permission) {
+				if !slices.Contains(Permissions, permission) {
 					err := fmt.Sprintf("invalid permission \"%s\" in \"%s\" role: \"%s\"", string(permission), service.Name, serviceRole.Name)
 					return errors.New(err)
 				}
@@ -139,44 +107,3 @@ func checkRBAC(RBAC *rbac) error {
 }
 
 var RBAC *rbac = loadRBAC()
-
-func GetServiceRoles(serviceID string) ([]role, *externalerror.Error) {
-	var service *service = nil
-
-	for _, rbacService := range RBAC.Services {
-		if rbacService.ID == serviceID {
-			service = &rbacService
-			break
-		}
-	}
-
-	if service == nil {
-		return nil, externalerror.New("service with id \""+serviceID+"\" wasn't found", http.StatusBadRequest)
-	}
-
-	roles := []role{}
-
-	// TODO now it's works for O(n**2), try to optimize it.
-	// Although it's not so important, RBAC schema isn't big enoungh to see a real difference in performance.
-	for _, serviceRole := range service.Roles {
-		for _, globalRole := range RBAC.Roles {
-			if serviceRole.Name == globalRole.Name {
-				roles = append(roles, serviceRole)
-			} else {
-				roles = append(roles, globalRole)
-			}
-		}
-	}
-
-	return roles, nil
-}
-
-func GetAuthRole(roleName string) (*role, *externalerror.Error) {
-	for _, globalRole := range RBAC.Roles {
-		if globalRole.Name == roleName {
-			return &globalRole, nil
-		}
-	}
-
-	return nil, externalerror.New("role with name \""+roleName+"\" wasn't found", http.StatusBadRequest)
-}
