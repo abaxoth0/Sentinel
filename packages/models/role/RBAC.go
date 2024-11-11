@@ -11,20 +11,20 @@ import (
 	"slices"
 )
 
-type role struct {
-	Name        string       `json:"name"`
-	Permissions []Permission `json:"permissions"`
+type Role struct {
+	Name        string          `json:"name"`
+	Permissions []PermissionTag `json:"permissions"`
 }
 
 type service struct {
 	// uuid format
 	ID    string `json:"id"`
 	Name  string `json:"name"`
-	Roles []role `json:"roles,omitempty"`
+	Roles []Role `json:"roles,omitempty"`
 }
 
 type rbac struct {
-	Roles    []role    `json:"roles"`
+	Roles    []Role    `json:"roles"`
 	Services []service `json:"services"`
 }
 
@@ -85,7 +85,7 @@ func loadRBAC() *rbac {
 func checkRBAC(RBAC *rbac) error {
 	for _, globalRole := range RBAC.Roles {
 		for _, permission := range globalRole.Permissions {
-			if !slices.Contains(Permissions, permission) {
+			if !slices.Contains(PermissionTags, permission) {
 				err := fmt.Sprintf("invalid permission \"%s\" in global role: \"%s\"", string(permission), globalRole.Name)
 				return errors.New(err)
 			}
@@ -95,7 +95,7 @@ func checkRBAC(RBAC *rbac) error {
 	for _, service := range RBAC.Services {
 		for _, serviceRole := range service.Roles {
 			for _, permission := range serviceRole.Permissions {
-				if !slices.Contains(Permissions, permission) {
+				if !slices.Contains(PermissionTags, permission) {
 					err := fmt.Sprintf("invalid permission \"%s\" in \"%s\" role: \"%s\"", string(permission), service.Name, serviceRole.Name)
 					return errors.New(err)
 				}

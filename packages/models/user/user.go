@@ -190,7 +190,7 @@ func Drop(filter *Filter) *ExternalError.Error {
 		return err
 	}
 
-	if slices.Contains(userRole.Permissions, role.AdminPermission) {
+	if slices.Contains(userRole.Permissions, role.AdminPermissionTag) {
 		return ExternalError.New("Невозможно удалить пользователя с ролью администратора. (Обратитесь напрямую в базу данных)", http.StatusForbidden)
 	}
 
@@ -211,7 +211,7 @@ func Drop(filter *Filter) *ExternalError.Error {
 }
 
 func DropAllDeleted(requesterRole string) *ExternalError.Error {
-	if err := auth.Rulebook.DropAllDeletedUsers.Authorize(requesterRole, "none"); err != nil {
+	if err := auth.Rulebook.DropAllDeletedUsers.Authorize(requesterRole, role.NoneRole); err != nil {
 		return err
 	}
 

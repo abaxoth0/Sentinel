@@ -15,9 +15,13 @@ func GetRoles(w http.ResponseWriter, req *http.Request) {
 	cookieServiceID, err := req.Cookie("serviceID")
 
 	if err != nil {
-		if !errors.Is(err, http.ErrNoCookie) {
+		if errors.Is(err, http.ErrNoCookie) {
 			res.BadRequest("Cookie serviceID wasn't found")
+			return
 		}
+
+		res.InternalServerError()
+		return
 	}
 
 	serviceID := cookieServiceID.Value

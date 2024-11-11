@@ -5,7 +5,9 @@ import (
 	ExternalError "sentinel/packages/error"
 )
 
-func ParseRole(roleName string) (*role, *ExternalError.Error) {
+const NoneRole string = "none"
+
+func ParseRole(roleName string) (*Role, *ExternalError.Error) {
 	for _, rbacRole := range RBAC.Roles {
 		if rbacRole.Name == roleName {
 			return &rbacRole, nil
@@ -15,7 +17,7 @@ func ParseRole(roleName string) (*role, *ExternalError.Error) {
 	return nil, ExternalError.New("Роль \""+roleName+"\" не надена", http.StatusBadRequest)
 }
 
-func GetServiceRoles(serviceID string) ([]role, *ExternalError.Error) {
+func GetServiceRoles(serviceID string) ([]Role, *ExternalError.Error) {
 	var service *service = nil
 
 	for _, rbacService := range RBAC.Services {
@@ -29,9 +31,13 @@ func GetServiceRoles(serviceID string) ([]role, *ExternalError.Error) {
 		return nil, ExternalError.New("service with id \""+serviceID+"\" wasn't found", http.StatusBadRequest)
 	}
 
-	roles := []role{}
+	if len(service.Roles) == 0 {
+		return RBAC.Roles, nil
+	}
 
-	// TODO now it's works for O(n**2), try to optimize it.
+	roles := []Role{}
+
+	// TODO Try to optimize it.
 	// Although it's not so important, RBAC schema isn't big enoungh to see a real difference in performance.
 	for _, serviceRole := range service.Roles {
 		for _, globalRole := range RBAC.Roles {
@@ -46,7 +52,8 @@ func GetServiceRoles(serviceID string) ([]role, *ExternalError.Error) {
 	return roles, nil
 }
 
-func GetAuthRole(roleName string) (*role, *ExternalError.Error) {
+// This works only for this service
+func GetAuthRole(roleName string) (*Role, *ExternalError.Error) {
 	for _, globalRole := range RBAC.Roles {
 		if globalRole.Name == roleName {
 			return &globalRole, nil
