@@ -3,7 +3,7 @@ package authcontroller
 import (
 	"errors"
 	"net/http"
-	ExternalError "sentinel/packages/error"
+	Error "sentinel/packages/errs"
 	"sentinel/packages/json"
 	"sentinel/packages/models/auth"
 	"sentinel/packages/models/token"
@@ -42,7 +42,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
 	accessToken, refreshToken := token.Generate(&user.Payload{
 		ID:    iuser.ID,
 		Login: iuser.Login,
-		Role:  iuser.Role,
+		Roles: iuser.Roles,
 	})
 
 	resBody, ok := json.Encode(json.TokenResponseBody{
@@ -100,7 +100,7 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 			weaver.LogRequest("Auth cookie wasn't found", req)
 		}
 
-		if isExternal, e := ExternalError.Is(e); isExternal {
+		if isExternal, e := Error.Is(e); isExternal {
 			// This cookie used inside of "GetRefreshToken" method so we know that it's exists.
 			authCookie, _ := req.Cookie(token.RefreshTokenKey)
 

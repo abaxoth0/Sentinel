@@ -3,7 +3,7 @@ package token
 import (
 	"net/http"
 	"sentinel/packages/config"
-	ExternalError "sentinel/packages/error"
+	Error "sentinel/packages/errs"
 	"sentinel/packages/util"
 
 	"github.com/golang-jwt/jwt"
@@ -17,17 +17,17 @@ func generateRefreshTokenTtlTimestamp() int64 {
 	return util.TimestampSinceNow(config.JWT.RefreshTokenTTL)
 }
 
-func verifyClaims(claims jwt.MapClaims) *ExternalError.Error {
+func verifyClaims(claims jwt.MapClaims) *Error.HTTP {
 	if claims[IdKey] == nil {
-		return ExternalError.New("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
+		return Error.NewHTTP("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
 	}
 
 	if claims[IssuerKey] == nil {
-		return ExternalError.New("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
+		return Error.NewHTTP("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
 	}
 
 	if claims[SubjectKey] == nil {
-		return ExternalError.New("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
+		return Error.NewHTTP("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
 	}
 
 	return nil

@@ -3,7 +3,7 @@ package usercontroller
 import (
 	"log"
 	"net/http"
-	ExternalError "sentinel/packages/error"
+	Error "sentinel/packages/errs"
 	"sentinel/packages/json"
 	"sentinel/packages/models/token"
 	user "sentinel/packages/models/user"
@@ -12,13 +12,13 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func buildUserFilterAndReqBody[T any](req *http.Request) (*user.Filter, T, *ExternalError.Error) {
+func buildUserFilterAndReqBody[T any](req *http.Request) (*user.Filter, T, *Error.HTTP) {
 	var emptyReqBody T
 
 	rawBody, ok := json.Decode[any](req.Body)
 
 	if !ok {
-		return nil, emptyReqBody, ExternalError.New("Failed to decode JSON", http.StatusBadRequest)
+		return nil, emptyReqBody, Error.NewHTTP("Failed to decode JSON", http.StatusBadRequest)
 	}
 
 	accessToken, err := token.GetAccessToken(req)
@@ -51,7 +51,7 @@ func Create(w http.ResponseWriter, req *http.Request) {
 	uid, err := user.Create(body.Login, body.Password)
 
 	if err != nil {
-		ok, e := ExternalError.Is(err)
+		ok, e := Error.Is(err)
 
 		if !ok {
 			res.Message("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
@@ -193,7 +193,7 @@ func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := user.DropAllDeleted(requester.Role); err != nil {
+	if err := user.DropAllDeleted(requester.Roles); err != nil {
 		res.Message(err.Message, err.Status)
 		return
 	}
@@ -210,14 +210,14 @@ func GetRole(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	role, err := user.GetRole(filter)
+	roles, err := user.GetRoles(filter)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
 		return
 	}
 
-	resBody, ok := json.Encode(json.UserRoleResponseBody{Role: string(role)})
+	resBody, ok := json.Encode(json.UserRoleResponseBody{Roles: roles})
 
 	if !ok {
 		res.InternalServerError()

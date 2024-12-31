@@ -8,6 +8,8 @@
 
 -   HTTP libraries: mux (`github.com/gorilla/mux`); weaver (`github.com/StepanAnanin/weaver`)
 
+-   Authorization system: RBAC (`github.com/StepanAnanin/SentinelRBAC`)
+
 -   Hash fucntion used for passwords: bcrypt (ed25519)
 
 -   Authentication type: toke-based (JWT)

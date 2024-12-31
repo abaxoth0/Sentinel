@@ -3,12 +3,14 @@ package cachecontroller
 import (
 	"net/http"
 	"sentinel/packages/cache"
+	"sentinel/packages/models/auth"
 	"sentinel/packages/models/token"
 
 	"github.com/StepanAnanin/weaver"
 	"github.com/golang-jwt/jwt"
 )
 
+// TODO test
 func Drop(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
 
@@ -27,9 +29,8 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO temporary solution
-	if filter.RequesterRole != "admin" {
-		res.Forbidden("Only admin can drop cache.")
+	if err := auth.Authorize(auth.Action.Drop, auth.Resource.Cache, filter.RequesterRoles); err != nil {
+		res.Message(err.Message, err.Status)
 		return
 	}
 

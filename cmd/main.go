@@ -15,8 +15,19 @@ import (
 	"github.com/StepanAnanin/weaver"
 )
 
+var logo = `
+
+  ███████╗ ███████╗ ███╗   ██╗ ████████╗ ██╗ ███╗   ██╗ ███████╗ ██╗     
+  ██╔════╝ ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██║ ████╗  ██║ ██╔════╝ ██║     
+  ███████╗ █████╗   ██╔██╗ ██║    ██║    ██║ ██╔██╗ ██║ █████╗   ██║     
+  ╚════██║ ██╔══╝   ██║╚██╗██║    ██║    ██║ ██║╚██╗██║ ██╔══╝   ██║     
+  ███████║ ███████╗ ██║ ╚████║    ██║    ██║ ██║ ╚████║ ███████╗ ███████╗
+  ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝ ╚═╝  ╚═══╝ ╚══════╝ ╚══════╝
+                                                                
+`
+
 func main() {
-	ver := "0.9.9.9"
+	ver := "1.0.0.0"
 
 	// Program wasn't run and/or tested on Windows.
 	// (Probably it will work, but required minor code modifications)
@@ -46,10 +57,12 @@ func main() {
 
 	fmt.Printf("  Authentication/authorization service (v%s)\n", ver)
 
+	fmt.Println("  Mady by Stepan Ananin (xrf844@gmail.com)")
+
 	fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
 	if config.Debug.Enabled {
-		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected values. \n\n")
+		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected results. \n\n")
 	}
 
 	weaver.Settings.DefaultOrigin = config.HTTP.AllowedOrigin
@@ -62,13 +75,3 @@ func main() {
 		panic(err)
 	}
 }
-
-var logo string = `
-  ███████╗ ███████╗ ███╗   ██╗ ████████╗ ██╗ ███╗   ██╗ ███████╗ ██╗     
-  ██╔════╝ ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██║ ████╗  ██║ ██╔════╝ ██║     
-  ███████╗ █████╗   ██╔██╗ ██║    ██║    ██║ ██╔██╗ ██║ █████╗   ██║     
-  ╚════██║ ██╔══╝   ██║╚██╗██║    ██║    ██║ ██║╚██╗██║ ██╔══╝   ██║     
-  ███████║ ███████╗ ██║ ╚████║    ██║    ██║ ██║ ╚████║ ███████╗ ███████╗
-  ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝ ╚═╝  ╚═══╝ ╚══════╝ ╚══════╝
-                                                                
-`

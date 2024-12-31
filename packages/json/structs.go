@@ -1,7 +1,5 @@
 package json
 
-// import "sentinel/packages/models/role"
-
 type AuthRequestBody struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
@@ -44,5 +42,5 @@ type LoginExistanceResponseBody struct {
 }
 
 type UserRoleResponseBody struct {
-	Role string `json:"role"`
+	Roles []string `json:"roles"`
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sentinel/packages/config"
-	ExternalError "sentinel/packages/error"
+	Error "sentinel/packages/errs"
 	"sentinel/packages/models/user"
 	"sentinel/packages/util"
 	"strings"
@@ -27,7 +27,7 @@ const IdKey string = "jti"
 // Login
 const IssuerKey string = "iss"
 
-// Role
+// Roles
 const SubjectKey string = "sub"
 
 // Generate access and refresh tokens. (they returns in same order as here)
@@ -38,7 +38,7 @@ func Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 		ExpiresAt: generateAccessTokenTtlTimestamp(),
 		Id:        user.ID,
 		Issuer:    user.Login,
-		Subject:   string(user.Role),
+		Subject:   strings.Join(user.Roles, ","),
 	})
 
 	refreshTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
@@ -47,7 +47,7 @@ func Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 		ExpiresAt: generateRefreshTokenTtlTimestamp(),
 		Id:        user.ID,
 		Issuer:    user.Login,
-		Subject:   string(user.Role),
+		Subject:   strings.Join(user.Roles, ","),
 	})
 
 	accessTokenStr, e := accessTokenBuilder.SignedString(*config.JWT.AccessTokenPrivateKey)
@@ -80,13 +80,13 @@ func Generate(user *user.Payload) (*SignedToken, *SignedToken) {
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
-func GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
+func GetAccessToken(req *http.Request) (*jwt.Token, *Error.HTTP) {
 	var r *jwt.Token
 
 	authHeaderValue := req.Header.Get("Authorization")
 
 	if authHeaderValue == "" {
-		return r, ExternalError.New("Вы не авторизованы", 401)
+		return r, Error.NewHTTP("Вы не авторизованы", 401)
 	}
 
 	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
@@ -94,11 +94,11 @@ func GetAccessToken(req *http.Request) (*jwt.Token, *ExternalError.Error) {
 	token, expired := parseAccessToken(accessTokenStr)
 
 	if !token.Valid {
-		return r, ExternalError.New("Invalid access token", http.StatusBadRequest)
+		return r, Error.NewHTTP("Invalid access token", http.StatusBadRequest)
 	}
 
 	if expired {
-		return r, ExternalError.New("Access token expired", http.StatusUnauthorized)
+		return r, Error.NewHTTP("Access token expired", http.StatusUnauthorized)
 	}
 
 	return token, nil
@@ -125,14 +125,14 @@ func GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	token, expired := parseRefreshToken(authCookie.Value)
 
 	if !token.Valid {
-		return emptyToken, ExternalError.New("Invalid refresh token", http.StatusBadRequest)
+		return emptyToken, Error.NewHTTP("Invalid refresh token", http.StatusBadRequest)
 	}
 
 	if expired {
 		// Not sure that status 409 is OK for this case, currently this tells user that there are conflict with server and him,
 		// and reason of conflict in next: User assumes that he authorized but it's wrong, cuz refresh token expired.
 		// More likely will be better to use status 401 (unathorized) in this case, but once againg - i'm not sure.
-		return emptyToken, ExternalError.New("Refresh token expired", http.StatusConflict)
+		return emptyToken, Error.NewHTTP("Refresh token expired", http.StatusConflict)
 	}
 
 	return token, nil
@@ -159,7 +159,7 @@ func parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 }
 
 // IMPORTANT: Use this function only if token is valid.
-func PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Error) {
+func PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *Error.HTTP) {
 	var r *user.Payload
 
 	if err := verifyClaims(claims); err != nil {
@@ -169,11 +169,11 @@ func PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *ExternalError.Erro
 	return &user.Payload{
 		ID:    claims[IdKey].(string),
 		Login: claims[IssuerKey].(string),
-		Role:  claims[SubjectKey].(string),
+		Roles: claims[SubjectKey].([]string),
 	}, nil
 }
 
-func UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter, *ExternalError.Error) {
+func UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter, *Error.HTTP) {
 	var r *user.Filter
 
 	if err := verifyClaims(claims); err != nil {
@@ -181,8 +181,8 @@ func UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter,
 	}
 
 	return &user.Filter{
-		TargetUID:     targetUID,
-		RequesterUID:  claims[IdKey].(string),
-		RequesterRole: claims[SubjectKey].(string),
+		TargetUID:      targetUID,
+		RequesterUID:   claims[IdKey].(string),
+		RequesterRoles: claims[SubjectKey].([]string),
 	}, nil
 }

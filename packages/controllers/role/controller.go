@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"sentinel/packages/json"
-	"sentinel/packages/models/role"
+	"sentinel/packages/models/auth"
 
 	"github.com/StepanAnanin/weaver"
 )
@@ -24,13 +24,17 @@ func GetRoles(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	serviceID := cookieServiceID.Value
-
-	roles, e := role.GetServiceRoles(serviceID)
+	schema, e := auth.Host.GetSchema(cookieServiceID.Value)
 
 	if e != nil {
-		res.Message(e.Message, e.Status)
+		res.Message(e.Message, http.StatusBadRequest)
 		return
+	}
+
+	roles := []string{}
+
+	for _, role := range schema.Roles {
+		roles = append(roles, role.Name)
 	}
 
 	encdoedRoles, ok := json.Encode(roles)

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sentinel/packages/DB"
 	"sentinel/packages/cache"
-	ExternalError "sentinel/packages/error"
+	Error "sentinel/packages/errs"
 	"sentinel/packages/json"
 	"sentinel/packages/util"
 
@@ -16,14 +16,14 @@ import (
 )
 
 type IndexedUser struct {
-	ID        string `bson:"_id" json:"_id"`
-	Login     string `bson:"login" json:"login"`
-	Password  string `bson:"password" json:"password"`
-	Role      string `bson:"role" json:"role"`
-	DeletedAt int    `bson:"deletedAt,omitmepty" json:"deletedAt"`
+	ID        string   `bson:"_id" json:"_id"`
+	Login     string   `bson:"login" json:"login"`
+	Password  string   `bson:"password" json:"password"`
+	Roles     []string `bson:"roles" json:"roles"`
+	DeletedAt int      `bson:"deletedAt,omitmepty" json:"deletedAt"`
 }
 
-func findUserBy(key string, value string, deleted bool) (*IndexedUser, *ExternalError.Error) {
+func findUserBy(key string, value string, deleted bool) (*IndexedUser, *Error.HTTP) {
 	var user IndexedUser
 
 	cacheKey := util.Ternary(deleted, cache.DeletedUserKeyPrefix, cache.UserKeyPrefix) + value
@@ -47,7 +47,7 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 		objectID, e := primitive.ObjectIDFromHex(value)
 
 		if e != nil {
-			return &user, ExternalError.New("Invalid UID", http.StatusBadRequest)
+			return &user, Error.NewHTTP("Invalid UID", http.StatusBadRequest)
 		}
 
 		uid = objectID
@@ -69,7 +69,7 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 	}
 
 	if hasResult := cur.Next(ctx); !hasResult {
-		return &user, ExternalError.New("Пользователь не был найден", http.StatusNotFound)
+		return &user, Error.NewHTTP("Пользователь не был найден", http.StatusNotFound)
 	}
 
 	err = cur.Decode(&user)
@@ -93,17 +93,17 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *External
 }
 
 // Search for not deleted user with given UID
-func FindUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+func FindUserByID(uid string) (*IndexedUser, *Error.HTTP) {
 	return findUserBy("_id", uid, false)
 }
 
 // Search for soft deleted user with given UID
-func FindSoftDeletedUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+func FindSoftDeletedUserByID(uid string) (*IndexedUser, *Error.HTTP) {
 	return findUserBy("_id", uid, true)
 }
 
 // Search for user with given UID, regardless of his deletion status
-func FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
+func FindAnyUserByID(uid string) (*IndexedUser, *Error.HTTP) {
 	out, err := FindUserByID(uid)
 
 	if err == nil {
@@ -117,6 +117,6 @@ func FindAnyUserByID(uid string) (*IndexedUser, *ExternalError.Error) {
 	return FindSoftDeletedUserByID(uid)
 }
 
-func FindUserByLogin(login string) (*IndexedUser, *ExternalError.Error) {
+func FindUserByLogin(login string) (*IndexedUser, *Error.HTTP) {
 	return findUserBy("login", login, false)
 }

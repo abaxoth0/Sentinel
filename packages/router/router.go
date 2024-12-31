@@ -35,6 +35,7 @@ func Create() *mux.Router {
 	// TODO Check who can change properties of admin users (no one must do that)
 	router.HandleFunc("/user/drop/all-soft-deleted", weaver.Preprocessing(User.DropAllDeleted, http.MethodDelete))
 
+	// TODO Check authorization behaviour if user wants to change own properties
 	router.HandleFunc("/user/change/login", weaver.Preprocessing(User.ChangeLogin, http.MethodPatch))
 
 	router.HandleFunc("/user/change/password", weaver.Preprocessing(User.ChangePassword, http.MethodPatch))
