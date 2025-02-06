@@ -17,7 +17,7 @@ func generateRefreshTokenTtlTimestamp() int64 {
 	return util.TimestampSinceNow(config.JWT.RefreshTokenTTL)
 }
 
-func verifyClaims(claims jwt.MapClaims) *Error.HTTP {
+func VerifyClaims(claims jwt.MapClaims) *Error.HTTP {
 	if claims[IdKey] == nil {
 		return Error.NewHTTP("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
 	}

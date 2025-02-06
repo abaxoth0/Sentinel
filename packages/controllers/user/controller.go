@@ -3,6 +3,7 @@ package usercontroller
 import (
 	"log"
 	"net/http"
+	"sentinel/packages/entities"
 	Error "sentinel/packages/errs"
 	"sentinel/packages/json"
 	"sentinel/packages/models/token"
@@ -12,45 +13,51 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func buildUserFilterAndReqBody[T any](req *http.Request) (*user.Filter, T, *Error.HTTP) {
-	var emptyReqBody T
+func newUserFilter(req *http.Request) (*entities.UserFilter, *Error.HTTP) {
+    body, err := getReqBody[json.UidBody](req);
 
-	rawBody, ok := json.Decode[any](req.Body)
-
-	if !ok {
-		return nil, emptyReqBody, Error.NewHTTP("Failed to decode JSON", http.StatusBadRequest)
+    if err != nil {
+		return nil, err
 	}
 
-	accessToken, err := token.GetAccessToken(req)
+    accessToken, err := token.GetAccessToken(req);
 
-	if err != nil {
-		return nil, emptyReqBody, err
+    if err != nil {
+		return nil, err
 	}
-
-	body, _ := rawBody.(json.UidBody)
 
 	// If token is valid, then we can trust claims
-	filter, err := token.UserFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
+	filter, err := user.NewFilterFromClaims(body.UID, accessToken.Claims.(jwt.MapClaims))
 
-	if err != nil {
-		return nil, emptyReqBody, err
+    if err != nil {
+		return nil, err
 	}
 
-	return filter, rawBody.(T), nil
+	return filter, nil
+}
+
+func getReqBody[T interface{}](req *http.Request) (T, *Error.HTTP) {
+    body, ok := json.Decode[T](req.Body);
+
+    if !ok {
+		return body, Error.NewHTTP("Failed to decode JSON", http.StatusBadRequest)
+    }
+
+    return body, nil
 }
 
 func Create(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	body, ok := json.Decode[json.AuthRequestBody](req.Body)
+    body, ok := json.Decode[json.AuthRequestBody](req.Body)
 
-	if !ok {
+    if !ok {
 		res.Message("Failed to decode JSON", http.StatusBadRequest)
 		return
 	}
 
 	uid, err := user.Create(body.Login, body.Password)
 
-	if err != nil {
+    if err != nil {
 		ok, e := Error.Is(err)
 
 		if !ok {
@@ -66,7 +73,7 @@ func Create(w http.ResponseWriter, req *http.Request) {
 
 	resBody, ok := json.Encode(json.UidBody{UID: uid.Hex()})
 
-	if !ok {
+    if !ok {
 		res.InternalServerError()
 		return
 	}
@@ -76,11 +83,20 @@ func Create(w http.ResponseWriter, req *http.Request) {
 
 func ChangeLogin(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, body, err := buildUserFilterAndReqBody[json.UidAndLoginBody](req)
+
+    body, err := getReqBody[json.UidAndLoginBody](req);
+
+    if err != nil {
+        res.Message(err.Message, err.Status)
+        return
+    }
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
-	}
+	    return
+    }
 
 	if e := user.ChangeLogin(filter, body.Login); e != nil {
 		res.Message(e.Message, e.Status)
@@ -92,7 +108,15 @@ func ChangeLogin(w http.ResponseWriter, req *http.Request) {
 
 func ChangePassword(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, body, err := buildUserFilterAndReqBody[json.UidAndPasswordBody](req)
+
+    body, err := getReqBody[json.UidAndPasswordBody](req);
+
+    if err != nil {
+        res.Message(err.Message, err.Status);
+        return;
+    }
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -109,7 +133,15 @@ func ChangePassword(w http.ResponseWriter, req *http.Request) {
 
 func ChangeRole(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, body, err := buildUserFilterAndReqBody[json.UidAndRoleBody](req)
+
+    body, err := getReqBody[json.UidAndRoleBody](req);
+
+    if err != nil {
+        res.Message(err.Message, err.Status);
+        return;
+    }
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -126,7 +158,8 @@ func ChangeRole(w http.ResponseWriter, req *http.Request) {
 
 func SoftDelete(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -143,7 +176,8 @@ func SoftDelete(w http.ResponseWriter, req *http.Request) {
 
 func Restore(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -161,7 +195,8 @@ func Restore(w http.ResponseWriter, req *http.Request) {
 // Hard delete
 func Drop(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -186,7 +221,7 @@ func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	requester, err := token.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
+	requester, err := user.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -201,9 +236,11 @@ func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
+// TODO fix, now cause panic
 func GetRole(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	filter, _, err := buildUserFilterAndReqBody[json.UidBody](req)
+
+    filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -229,12 +266,13 @@ func GetRole(w http.ResponseWriter, req *http.Request) {
 
 func CheckIsLoginExists(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
-	body, ok := json.Decode[json.LoginBody](req.Body)
 
-	if !ok {
-		res.Message("Failed to decode JSON", http.StatusBadRequest)
-		return
-	}
+    body, err := getReqBody[json.LoginBody](req);
+
+    if err != nil {
+        res.Message(err.Message, err.Status);
+        return;
+    }
 
 	isExists, err := user.CheckIsLoginExists(body.Login)
 

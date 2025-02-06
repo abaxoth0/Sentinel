@@ -3,6 +3,7 @@ package authcontroller
 import (
 	"errors"
 	"net/http"
+	"sentinel/packages/entities"
 	Error "sentinel/packages/errs"
 	"sentinel/packages/json"
 	"sentinel/packages/models/auth"
@@ -39,7 +40,7 @@ func Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	accessToken, refreshToken := token.Generate(&user.Payload{
+	accessToken, refreshToken := token.Generate(&entities.UserPayload{
 		ID:    iuser.ID,
 		Login: iuser.Login,
 		Roles: iuser.Roles,
@@ -115,7 +116,7 @@ func Refresh(w http.ResponseWriter, req *http.Request) {
 	}
 
 	claims := oldRefreshToken.Claims.(jwt.MapClaims)
-	payload, err := token.PayloadFromClaims(claims)
+	payload, err := user.PayloadFromClaims(claims)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -156,7 +157,7 @@ func Verify(w http.ResponseWriter, req *http.Request) {
 
 	claims := accessToken.Claims.(jwt.MapClaims)
 
-	payload, err := token.PayloadFromClaims(claims)
+	payload, err := user.PayloadFromClaims(claims)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
@@ -174,3 +175,4 @@ func Verify(w http.ResponseWriter, req *http.Request) {
 
 	weaver.LogRequest("Authentication verified for \""+payload.ID+"\".", req)
 }
+

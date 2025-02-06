@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	ExternalError "sentinel/packages/errs"
 	"sentinel/packages/models/search"
@@ -15,7 +16,11 @@ func Login(login string, password string) (*search.IndexedUser, *ExternalError.H
 	// TODO check this
 	// If user was found (user.ID != "") and there are error, that means cursor closing failed. (see `findUserBy` method)
 	// If user wasn't found and there are error, that means occured an unexpected error.
-	if err != nil && (user.ID != "") {
+	if err != nil {
+        if user.ID != "" {
+            log.Printf("[ ERROR ] Failed to close cursor")
+        }
+
 		return user, ExternalError.NewHTTP("Неверный логин или пароль", http.StatusBadRequest)
 	}
 

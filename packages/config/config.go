@@ -11,14 +11,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type databaseConfig struct {
+type mongodbConfig struct {
 	Name                      string
 	UserCollectionName        string
 	DeletedUserCollectionName string
 	Username                  string
 	Password                  string
 	URI                       string
-	QueryDefaultTimeout       time.Duration
+	DefaultQueryTimeout       time.Duration
 }
 
 type httpServerConfig struct {
@@ -55,7 +55,7 @@ func getEnv(key string) string {
 	return env
 }
 
-var DB, HTTP, JWT, Cache, Debug = (func() (*databaseConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
+var DB, HTTP, JWT, Cache, Debug = (func() (*mongodbConfig, *httpServerConfig, *jwtConfing, *cacheConfig, *debugConfig) {
 	log.Println("[ CONFIG ] Initializing...")
 
 	if err := godotenv.Load(); err != nil {
@@ -93,14 +93,14 @@ var DB, HTTP, JWT, Cache, Debug = (func() (*databaseConfig, *httpServerConfig, *
 
 	queryTimeoutMultiplier, _ := strconv.ParseInt(getEnv("DB_DEFAULT_TIMEOUT"), 10, 64)
 
-	DbConfig := databaseConfig{
+	DbConfig := mongodbConfig{
 		Name:                      getEnv("DB_NAME"),
 		UserCollectionName:        getEnv("DB_USER_COLLECTION_NAME"),
 		DeletedUserCollectionName: getEnv("DB_DELETED_USER_COLLECTION_NAME"),
 		Username:                  getEnv("DB_USER_NAME"),
 		Password:                  getEnv("DB_PASSWORD"),
 		URI:                       getEnv("DB_URI"),
-		QueryDefaultTimeout:       time.Second * time.Duration(queryTimeoutMultiplier),
+		DefaultQueryTimeout:       time.Second * time.Duration(queryTimeoutMultiplier),
 	}
 
 	HttpConfig := httpServerConfig{

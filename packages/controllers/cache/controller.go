@@ -5,6 +5,7 @@ import (
 	"sentinel/packages/cache"
 	"sentinel/packages/models/auth"
 	"sentinel/packages/models/token"
+	"sentinel/packages/models/user"
 
 	"github.com/StepanAnanin/weaver"
 	"github.com/golang-jwt/jwt"
@@ -21,8 +22,7 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// There is no targeted user, so just pass empty string
-	filter, err := token.UserFilterFromClaims("", accessToken.Claims.(jwt.MapClaims))
+    filter, err := user.NewFilterFromClaims(user.NoTarget, accessToken.Claims.(jwt.MapClaims))
 
 	if err != nil {
 		res.Message(err.Message, err.Status)

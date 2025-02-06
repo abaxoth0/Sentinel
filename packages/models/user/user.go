@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sentinel/packages/DB"
 	"sentinel/packages/cache"
+	"sentinel/packages/entities"
 	Error "sentinel/packages/errs"
 	"sentinel/packages/models/auth"
 	"sentinel/packages/models/search"
@@ -16,18 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type Filter struct {
-	TargetUID      string
-	RequesterUID   string
-	RequesterRoles []string
-}
-
-type user struct {
-	Login    string
-	Password string
-	Roles    []string
-}
 
 func Create(login string, password string) (primitive.ObjectID, error) {
 	var uid primitive.ObjectID
@@ -46,7 +35,7 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 		return uid, Error.NewHTTP("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
 	}
 
-	usr := user{
+	user := entities.User{
 		Login:    login,
 		Password: string(hashedPassword),
 		Roles:    []string{auth.Host.OriginRoleName},
@@ -56,7 +45,7 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 
 	defer cancel()
 
-	result, err := DB.UserCollection.InsertOne(ctx, usr)
+	result, err := DB.UserCollection.InsertOne(ctx, user)
 
 	if err != nil {
 		return uid, Error.NewHTTP("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
@@ -67,17 +56,15 @@ func Create(login string, password string) (primitive.ObjectID, error) {
 	return uid, nil
 }
 
-func update(filter *Filter, upd *primitive.E, deleted bool) *Error.HTTP {
+func update(filter *entities.UserFilter, upd *primitive.E, deleted bool) *Error.HTTP {
 	if deleted {
 		if _, err := search.FindSoftDeletedUserByID(filter.TargetUID); err != nil {
 			return err
 		}
 	} else {
-		_, err := search.FindUserByID(filter.TargetUID)
-
-		if err != nil {
-			return err
-		}
+		if _, err := search.FindUserByID(filter.TargetUID); err != nil {
+            return err
+        }
 	}
 
 	ctx, cancel := emongo.DefaultTimeoutContext()
@@ -99,7 +86,7 @@ func update(filter *Filter, upd *primitive.E, deleted bool) *Error.HTTP {
 	return nil
 }
 
-func SoftDelete(filter *Filter) *Error.HTTP {
+func SoftDelete(filter *entities.UserFilter) *Error.HTTP {
 	if err := auth.Authorize(auth.Action.SoftDelete, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -127,7 +114,7 @@ func SoftDelete(filter *Filter) *Error.HTTP {
 	return nil
 }
 
-func Restore(filter *Filter) *Error.HTTP {
+func Restore(filter *entities.UserFilter) *Error.HTTP {
 	if err := auth.Authorize(auth.Action.Restore, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -157,7 +144,7 @@ func Restore(filter *Filter) *Error.HTTP {
 }
 
 // Hard delete
-func Drop(filter *Filter) *Error.HTTP {
+func Drop(filter *entities.UserFilter) *Error.HTTP {
 	if err := auth.Authorize(auth.Action.Drop, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -203,7 +190,7 @@ func DropAllDeleted(requesterRoles []string) *Error.HTTP {
 	return nil
 }
 
-func ChangeLogin(filter *Filter, newlogin string) *Error.HTTP {
+func ChangeLogin(filter *entities.UserFilter, newlogin string) *Error.HTTP {
 	if err := auth.Authorize(auth.Action.ChangeLogin, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -224,7 +211,7 @@ func ChangeLogin(filter *Filter, newlogin string) *Error.HTTP {
 	return update(filter, upd, true)
 }
 
-func ChangePassword(filter *Filter, newPassword string) *Error.HTTP {
+func ChangePassword(filter *entities.UserFilter, newPassword string) *Error.HTTP {
 	if err := auth.Authorize(auth.Action.ChangePassword, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -248,7 +235,7 @@ func ChangePassword(filter *Filter, newPassword string) *Error.HTTP {
 	return update(filter, upd, true)
 }
 
-func ChangeRole(filter *Filter, newRole string) *Error.HTTP {
+func ChangeRole(filter *entities.UserFilter, newRole string) *Error.HTTP {
 	if err := auth.Authorize(auth.Action.ChangeRole, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -262,6 +249,7 @@ func ChangeRole(filter *Filter, newRole string) *Error.HTTP {
 	return update(filter, upd, true)
 }
 
+// TODO add cache
 func CheckIsLoginExists(login string) (bool, *Error.HTTP) {
 	if _, err := search.FindUserByLogin(login); err != nil {
 		if err.Status == http.StatusNotFound {
@@ -274,7 +262,7 @@ func CheckIsLoginExists(login string) (bool, *Error.HTTP) {
 	return true, nil
 }
 
-func GetRoles(filter *Filter) ([]string, *Error.HTTP) {
+func GetRoles(filter *entities.UserFilter) ([]string, *Error.HTTP) {
 	if err := auth.Authorize(auth.Action.GetRole, auth.Resource.User, filter.RequesterRoles); err != nil {
 		return []string{}, err
 	}
@@ -287,3 +275,4 @@ func GetRoles(filter *Filter) ([]string, *Error.HTTP) {
 
 	return user.Roles, nil
 }
+

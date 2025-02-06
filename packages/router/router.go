@@ -40,8 +40,10 @@ func Create() *mux.Router {
 
 	router.HandleFunc("/user/change/password", weaver.Preprocessing(User.ChangePassword, http.MethodPatch))
 
+	// TODO rework this endpoint (cuz now user can have multiple roles)
 	router.HandleFunc("/user/change/role", weaver.Preprocessing(User.ChangeRole, http.MethodPatch))
 
+	// TODO Add option (query param of flag in body) to check if login email (also do this on registration)
 	router.HandleFunc("/user/check/login", weaver.Preprocessing(User.CheckIsLoginExists, http.MethodPost))
 
 	router.HandleFunc("/user/check/role", weaver.Preprocessing(User.GetRole, http.MethodPost))

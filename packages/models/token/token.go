@@ -5,19 +5,23 @@ import (
 	"log"
 	"net/http"
 	"sentinel/packages/config"
-	Error "sentinel/packages/errs"
-	"sentinel/packages/models/user"
+	"sentinel/packages/entities"
 	"sentinel/packages/util"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
+
+	Error "sentinel/packages/errs"
 )
 
 type SignedToken struct {
 	Value string
 	TTL   int64
 }
+
+type AccessToken = SignedToken
+type RefreshToken = SignedToken
 
 const RefreshTokenKey string = "refreshToken"
 
@@ -30,24 +34,24 @@ const IssuerKey string = "iss"
 // Roles
 const SubjectKey string = "sub"
 
-// Generate access and refresh tokens. (they returns in same order as here)
-func Generate(user *user.Payload) (*SignedToken, *SignedToken) {
+// Generate access and refresh tokens.
+func Generate(payload *entities.UserPayload) (*AccessToken, *RefreshToken) {
 	accessTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
 		IssuedAt: time.Now().Unix(),
 		// For certain values see config
 		ExpiresAt: generateAccessTokenTtlTimestamp(),
-		Id:        user.ID,
-		Issuer:    user.Login,
-		Subject:   strings.Join(user.Roles, ","),
+		Id:        payload.ID,
+		Issuer:    payload.Login,
+		Subject:   strings.Join(payload.Roles, ","),
 	})
 
 	refreshTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
 		IssuedAt: time.Now().Unix(),
 		// For certain values see config
 		ExpiresAt: generateRefreshTokenTtlTimestamp(),
-		Id:        user.ID,
-		Issuer:    user.Login,
-		Subject:   strings.Join(user.Roles, ","),
+		Id:        payload.ID,
+		Issuer:    payload.Login,
+		Subject:   strings.Join(payload.Roles, ","),
 	})
 
 	accessTokenStr, e := accessTokenBuilder.SignedString(*config.JWT.AccessTokenPrivateKey)
@@ -158,31 +162,3 @@ func parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 	return token, exp
 }
 
-// IMPORTANT: Use this function only if token is valid.
-func PayloadFromClaims(claims jwt.MapClaims) (*user.Payload, *Error.HTTP) {
-	var r *user.Payload
-
-	if err := verifyClaims(claims); err != nil {
-		return r, err
-	}
-
-	return &user.Payload{
-		ID:    claims[IdKey].(string),
-		Login: claims[IssuerKey].(string),
-		Roles: claims[SubjectKey].([]string),
-	}, nil
-}
-
-func UserFilterFromClaims(targetUID string, claims jwt.MapClaims) (*user.Filter, *Error.HTTP) {
-	var r *user.Filter
-
-	if err := verifyClaims(claims); err != nil {
-		return r, err
-	}
-
-	return &user.Filter{
-		TargetUID:      targetUID,
-		RequesterUID:   claims[IdKey].(string),
-		RequesterRoles: claims[SubjectKey].([]string),
-	}, nil
-}

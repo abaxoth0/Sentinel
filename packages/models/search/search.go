@@ -43,7 +43,7 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *Error.HT
 
 	isKeyID := key == "_id"
 
-	if isKeyID {
+    if isKeyID {
 		objectID, e := primitive.ObjectIDFromHex(value)
 
 		if e != nil {
@@ -82,7 +82,7 @@ func findUserBy(key string, value string, deleted bool) (*IndexedUser, *Error.HT
 	// and garbage collector should kill cursor, but idk how it will work in practice.
 	// user will be non-empty, but error will still presence
 	if err := cur.Close(ctx); err != nil {
-		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, Login:%s\n", user.ID, user.Login)
+		log.Printf("[ ERROR ] Failed to close cursor. ID: %s, Login: %s\n", user.ID, user.Login)
 	}
 
 	if rawUser, ok := json.Encode(user); ok {

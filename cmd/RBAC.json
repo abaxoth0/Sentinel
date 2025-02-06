@@ -84,6 +84,25 @@
         {
             "id": "cb663674-803e-4b06-bfeb-87c5cc86383e",
             "name": "sentinel"
+        },
+        {
+            "id": "2fd9f71c-4ced-4607-af47-7e8cc21725a9",
+            "name": "post-service",
+            "roles": [
+                {
+                    "name": "unconfirmed_user",
+                    "permissions": {
+                        "read": false,
+                        "self-read": true,
+                        "create": false,
+                        "self-create": false,
+                        "update": false,
+                        "self-update": false,
+                        "delete": false,
+                        "self-delete": false
+                    }
+                }
+            ]
         }
     ]
 }

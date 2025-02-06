@@ -24,7 +24,8 @@ var Host = (func() *rbac.Host {
 })()
 
 var schema = (func() *rbac.Schema {
-	s, e := Host.GetSchema("cb663674-803e-4b06-bfeb-87c5cc86383e")
+	// TODO move it to env variable
+    s, e := Host.GetSchema("cb663674-803e-4b06-bfeb-87c5cc86383e")
 
 	if e != nil {
 		panic(e)
