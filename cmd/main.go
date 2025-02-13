@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 	"runtime"
-	"sentinel/packages/DB"
-	"sentinel/packages/cache"
-	"sentinel/packages/config"
-	"sentinel/packages/router"
+	"sentinel/packages/infrastructure/DB"
+	"sentinel/packages/infrastructure/cache"
+	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/presentation/api/http/router"
 	"sentinel/packages/util"
 
 	emongo "github.com/StepanAnanin/EssentialMongoDB"
@@ -27,7 +27,7 @@ var logo = `
 `
 
 func main() {
-	ver := "1.0.0.0"
+	ver := "1.1.0.0"
 
 	// Program wasn't run and/or tested on Windows.
 	// (Probably it will work, but required minor code modifications)
@@ -35,11 +35,11 @@ func main() {
 		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux.")
 	}
 
-	DB.Connect()
+	DB.Database.Connect()
 
 	emongo.Config.DefaultQueryTimeout = config.DB.DefaultQueryTimeout
 
-	defer DB.Disconnect()
+	defer DB.Database.Disconnect()
 
 	cache.Init()
 
@@ -70,7 +70,7 @@ func main() {
 	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
 		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")
 
-		DB.Disconnect()
+		DB.Database.Disconnect()
 
 		panic(err)
 	}
