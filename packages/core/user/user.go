@@ -5,14 +5,10 @@ import (
 	Error "sentinel/packages/errs"
 )
 
-type Raw struct {
+type Model struct {
 	Login string
 	Roles []string
-}
-
-type RawSecured struct {
 	Password string
-	Raw
 }
 
 func VerifyPassword(password string) *Error.Status {

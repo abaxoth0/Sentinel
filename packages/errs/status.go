@@ -1,5 +1,9 @@
 package errs
 
+// TODO
+// Need to rework functions which return this error:
+// they should return it by value and not by pointer
+
 type Status struct {
 	Message string
 	Status  int

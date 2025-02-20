@@ -5,11 +5,12 @@ import (
 	"log"
 	"net/http"
 	"sentinel/packages/core/user"
-	userdto "sentinel/packages/core/user/DTO"
+	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errs"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/util"
+	"slices"
 
 	emongo "github.com/StepanAnanin/EssentialMongoDB"
 	"go.mongodb.org/mongo-driver/bson"
@@ -24,8 +25,6 @@ type repository struct {
 }
 
 func (repo *repository) Create(login string, password string) (string, error) {
-	// var uid primitive.ObjectID
-
 	if err := user.VerifyPassword(password); err != nil {
 		return "", err
 	}
@@ -40,31 +39,29 @@ func (repo *repository) Create(login string, password string) (string, error) {
 		return "", Error.NewStatusError("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
 	}
 
-	user := user.RawSecured{
+	data := user.Model{
+		Login: login,
 		Password: string(hashedPassword),
-		Raw: user.Raw{
-			Login: login,
-			Roles: []string{authorization.Host.OriginRoleName},
-		},
+		Roles: []string{authorization.Host.OriginRoleName},
 	}
 
 	ctx, cancel := emongo.DefaultTimeoutContext()
 
 	defer cancel()
 
-	result, err := driver.UserCollection.InsertOne(ctx, user)
+	result, err := driver.UserCollection.InsertOne(ctx, data)
 
 	if err != nil {
 		return "", Error.NewStatusError("Не удалось создать пользователя: Внутреняя ошибка сервера.", http.StatusInternalServerError)
 	}
 
-	// TODO test this func
-	uid := result.InsertedID.(string)
+	uid := result.InsertedID.(primitive.ObjectID).Hex()
 
 	return uid, nil
 }
 
-func (repo *repository) update(filter *userdto.Filter, upd *primitive.E, deleted bool) *Error.Status {
+func (repo *repository) update(filter *UserDTO.Filter, upd *primitive.E, deleted bool) *Error.Status {
+	// TODO replace this shit via driver.FindAnyUserByID
 	if deleted {
 		if _, err := driver.FindSoftDeletedUserByID(filter.TargetUID); err != nil {
 			return err
@@ -81,7 +78,13 @@ func (repo *repository) update(filter *userdto.Filter, upd *primitive.E, deleted
 
 	update := bson.D{{"$set", bson.D{*upd}}}
 
-	_, updError := driver.UserCollection.UpdateByID(ctx, emongo.ObjectIDFromHex(filter.TargetUID), update)
+    uid, err := primitive.ObjectIDFromHex(filter.TargetUID)
+
+    if err != nil {
+        return Error.NewStatusError("Внутренняя ошибка сервера (failed to format uid to objectID)", http.StatusInternalServerError)
+    }
+
+	_, updError := driver.UserCollection.UpdateByID(ctx, uid, update)
 
 	if updError != nil {
 		log.Println("[ ERROR ] Failed to update user (query error) \"" + filter.TargetUID + "\" - " + updError.Error())
@@ -94,14 +97,24 @@ func (repo *repository) update(filter *userdto.Filter, upd *primitive.E, deleted
 	return nil
 }
 
-func (repo *repository) SoftDelete(filter *userdto.Filter) *Error.Status {
-	if err := authorization.Authorize(authorization.Action.SoftDelete, authorization.Resource.User, filter.RequesterRoles); err != nil {
-		return err
-	}
+func (repo *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
+	// TODO add possibility to config what kind of users can delete themselves
+    // all users can delete themselves, except admins (TEMP)
+    if filter.TargetUID != filter.RequesterUID {
+        if err := authorization.Authorize(authorization.Action.SoftDelete, authorization.Resource.User, filter.RequesterRoles); err != nil {
+            return err
+        }
+    }
 
-	if _, err := driver.FindUserByID(filter.TargetUID); err != nil {
+	target, err := driver.FindUserByID(filter.TargetUID);
+
+    if err != nil {
 		return Error.NewStatusError("Запрошенный пользователь не был найден", http.StatusNotFound)
 	}
+
+    if slices.Contains(target.Roles, "admin") {
+        return Error.NewStatusError("Нельзя удалить пользователя с ролью администратора", http.StatusBadRequest)
+    }
 
 	user, err := driver.FindUserByID(filter.TargetUID)
 
@@ -111,7 +124,18 @@ func (repo *repository) SoftDelete(filter *userdto.Filter) *Error.Status {
 
 	user.DeletedAt = int(util.UnixTimeNow())
 
-	if e := emongo.DocumentTransfer(user, driver.UserCollection, driver.DeletedUserCollection, func() { user.DeletedAt = 0 }); e != nil {
+    uid, e := primitive.ObjectIDFromHex(user.ID)
+
+    if e != nil {
+        return Error.NewStatusError("UID assertation failed", http.StatusInternalServerError)
+    }
+
+    transferData := &emongo.TransferData{
+        DocumentID: uid,
+        Document: UserDTO.IndexedToUnindexed(user),
+    }
+
+	if e := emongo.DocumentTransfer(transferData, driver.UserCollection, driver.DeletedUserCollection, func() { user.DeletedAt = 0 }); e != nil {
 		err = Error.NewStatusError(e.Error(), http.StatusInternalServerError)
 	}
 
@@ -122,7 +146,7 @@ func (repo *repository) SoftDelete(filter *userdto.Filter) *Error.Status {
 	return nil
 }
 
-func (repo *repository) Restore(filter *userdto.Filter) *Error.Status {
+func (repo *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 	if err := authorization.Authorize(authorization.Action.Restore, authorization.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -140,19 +164,26 @@ func (repo *repository) Restore(filter *userdto.Filter) *Error.Status {
 	deletedAtTimestamp := user.DeletedAt
 	user.DeletedAt = 0
 
-	if e := emongo.DocumentTransfer(user, driver.DeletedUserCollection, driver.UserCollection, func() { user.DeletedAt = deletedAtTimestamp }); e != nil {
-		err = Error.NewStatusError(e.Error(), http.StatusInternalServerError)
-	}
+    uid, e := primitive.ObjectIDFromHex(user.ID)
 
-	if err != nil {
-		return err
+    if e != nil {
+        return Error.NewStatusError("UID assertation failed", http.StatusInternalServerError)
+    }
+
+    transferData := &emongo.TransferData{
+        DocumentID: uid,
+        Document: UserDTO.IndexedToUnindexed(user),
+    }
+
+	if err := emongo.DocumentTransfer(transferData, driver.DeletedUserCollection, driver.UserCollection, func() { user.DeletedAt = deletedAtTimestamp }); err != nil {
+		return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
 	}
 
 	return nil
 }
 
 // Hard delete
-func (repo *repository) Drop(filter *userdto.Filter) *Error.Status {
+func (repo *repository) Drop(filter *UserDTO.Filter) *Error.Status {
 	if err := authorization.Authorize(authorization.Action.Drop, authorization.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -198,7 +229,7 @@ func (repo *repository) DropAllSoftDeleted(requesterRoles []string) *Error.Statu
 	return nil
 }
 
-func (repo *repository) ChangeLogin(filter *userdto.Filter, newlogin string) *Error.Status {
+func (repo *repository) ChangeLogin(filter *UserDTO.Filter, newlogin string) *Error.Status {
 	if err := authorization.Authorize(authorization.Action.ChangeLogin, authorization.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -219,7 +250,7 @@ func (repo *repository) ChangeLogin(filter *userdto.Filter, newlogin string) *Er
 	return repo.update(filter, upd, true)
 }
 
-func (repo *repository) ChangePassword(filter *userdto.Filter, newPassword string) *Error.Status {
+func (repo *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status {
 	if err := authorization.Authorize(authorization.Action.ChangePassword, authorization.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -243,7 +274,7 @@ func (repo *repository) ChangePassword(filter *userdto.Filter, newPassword strin
 	return repo.update(filter, upd, true)
 }
 
-func (repo *repository) ChangeRoles(filter *userdto.Filter, newRoles []string) *Error.Status {
+func (repo *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status {
 	if err := authorization.Authorize(authorization.Action.ChangeRoles, authorization.Resource.User, filter.RequesterRoles); err != nil {
 		return err
 	}
@@ -257,7 +288,7 @@ func (repo *repository) ChangeRoles(filter *userdto.Filter, newRoles []string) *
 	return repo.update(filter, upd, true)
 }
 
-func (repo *repository) GetRoles(filter *userdto.Filter) ([]string, *Error.Status) {
+func (repo *repository) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
 	if err := authorization.Authorize(authorization.Action.GetRole, authorization.Resource.User, filter.RequesterRoles); err != nil {
 		return []string{}, err
 	}

@@ -27,7 +27,7 @@ var logo = `
 `
 
 func main() {
-	ver := "1.1.0.0"
+	ver := "1.1.1.0"
 
 	// Program wasn't run and/or tested on Windows.
 	// (Probably it will work, but required minor code modifications)

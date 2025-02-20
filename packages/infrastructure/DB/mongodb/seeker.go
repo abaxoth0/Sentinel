@@ -24,9 +24,9 @@ func (_ *seeker) findUserBy(key string, value string, deleted bool) (*UserDTO.In
 
 	cacheKey := util.Ternary(deleted, cache.DeletedUserKeyPrefix, cache.UserKeyPrefix) + value
 
-	if rawCachedUser, hit := cache.Get(cacheKey); hit {
-		if cachedUser, err := datamodel.DecodeString[UserDTO.Indexed](rawCachedUser); err != nil {
-			return &cachedUser, nil
+	if rawCachedUser, hit:= cache.Get(cacheKey); hit {
+		if cachedUser, err:= datamodel.DecodeString[UserDTO.Indexed](rawCachedUser); err != nil {
+            return &cachedUser, nil
 		}
 	}
 
@@ -50,7 +50,7 @@ func (_ *seeker) findUserBy(key string, value string, deleted bool) (*UserDTO.In
 	}
 
 	// TODO test queries (changed from D to M)
-	filter := util.Ternary(isKeyID, bson.M{key: uid}, bson.M{key: value})
+    filter := util.Ternary(isKeyID, bson.D{{key, uid}}, bson.D{{key, value}})
 
 	var cur *mongo.Cursor
 	var err error

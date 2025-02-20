@@ -85,7 +85,7 @@ func Generate(payload *UserDTO.Payload) (*AccessToken, *RefreshToken) {
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
 func GetAccessToken(req *http.Request) (*jwt.Token, *Error.Status) {
-	var r *jwt.Token
+    var r *jwt.Token
 
 	authHeaderValue := req.Header.Get("Authorization")
 
@@ -94,6 +94,10 @@ func GetAccessToken(req *http.Request) (*jwt.Token, *Error.Status) {
 	}
 
 	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
+
+    if accessTokenStr == "null" {
+        return r, Error.NewStatusError("Invalid access token (null value)", http.StatusBadRequest)
+    }
 
 	token, expired := parseAccessToken(accessTokenStr)
 
