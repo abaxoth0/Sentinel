@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// TODO rework: for some endpoint change method go Get and receive UID from URL
+
 func Create() *mux.Router {
 	router := mux.NewRouter()
 
@@ -46,7 +48,7 @@ func Create() *mux.Router {
 	// TODO Add option (query param of flag in body) to check if login email (also do this on registration)
 	router.HandleFunc("/user/check/login", weaver.Preprocessing(User.CheckIsLoginExists, http.MethodPost))
 
-	router.HandleFunc("/user/check/role", weaver.Preprocessing(User.GetRole, http.MethodPost))
+	router.HandleFunc("/user/roles", weaver.Preprocessing(User.GetRoles, http.MethodPost))
 
 	// roles
 	router.HandleFunc("/roles", weaver.Preprocessing(Role.GetRoles, http.MethodGet))

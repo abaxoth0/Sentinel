@@ -238,7 +238,7 @@ func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-func GetRole(w http.ResponseWriter, req *http.Request) {
+func GetRoles(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
 
 	filter, err := newUserFilter(req)
