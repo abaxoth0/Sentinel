@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/infrastructure/config"
 	"strings"

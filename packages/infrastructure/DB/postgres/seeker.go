@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -14,11 +14,13 @@ type seeker struct {
     //
 }
 
+var invalidUID = Error.NewStatusError("Invalid ID", http.StatusBadRequest)
+
 func (_ *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     parsedID, e := strconv.ParseInt(id, 10, 64);
 
     if e != nil {
-        return nil, Error.NewStatusError("Invalid ID", http.StatusBadRequest)
+        return nil, invalidUID
     }
 
     return dtoFromQuery(
@@ -33,7 +35,7 @@ func (_ *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.St
     parsedID, e := strconv.ParseInt(id, 10, 64);
 
     if e != nil {
-        return nil, Error.NewStatusError("Invalid ID", http.StatusBadRequest)
+        return nil, invalidUID
     }
 
     return dtoFromQuery(
@@ -75,7 +77,7 @@ func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
 
         println(e.Error())
 
-        return false, Error.NewStatusError("Internal Server Error", http.StatusInternalServerError)
+        return false, Error.StatusInternalError
     }
 
     return true, nil

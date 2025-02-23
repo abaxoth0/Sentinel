@@ -6,7 +6,7 @@ import (
 	"sentinel/packages/util"
 	"strings"
 
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 
 	"github.com/golang-jwt/jwt"
 )

@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/DB"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
@@ -47,7 +47,6 @@ func getReqBody[T any](req *http.Request) (T, *Error.Status) {
 	return body, nil
 }
 
-// TODO test (uid.HEX removed)
 func Create(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
 
@@ -239,7 +238,6 @@ func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 	res.OK()
 }
 
-// TODO fix, now cause panic
 func GetRole(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
 

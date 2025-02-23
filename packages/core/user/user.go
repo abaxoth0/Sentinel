@@ -2,7 +2,7 @@ package user
 
 import (
 	"net/http"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 )
 
 type Model struct {
@@ -16,7 +16,10 @@ func VerifyPassword(password string) *Error.Status {
 
 	// bcrypt can handle password with maximum size of 72 bytes
 	if passwordSize < 8 || passwordSize > 64 {
-		return Error.NewStatusError("Недопустимый размер пароля. Пароль должен находится в диапозоне от 8 до 64 символов.", http.StatusBadRequest)
+		return Error.NewStatusError(
+            "Пароль должен находится в диапозоне от 8 до 64 символов.",
+            http.StatusBadRequest,
+        )
 	}
 
 	return nil

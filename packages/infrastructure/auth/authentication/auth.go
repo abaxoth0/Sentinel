@@ -4,10 +4,15 @@ import (
 	"log"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/DB"
 
 	"golang.org/x/crypto/bcrypt"
+)
+
+var invalidAuthCreditinals = Error.NewStatusError(
+    "Неверный логин или пароль",
+    http.StatusBadRequest,
 )
 
 // Returns indexedUser if auth data is correct, ExternalError otherwise.
@@ -22,13 +27,13 @@ func Login(login string, password string) (*UserDTO.Indexed, *Error.Status) {
 			log.Printf("[ ERROR ] Failed to close cursor")
 		}
 
-		return user, Error.NewStatusError("Неверный логин или пароль", http.StatusBadRequest)
-	}
+	    return user, invalidAuthCreditinals
+    }
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		// We know that on this stage only password is incorrect,
-		// but there are no point to tell user about this (due to security reasons).
-		return user, Error.NewStatusError("Неверный логин или пароль", http.StatusBadRequest)
+    e := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+
+    if e != nil {
+		return user, invalidAuthCreditinals
 	}
 
 	return user, nil

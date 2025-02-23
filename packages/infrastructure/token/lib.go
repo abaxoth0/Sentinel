@@ -2,7 +2,7 @@ package token
 
 import (
 	"net/http"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/config"
 	"sentinel/packages/util"
 
@@ -17,18 +17,23 @@ func generateRefreshTokenTtlTimestamp() int64 {
 	return util.TimestampSinceNow(config.JWT.RefreshTokenTTL)
 }
 
+var invalidTokenPayload = Error.NewStatusError(
+    "Ошибка авторизации (invalid token payload)",
+    http.StatusBadRequest,
+)
+
 func VerifyClaims(claims jwt.MapClaims) *Error.Status {
 	if claims[IdKey] == nil {
-		return Error.NewStatusError("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
-	}
+		return invalidTokenPayload
+    }
 
 	if claims[IssuerKey] == nil {
-		return Error.NewStatusError("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
-	}
+		return invalidTokenPayload
+    }
 
 	if claims[SubjectKey] == nil {
-		return Error.NewStatusError("Ошибка авторизации (invalid token payload)", http.StatusBadRequest)
-	}
+		return invalidTokenPayload
+    }
 
 	return nil
 }

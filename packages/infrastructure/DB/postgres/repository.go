@@ -2,7 +2,7 @@ package postgres
 
 import (
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 )
 
 type repository struct {

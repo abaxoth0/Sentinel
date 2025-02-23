@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/cache"
 	datamodel "sentinel/packages/presentation/data"
 	"sentinel/packages/util"
@@ -66,8 +66,8 @@ func (_ *seeker) findUserBy(key string, value string, deleted bool) (*UserDTO.In
 	}
 
 	if hasResult := cur.Next(ctx); !hasResult {
-		return &user, Error.NewStatusError("Пользователь не был найден", http.StatusNotFound)
-	}
+		return &user, Error.StatusUserNotFound
+    }
 
 	err = cur.Decode(&user)
 

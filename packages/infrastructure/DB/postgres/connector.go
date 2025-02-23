@@ -3,9 +3,8 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,10 +79,7 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
             err.Error(),
         )
 
-        return nil, Error.NewStatusError(
-            "Internal Server Error",
-            http.StatusInternalServerError,
-        )
+        return nil, Error.StatusInternalError
     }
 
     return connection, nil

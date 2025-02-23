@@ -2,9 +2,8 @@ package postgres
 
 import (
 	"errors"
-	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -20,12 +19,7 @@ func evalSQL(sql string, args ...any) (pgx.Row, *Error.Status) {
         return nil, err
     }
 
-    return con.QueryRow(
-        driver.ctx,
-        sql,
-        args...,
-    ), nil
-
+    return con.QueryRow(driver.ctx, sql, args...), nil
 }
 
 func dtoFromQuery(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
@@ -41,12 +35,12 @@ func dtoFromQuery(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
 
     if e != nil {
         if errors.Is(e, pgx.ErrNoRows) {
-            return nil, Error.NewStatusError("Запрошенный пользователь не был найден", http.StatusNotFound)
+            return nil, Error.StatusUserNotFound
         }
 
         println(e.Error())
 
-        return nil, Error.NewStatusError("Internal Server Error", http.StatusInternalServerError)
+        return nil, Error.StatusInternalError
     }
 
     return dto, nil

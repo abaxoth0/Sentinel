@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 
-	Error "sentinel/packages/errs"
+	Error "sentinel/packages/errors"
 )
 
 type SignedToken struct {
@@ -90,23 +90,23 @@ func GetAccessToken(req *http.Request) (*jwt.Token, *Error.Status) {
 	authHeaderValue := req.Header.Get("Authorization")
 
 	if authHeaderValue == "" {
-		return r, Error.NewStatusError("Вы не авторизованы", 401)
+		return r, unauthorized
 	}
 
 	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
 
     if accessTokenStr == "null" {
-        return r, Error.NewStatusError("Invalid access token (null value)", http.StatusBadRequest)
+        return r, invalidAccessToken
     }
 
 	token, expired := parseAccessToken(accessTokenStr)
 
 	if !token.Valid {
-		return r, Error.NewStatusError("Invalid access token", http.StatusBadRequest)
+		return r, invalidAccessToken
 	}
 
 	if expired {
-		return r, Error.NewStatusError("Access token expired", http.StatusUnauthorized)
+		return r, accessTokenExpired
 	}
 
 	return token, nil
@@ -133,14 +133,11 @@ func GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 	token, expired := parseRefreshToken(authCookie.Value)
 
 	if !token.Valid {
-		return emptyToken, Error.NewStatusError("Invalid refresh token", http.StatusBadRequest)
+		return emptyToken, invalidRefreshToken
 	}
 
 	if expired {
-		// Not sure that status 409 is OK for this case, currently this tells user that there are conflict with server and him,
-		// and reason of conflict in next: User assumes that he authorized but it's wrong, cuz refresh token expired.
-		// More likely will be better to use status 401 (unathorized) in this case, but once againg - i'm not sure.
-		return emptyToken, Error.NewStatusError("Refresh token expired", http.StatusConflict)
+		return emptyToken, refreshTokenExpired
 	}
 
 	return token, nil
