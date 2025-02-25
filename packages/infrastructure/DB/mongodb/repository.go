@@ -25,13 +25,13 @@ type repository struct {
 	//
 }
 
-func (repo *repository) Create(login string, password string) (string, error) {
+func (repo *repository) Create(login string, password string) (error) {
 	if err := user.VerifyPassword(password); err != nil {
-		return "", err
+		return err
 	}
 
 	if _, err := driver.FindUserByLogin(login); err == nil {
-		return "", Error.NewStatusError(
+		return Error.NewStatusError(
             "Пользователь с таким логином уже существует.",
             http.StatusConflict,
         )
@@ -40,7 +40,7 @@ func (repo *repository) Create(login string, password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 
 	if err != nil {
-		return "", 	Error.StatusInternalError
+		return Error.StatusInternalError
     }
 
 	data := user.Model{
@@ -53,15 +53,13 @@ func (repo *repository) Create(login string, password string) (string, error) {
 
 	defer cancel()
 
-	result, err := driver.UserCollection.InsertOne(ctx, data)
+	_, err = driver.UserCollection.InsertOne(ctx, data)
 
 	if err != nil {
-		return "", Error.StatusInternalError
+		return Error.StatusInternalError
 	}
 
-	uid := result.InsertedID.(primitive.ObjectID).Hex()
-
-	return uid, nil
+	return nil
 }
 
 func (repo *repository) update(filter *UserDTO.Filter, upd *primitive.E, deleted bool) *Error.Status {

@@ -24,7 +24,7 @@ type seeker interface {
 // Responsible for CUD in CRUD
 type repository interface {
 	// Returns uid and error
-	Create(login string, password string) (string, error)
+	Create(login string, password string) (error)
 
 	SoftDelete(filter *UserDTO.Filter) *Error.Status
 

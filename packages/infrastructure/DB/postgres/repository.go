@@ -9,8 +9,8 @@ type repository struct {
     //
 }
 
-func (_ *repository) Create(login string, password string) (string, error) {
-    return "", nil
+func (_ *repository) Create(login string, password string) (error) {
+    return nil
 }
 
 func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {

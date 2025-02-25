@@ -57,7 +57,7 @@ func Create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	uid, err := DB.Database.Create(body.Login, body.Password)
+	err := DB.Database.Create(body.Login, body.Password)
 
 	if err != nil {
 		is, e := Error.IsStatusError(err)
@@ -73,14 +73,7 @@ func Create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resBody, e := datamodel.Encode(datamodel.UidBody{UID: uid})
-
-	if e != nil {
-		res.InternalServerError()
-		return
-	}
-
-	res.SendBody(resBody)
+	res.OK()
 }
 
 func ChangeLogin(w http.ResponseWriter, req *http.Request) {
