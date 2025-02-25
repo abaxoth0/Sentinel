@@ -31,3 +31,8 @@ var StatusUserNotFound = NewStatusError(
     http.StatusNotFound,
 )
 
+var StatusTimeout = NewStatusError(
+    "Превышено время ожидания",
+    http.StatusRequestTimeout,
+)
+

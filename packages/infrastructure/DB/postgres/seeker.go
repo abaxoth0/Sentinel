@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
@@ -57,6 +58,7 @@ func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status)
 
 func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
     var id int
+
     row, err := evalSQL(
         `SELECT id
          FROM "user"
@@ -65,6 +67,10 @@ func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
     )
 
     if err != nil {
+        if err == context.DeadlineExceeded {
+            return false, Error.StatusTimeout
+        }
+
         return false, err
     }
 

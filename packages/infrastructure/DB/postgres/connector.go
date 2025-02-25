@@ -52,6 +52,11 @@ func (c *connector) Connect() {
     defer cancel()
 
     if err = pool.Ping(ctx); err != nil {
+        if err == context.DeadlineExceeded {
+            fmt.Printf("[ DATABASE ] Error: Ping timeout")
+            os.Exit(1)
+        }
+
         fmt.Printf("[ DATABASE ] Failed to ping: %v\n", err.Error())
         os.Exit(1)
     }
@@ -74,6 +79,10 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
     connection, err := c.pool.Acquire(ctx)
 
     if err != nil {
+        if err == context.DeadlineExceeded {
+            return nil, Error.StatusTimeout
+        }
+
         fmt.Printf(
             "[ ERROR ] Failed to acquire connection from pool: %v\n",
             err.Error(),

@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"errors"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
@@ -19,7 +20,11 @@ func evalSQL(sql string, args ...any) (pgx.Row, *Error.Status) {
         return nil, err
     }
 
-    return con.QueryRow(driver.ctx, sql, args...), nil
+    ctx, cancel := defaultTimeoutContext()
+
+    defer cancel()
+
+    return con.QueryRow(ctx, sql, args...), nil
 }
 
 func dtoFromQuery(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
@@ -28,6 +33,10 @@ func dtoFromQuery(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
     row, err := evalSQL(sql, args)
 
     if err != nil {
+        if err == context.DeadlineExceeded {
+            return nil, Error.StatusTimeout
+        }
+
         return nil, err
     }
 
