@@ -84,7 +84,7 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
         }
 
         fmt.Printf(
-            "[ ERROR ] Failed to acquire connection from pool: %v\n",
+            "[ ERROR ] Failed to acquire connection from pool: \n%v\n",
             err.Error(),
         )
 

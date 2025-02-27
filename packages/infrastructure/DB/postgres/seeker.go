@@ -24,7 +24,7 @@ func (_ *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
         return nil, invalidUID
     }
 
-    return dtoFromQuery(
+    return queryDTO(
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
          WHERE id = $1 AND deletedAt IS NULL;`,
@@ -39,7 +39,7 @@ func (_ *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.St
         return nil, invalidUID
     }
 
-    return dtoFromQuery(
+    return queryDTO(
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
          WHERE id = $1 AND deletedAt IS NOT NULL;`,
@@ -48,7 +48,7 @@ func (_ *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.St
 }
 
 func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
-    return dtoFromQuery(
+    return queryDTO(
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
          WHERE login = $1 AND deletedAt IS NULL;`,
@@ -59,7 +59,7 @@ func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status)
 func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
     var id int
 
-    row, err := evalSQL(
+    row, err := queryRow(
         `SELECT id
          FROM "user"
          WHERE login = $1 and deletedAt IS NULL;`,
@@ -67,16 +67,16 @@ func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
     )
 
     if err != nil {
-        if err == context.DeadlineExceeded {
-            return false, Error.StatusTimeout
-        }
-
         return false, err
     }
 
     e := row.Scan(&id)
 
     if e != nil {
+        if err == context.DeadlineExceeded {
+            return false, Error.StatusTimeout
+        }
+
         if errors.Is(e, pgx.ErrNoRows) {
             return false, nil
         }
