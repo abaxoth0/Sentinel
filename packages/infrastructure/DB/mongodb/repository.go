@@ -25,7 +25,7 @@ type repository struct {
 	//
 }
 
-func (repo *repository) Create(login string, password string) (error) {
+func (repo *repository) Create(login string, password string) (*Error.Status) {
 	if err := user.VerifyPassword(password); err != nil {
 		return err
 	}

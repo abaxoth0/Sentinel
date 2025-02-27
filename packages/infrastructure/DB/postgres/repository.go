@@ -9,7 +9,7 @@ type repository struct {
     //
 }
 
-func (_ *repository) Create(login string, password string) (error) {
+func (_ *repository) Create(login string, password string) (*Error.Status) {
     return nil
 }
 
