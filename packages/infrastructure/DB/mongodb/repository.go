@@ -120,15 +120,9 @@ func (repo *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
         return Error.NewStatusError("Нельзя удалить пользователя с ролью администратора", http.StatusBadRequest)
     }
 
-	user, err := driver.FindUserByID(filter.TargetUID)
+	target.DeletedAt = int(util.UnixTimeNow())
 
-	if err != nil {
-		return err
-	}
-
-	user.DeletedAt = int(util.UnixTimeNow())
-
-    uid, e := primitive.ObjectIDFromHex(user.ID)
+    uid, e := primitive.ObjectIDFromHex(target.ID)
 
     if e != nil {
         fmt.Printf("failed to format uid to objectID: %v\n", err.Error())
@@ -138,10 +132,10 @@ func (repo *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
 
     transferData := &emongo.TransferData{
         DocumentID: uid,
-        Document: UserDTO.IndexedToUnindexed(user),
+        Document: UserDTO.IndexedToUnindexed(target),
     }
 
-	if e := emongo.DocumentTransfer(transferData, driver.UserCollection, driver.DeletedUserCollection, func() { user.DeletedAt = 0 }); e != nil {
+	if e := emongo.DocumentTransfer(transferData, driver.UserCollection, driver.DeletedUserCollection, func() { target.DeletedAt = 0 }); e != nil {
 		err = Error.NewStatusError(e.Error(), http.StatusInternalServerError)
 	}
 
