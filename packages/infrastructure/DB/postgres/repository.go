@@ -170,7 +170,7 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
 
 func (_ *repository) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
     if err := authorization.Authorize(
-        authorization.Action.GetRole,
+        authorization.Action.GetRoles,
         authorization.Resource.User,
         filter.RequesterRoles,
     ); err != nil {

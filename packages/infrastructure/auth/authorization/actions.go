@@ -12,7 +12,7 @@ type action struct {
 	ChangeLogin        rbac.Action
 	ChangePassword     rbac.Action
 	ChangeRoles        rbac.Action
-	GetRole            rbac.Action
+	GetRoles           rbac.Action
 }
 
 var Action = &action{
@@ -45,7 +45,7 @@ var Action = &action{
 		Update: true,
 	}),
 
-	GetRole: user.NewAction("get_role", &rbac.Permissions{
+	GetRoles: user.NewAction("get_role", &rbac.Permissions{
 		Read: true,
 	}),
 }
