@@ -23,8 +23,7 @@ type seeker interface {
 
 // Responsible for CUD in CRUD
 type repository interface {
-	// Returns uid and error
-	Create(login string, password string) (*Error.Status)
+	Create(login string, password string) *Error.Status
 
 	SoftDelete(filter *UserDTO.Filter) *Error.Status
 
@@ -32,7 +31,7 @@ type repository interface {
 
 	Drop(filter *UserDTO.Filter) *Error.Status
 
-	DropAllSoftDeleted(requesterRoles []string) *Error.Status
+	DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status
 
 	ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status
 

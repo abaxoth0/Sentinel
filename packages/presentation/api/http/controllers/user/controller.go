@@ -209,21 +209,14 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 func DropAllDeleted(w http.ResponseWriter, req *http.Request) {
 	res := weaver.NewResponse(w).Logged(req)
 
-	accessToken, err := token.GetAccessToken(req)
+	filter, err := newUserFilter(req)
 
 	if err != nil {
 		res.Message(err.Message, err.Status)
 		return
 	}
 
-	requester, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
-
-	if err != nil {
-		res.Message(err.Message, err.Status)
-		return
-	}
-
-	if err := DB.Database.DropAllSoftDeleted(requester.Roles); err != nil {
+	if err := DB.Database.DropAllSoftDeleted(filter); err != nil {
 		res.Message(err.Message, err.Status)
 		return
 	}

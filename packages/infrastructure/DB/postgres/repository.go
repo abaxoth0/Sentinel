@@ -99,11 +99,11 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
     )
 }
 
-func (_ *repository) DropAllSoftDeleted(requesterRoles []string) *Error.Status {
+func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
     if err := authorization.Authorize(
         authorization.Action.DropAllSoftDeleted,
         authorization.Resource.User,
-        requesterRoles,
+        filter.RequesterRoles,
     ); err != nil {
         return err
     }
