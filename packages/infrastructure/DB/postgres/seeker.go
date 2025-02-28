@@ -1,14 +1,10 @@
 package postgres
 
 import (
-	"context"
-	"errors"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"strconv"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type seeker struct {
@@ -27,7 +23,7 @@ func (_ *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     return queryDTO(
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
-         WHERE id = $1 AND deletedAt IS NULL;`,
+         WHERE id = $1 AND deletedAt = 0;`,
         parsedID,
     )
 }
@@ -42,7 +38,7 @@ func (_ *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.St
     return queryDTO(
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
-         WHERE id = $1 AND deletedAt IS NOT NULL;`,
+         WHERE id = $1 AND deletedAt <> 0;`,
         parsedID,
     )
 }
@@ -51,7 +47,7 @@ func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status)
     return queryDTO(
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
-         WHERE login = $1 AND deletedAt IS NULL;`,
+         WHERE login = $1 AND deletedAt = 0;`,
         login,
     )
 }
@@ -59,10 +55,10 @@ func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status)
 func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
     var id int
 
-    row, err := queryRow(
+    scan, err := queryRow(
         `SELECT id
          FROM "user"
-         WHERE login = $1 and deletedAt IS NULL;`,
+         WHERE login = $1 and deletedAt = 0;`,
         target,
     )
 
@@ -70,20 +66,12 @@ func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
         return false, err
     }
 
-    e := row.Scan(&id)
-
-    if e != nil {
-        if err == context.DeadlineExceeded {
-            return false, Error.StatusTimeout
-        }
-
-        if errors.Is(e, pgx.ErrNoRows) {
+    if e := scan(false, &id); e != nil {
+        if e == Error.StatusUserNotFound {
             return false, nil
         }
 
-        println(e.Error())
-
-        return false, Error.StatusInternalError
+        return false, e
     }
 
     return true, nil

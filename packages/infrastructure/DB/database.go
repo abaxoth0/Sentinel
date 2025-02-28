@@ -2,7 +2,7 @@ package DB
 
 import (
 	"sentinel/packages/core/user"
-	"sentinel/packages/infrastructure/DB/mongodb"
+	"sentinel/packages/infrastructure/DB/postgres"
 )
 
 type database interface {
@@ -15,4 +15,5 @@ type connector interface {
 	Disconnect()
 }
 
-var Database database = mongodb.InitDriver()
+var Database database = postgres.InitDriver()
+
