@@ -107,6 +107,6 @@ func queryDTO(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
 
     dto := new(UserDTO.Indexed)
 
-    return dto, scan(true, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &dto.DeletedAt)
+    return dto, scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &dto.DeletedAt)
 }
 
