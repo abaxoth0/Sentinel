@@ -42,11 +42,12 @@ type authorizationConfig struct {
 }
 
 type cacheConfig struct {
-	URI           string
-	Password      string
-	DB            int
-	SocketTimeout time.Duration
-	TTL           time.Duration
+    URI              string
+    Password         string
+    DB               int
+    SocketTimeout    time.Duration
+    TTL              time.Duration
+    OperationTimeout time.Duration
 }
 
 type debugConfig struct {
@@ -68,7 +69,7 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 		panic(err)
 	}
 
-	requiredVariables := [20]string{
+	requiredVariables := [21]string{
 		"ALLOWED_ORIGIN",
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
@@ -87,8 +88,9 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 		"CACHE_URI",
 		"CACHE_PASSWORD",
 		"CACHE_DB",
-		"CACHE_SOCKET_READ_TIMEOUT",
+		"CACHE_SOCKET_TIMEOUT",
 		"CACHE_TTL",
+        "CACHE_OPERATION_TIMEOUT",
 	}
 
 	// Check is all required env variables exists
@@ -146,8 +148,9 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
     }
 
 	CacheDB, _ := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
-	CacheSocketTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_SOCKET_READ_TIMEOUT"), 10, 64)
+	CacheSocketTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_SOCKET_TIMEOUT"), 10, 64)
 	CacheTTLMultiplier, _ := strconv.ParseInt(getEnv("CACHE_TTL"), 10, 64)
+    CacheOperationTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_OPERATION_TIMEOUT"), 10, 64)
 
 	CacheConfig := cacheConfig{
 		URI:           getEnv("CACHE_URI"),
@@ -155,7 +158,8 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 		DB:            int(CacheDB),
 		SocketTimeout: time.Second * time.Duration(CacheSocketTimeoutMultiplier),
 		TTL:           time.Minute * time.Duration(CacheTTLMultiplier),
-	}
+	    OperationTimeout: time.Second * time.Duration(CacheOperationTimeoutMultiplier),
+    }
 
 	DebugConfig := debugConfig{
 		Enabled: getEnv("DEBUG_ENABLED") == "true",

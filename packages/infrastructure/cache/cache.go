@@ -2,17 +2,26 @@ package cache
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log"
 	"sentinel/packages/infrastructure/config"
+	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
+const UserKeyPrefix string = "user_"
+const DeletedUserKeyPrefix string = "sd_user_"
+
 var client *redis.Client
-var ctx context.Context
+var isInit bool = false
 
 func Init() {
+    if isInit {
+        panic("cache already initialized")
+    }
+
 	log.Println("[ CACHE ] Initializng...")
 
 	client = redis.NewClient(&redis.Options{
@@ -20,67 +29,82 @@ func Init() {
 		Password:    config.Cache.Password,
 		DB:          config.Cache.DB,
 		ReadTimeout: config.Cache.SocketTimeout,
-	})
+    })
 
-	ctx = context.Background()
+    ctx, cancel := defaultTimeoutContext()
+    defer cancel()
+
+    if err := client.Ping(ctx).Err(); err != nil {
+        panic(fmt.Sprintf("[ ERROR ] Failed to connect to Redis:\n%v\n", err))
+    }
 
 	log.Println("[ CACHE ] Initializng: OK")
+
+    isInit = true
+}
+
+func defaultTimeoutContext() (context.Context, context.CancelFunc) {
+    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout)
+}
+
+func logAction(action string, err error) {
+	if err != nil {
+        if err == context.DeadlineExceeded {
+            log.Println("[ CACHE ] TIMEOUT: " + action)
+        } else {
+            log.Printf("[ CACHE ] ERROR: Failed to '%s':\n%v\n", action, err)
+        }
+	} else {
+		log.Println("[ CACHE ] " + action)
+    }
 }
 
 func Get(key string) (string, bool) {
-	r, e := client.Get(ctx, key).Result()
+    ctx, cancel := defaultTimeoutContext()
+    defer cancel()
 
-	if e != nil {
-		if errors.Is(e, redis.Nil) {
-			if config.Debug.Enabled {
-				log.Println("[ CACHE ] Miss: " + key)
-			}
+	cachedData, err := client.Get(ctx, key).Result()
 
-			return r, false
-		}
+    if err == redis.Nil {
+        log.Println("[ CACHE ] Miss: " + key)
+        return "", false
+    }
 
-		log.Println("[ CACHE ] Critical error")
-		log.Fatalln(e)
-	}
+    logAction("Get: " + key, err)
 
-	if config.Debug.Enabled {
-		log.Println("[ CACHE ] Hit: " + key)
-	}
-
-	return r, true
+    return cachedData, err == nil
 }
 
-func Set(key string, value any) error {
-	e := client.Set(ctx, key, value, config.Cache.TTL).Err()
+func Set[T string | bool | []byte | int | int64 | float64 | time.Time](key string, value T) error {
+    ctx, cancel := defaultTimeoutContext()
+    defer cancel()
 
-	if e != nil && config.Debug.Enabled {
-		log.Println("[ CACHE ] Set: " + key)
-	}
+	err := client.Set(ctx, key, value, config.Cache.TTL).Err()
 
-	return e
+    logAction("Set: " + key, err)
+
+	return err
 }
 
 func Delete(keys ...string) error {
-	e := client.Del(ctx, keys...).Err()
+    ctx, cancel := defaultTimeoutContext()
+    defer cancel()
 
-	if e != nil && config.Debug.Enabled {
-		for _, key := range keys {
-			log.Println("[ CACHE ] Delete: " + key)
-		}
-	}
+	err := client.Del(ctx, keys...).Err()
 
-	return e
+    logAction("Delete: " + strings.Join(keys, ","), err)
+
+	return err
 }
 
 func Drop() error {
-	e := client.FlushAll(ctx).Err()
+    ctx, cancel := defaultTimeoutContext()
+    defer cancel()
 
-	if e != nil && config.Debug.Enabled {
-		log.Println("[ CACHE ] Drop all")
-	}
+	err := client.FlushAll(ctx).Err()
 
-	return e
+    logAction("Drop", err)
+
+	return err
 }
 
-const UserKeyPrefix string = "user_"
-const DeletedUserKeyPrefix string = "sd_user_"
