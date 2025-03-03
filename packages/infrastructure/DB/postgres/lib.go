@@ -8,7 +8,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TODO return string instead of byte array?
 func hashPassword(password string) ([]byte, *Error.Status) {
 	if err := user.VerifyPassword(password); err != nil {
 		return nil, err
