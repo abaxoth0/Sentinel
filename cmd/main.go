@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"runtime"
 	"sentinel/packages/infrastructure/DB"
+	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/infrastructure/config"
 	"sentinel/packages/presentation/api/http/router"
 	"sentinel/packages/util"
 
-	emongo "github.com/StepanAnanin/EssentialMongoDB"
 	"github.com/StepanAnanin/weaver"
 )
 
@@ -27,21 +27,23 @@ var logo = `
 `
 
 func main() {
-	ver := "1.1.1.0"
+	ver := "1.1.2.1"
 
-	// Program wasn't run and/or tested on Windows.
+	// Program wasn't run and/or tested on Windows and MacOS.
 	// (Probably it will work, but required minor code modifications)
 	if runtime.GOOS != "linux" {
 		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux.")
 	}
 
+    config.Init()
+
+    authorization.Init()
+
+    cache.Init()
+
 	DB.Database.Connect()
 
-	emongo.Config.DefaultQueryTimeout = config.DB.DefaultQueryTimeout
-
 	defer DB.Database.Disconnect()
-
-	cache.Init()
 
 	log.Println("[ SERVER ] Initializng router...")
 
@@ -69,8 +71,6 @@ func main() {
 
 	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
 		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")
-
-		DB.Database.Disconnect()
 
 		panic(err)
 	}

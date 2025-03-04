@@ -13,7 +13,16 @@ import (
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 )
 
-var Host = (func() *rbac.Host {
+type resource struct {
+	User  *rbac.Resource
+	Cache *rbac.Resource
+}
+
+var Resource resource
+var Host *rbac.Host
+var schema *rbac.Schema
+
+func Init() {
 	h, e := rbac.LoadHost("RBAC.json")
 
 	if e != nil {
@@ -21,44 +30,37 @@ var Host = (func() *rbac.Host {
 		os.Exit(1)
 	}
 
-	return h
-})()
+    Host = h
 
-var schema = (func() *rbac.Schema {
-	s, e := Host.GetSchema(config.Authorization.ServiceID)
+	s, err := Host.GetSchema(config.Authorization.ServiceID)
 
-	if e != nil {
-		panic(e)
+	if err != nil {
+		panic(err)
 	}
 
-	return s
-})()
+    schema = s
+
+    Resource = resource{
+        User: rbac.NewResource("user", schema.Roles),
+
+        Cache: rbac.NewResource("cache", (func() []*rbac.Role {
+            r := []*rbac.Role{}
+
+            for _, role := range schema.Roles {
+                // Only admins can interact with cache
+                if role.Name == "admin" {
+                    r = append(r, role)
+                } else {
+                    r = append(r, rbac.NewRole(role.Name, new(rbac.Permissions)))
+                }
+            }
+
+            return r
+        })()),
+    }
+}
 
 var user = rbac.NewEntity("user")
-
-type resource struct {
-	User  *rbac.Resource
-	Cache *rbac.Resource
-}
-
-var Resource = &resource{
-	User: rbac.NewResource("user", schema.Roles),
-
-	Cache: rbac.NewResource("cache", (func() []*rbac.Role {
-		r := []*rbac.Role{}
-
-		for _, role := range schema.Roles {
-			// Only admins can interact with cache
-			if role.Name == "admin" {
-				r = append(r, role)
-			} else {
-				r = append(r, rbac.NewRole(role.Name, &rbac.Permissions{}))
-			}
-		}
-
-		return r
-	})()),
-}
 
 // Checks if user with role == userRoleName can perform action on user with role == targetRoleName.
 //
@@ -88,3 +90,4 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
 
 	return Error.NewStatusError(err.Error(), http.StatusForbidden)
 }
+

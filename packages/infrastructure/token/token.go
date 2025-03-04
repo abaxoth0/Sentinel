@@ -54,8 +54,8 @@ func Generate(payload *UserDTO.Payload) (*AccessToken, *RefreshToken) {
 		Subject:   strings.Join(payload.Roles, ","),
 	})
 
-	accessTokenStr, e := accessTokenBuilder.SignedString(*config.JWT.AccessTokenPrivateKey)
-	refreshTokenStr, err := refreshTokenBuilder.SignedString(*config.JWT.RefreshTokenPrivateKey)
+	accessTokenStr, e := accessTokenBuilder.SignedString(config.JWT.AccessTokenPrivateKey)
+	refreshTokenStr, err := refreshTokenBuilder.SignedString(config.JWT.RefreshTokenPrivateKey)
 
 	if e != nil {
 		log.Fatalf("[ CRITICAL ERROR ] Failed to sign access token.\n%s", e)
@@ -145,7 +145,7 @@ func GetRefreshToken(req *http.Request) (*jwt.Token, error) {
 
 func parseAccessToken(accessToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
-		return *config.JWT.AccessTokenPublicKey, nil
+		return config.JWT.AccessTokenPublicKey, nil
 	})
 
 	exp := !token.Claims.(jwt.MapClaims).VerifyExpiresAt(util.UnixTimeNow(), true)
@@ -155,7 +155,7 @@ func parseAccessToken(accessToken string) (*jwt.Token, bool) {
 
 func parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 	token, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
-		return *config.JWT.RefreshTokenPublicKey, nil
+		return config.JWT.RefreshTokenPublicKey, nil
 	})
 
 	exp := !token.Claims.(jwt.MapClaims).VerifyExpiresAt(util.UnixTimeNow(), true)

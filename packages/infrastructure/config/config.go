@@ -11,16 +11,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// TODO Decompose configs
-
-type mongodbConfig struct {
-	Name                      string
-	UserCollectionName        string
-	DeletedUserCollectionName string
-	Username                  string
-	Password                  string
-	URI                       string
-	DefaultQueryTimeout       time.Duration
+type dbConfig struct {
+    URI                 string
+    DefaultQueryTimeout time.Duration
 }
 
 type httpServerConfig struct {
@@ -29,10 +22,10 @@ type httpServerConfig struct {
 }
 
 type jwtConfing struct {
-	AccessTokenPrivateKey  *ed25519.PrivateKey
-	AccessTokenPublicKey   *ed25519.PublicKey
-	RefreshTokenPrivateKey *ed25519.PrivateKey
-	RefreshTokenPublicKey  *ed25519.PublicKey
+	AccessTokenPrivateKey  ed25519.PrivateKey
+	AccessTokenPublicKey   ed25519.PublicKey
+	RefreshTokenPrivateKey ed25519.PrivateKey
+	RefreshTokenPublicKey  ed25519.PublicKey
 	AccessTokenTTL         time.Duration
 	RefreshTokenTTL        time.Duration
 }
@@ -62,22 +55,30 @@ func getEnv(key string) string {
 	return env
 }
 
-var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpServerConfig, *jwtConfing, *authorizationConfig, *cacheConfig, *debugConfig) {
+var DB dbConfig
+var HTTP httpServerConfig
+var JWT jwtConfing
+var Authorization authorizationConfig
+var Cache cacheConfig
+var Debug debugConfig
+
+var isInit bool = false
+
+func Init() {
+    if isInit {
+        panic("configs was already initialized")
+    }
+
 	log.Println("[ CONFIG ] Initializing...")
 
 	if err := godotenv.Load(); err != nil {
 		panic(err)
 	}
 
-	requiredVariables := [21]string{
+	requiredVariables := [16]string{
 		"ALLOWED_ORIGIN",
 		"SERVER_PORT",
 		"DEBUG_ENABLED",
-		"DB_NAME",
-		"DB_USER_COLLECTION_NAME",
-		"DB_DELETED_USER_COLLECTION_NAME",
-		"DB_USER_NAME",
-		"DB_PASSWORD",
 		"DB_URI",
 		"DB_DEFAULT_TIMEOUT",
 		"ACCESS_TOKEN_SECRET",
@@ -102,17 +103,12 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 
 	queryTimeoutMultiplier, _ := strconv.ParseInt(getEnv("DB_DEFAULT_TIMEOUT"), 10, 64)
 
-	DbConfig := mongodbConfig{
-		Name:                      getEnv("DB_NAME"),
-		UserCollectionName:        getEnv("DB_USER_COLLECTION_NAME"),
-		DeletedUserCollectionName: getEnv("DB_DELETED_USER_COLLECTION_NAME"),
-		Username:                  getEnv("DB_USER_NAME"),
-		Password:                  getEnv("DB_PASSWORD"),
-		URI:                       getEnv("DB_URI"),
-		DefaultQueryTimeout:       time.Second * time.Duration(queryTimeoutMultiplier),
+	DB = dbConfig{
+		URI:                 getEnv("DB_URI"),
+		DefaultQueryTimeout: time.Second * time.Duration(queryTimeoutMultiplier),
 	}
 
-	HttpConfig := httpServerConfig{
+	HTTP = httpServerConfig{
 		Port:          getEnv("SERVER_PORT"),
 		AllowedOrigin: getEnv("ALLOWED_ORIGIN"),
 	}
@@ -134,16 +130,16 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 	AccessTokenPublicKey := AccessTokenPrivateKey.Public().(ed25519.PublicKey)
 	RefreshTokenPublicKey := RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
 
-	JWTConfig := jwtConfing{
-		AccessTokenPrivateKey:  &AccessTokenPrivateKey,
-		RefreshTokenPrivateKey: &RefreshTokenPrivateKey,
-		AccessTokenPublicKey:   &AccessTokenPublicKey,
-		RefreshTokenPublicKey:  &RefreshTokenPublicKey,
+	JWT = jwtConfing{
+		AccessTokenPrivateKey:  AccessTokenPrivateKey,
+		RefreshTokenPrivateKey: RefreshTokenPrivateKey,
+		AccessTokenPublicKey:   AccessTokenPublicKey,
+		RefreshTokenPublicKey:  RefreshTokenPublicKey,
 		AccessTokenTTL:         time.Minute * time.Duration(AccessTokenTtlMultiplier),
 		RefreshTokenTTL:        time.Hour * 24 * time.Duration(RefreshTokenTtlMultiplier),
 	}
 
-    AuthorizationConfig := authorizationConfig{
+    Authorization = authorizationConfig{
         ServiceID: getEnv("SERVICE_ID"),
     }
 
@@ -152,7 +148,7 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 	CacheTTLMultiplier, _ := strconv.ParseInt(getEnv("CACHE_TTL"), 10, 64)
     CacheOperationTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_OPERATION_TIMEOUT"), 10, 64)
 
-	CacheConfig := cacheConfig{
+	Cache = cacheConfig{
 		URI:           getEnv("CACHE_URI"),
 		Password:      getEnv("CACHE_PASSWORD"),
 		DB:            int(CacheDB),
@@ -161,11 +157,12 @@ var DB, HTTP, JWT, Authorization, Cache, Debug = (func() (*mongodbConfig, *httpS
 	    OperationTimeout: time.Second * time.Duration(CacheOperationTimeoutMultiplier),
     }
 
-	DebugConfig := debugConfig{
+	Debug = debugConfig{
 		Enabled: getEnv("DEBUG_ENABLED") == "true",
 	}
 
 	log.Println("[ CONFIG ] Initializing: OK")
 
-	return &DbConfig, &HttpConfig, &JWTConfig, &AuthorizationConfig, &CacheConfig, &DebugConfig
-})()
+    isInit = true
+}
+
