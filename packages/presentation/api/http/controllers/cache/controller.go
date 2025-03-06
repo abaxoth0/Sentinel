@@ -34,7 +34,7 @@ func Drop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cache.Drop()
+	cache.Client.Drop()
 
 	res.OK()
 }

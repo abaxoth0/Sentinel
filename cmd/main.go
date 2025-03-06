@@ -39,7 +39,7 @@ func main() {
 
     authorization.Init()
 
-    cache.Init()
+    cache.Client.Init()
 
 	DB.Database.Connect()
 

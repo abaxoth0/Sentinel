@@ -70,7 +70,7 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
 	cacheKey := fmt.Sprintf("%s[%s->%s]", action.String(), strings.Join(userRoles, ","), resource.Name)
 	cacheOK := "K"
 
-	if cacheValue, hit := cache.Get(cacheKey); hit {
+	if cacheValue, hit := cache.Client.Get(cacheKey); hit {
 		if cacheValue == cacheOK {
 			return nil
 		}
@@ -86,7 +86,7 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
 		cacheValue = err.Error()
 	}
 
-	cache.Set(cacheKey, cacheValue)
+	cache.Client.Set(cacheKey, cacheValue)
 
 	return Error.NewStatusError(err.Error(), http.StatusForbidden)
 }
