@@ -7,12 +7,15 @@ import (
 	"reflect"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
+	"sentinel/packages/infrastructure/cache"
+	"sentinel/packages/presentation/data/json"
 
 	"github.com/jackc/pgx/v5"
 )
 
-func handleQueryError(query string, err error) *Error.Status {
+func logQueryError(query string, err error) *Error.Status {
     if err == context.DeadlineExceeded {
+        fmt.Printf("[ ERROR ] Query timeout:\n%s\n", query)
         return Error.StatusTimeout
     }
 
@@ -42,7 +45,7 @@ func runSQL(returnRow bool, sql string, args []any) (pgx.Row, *Error.Status) {
     }
 
     if _, e := con.Exec(ctx, sql, args...); e != nil {
-        return nil, handleQueryError(sql, e)
+        return nil, logQueryError(sql, e)
     }
 
     return nil, nil
@@ -83,7 +86,7 @@ func queryRow(sql string, args ...any) (scanRow, *Error.Status) {
                 return Error.StatusUserNotFound
             }
 
-            return handleQueryError(sql, e)
+            return logQueryError(sql, e)
         }
 
         return nil
@@ -98,7 +101,20 @@ func queryExec(sql string, args ...any) (*Error.Status) {
 }
 
 // Works same as 'queryRow', but also scans resulting row into '*UserDTO.Indexed'
-func queryDTO(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
+func queryDTO(cacheKey string, sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
+    if cached, hit := cache.Client.Get(cacheKey); hit {
+        r, err := json.DecodeString[UserDTO.Indexed](cached)
+
+        if err == nil {
+            return &r, nil
+        }
+
+        // if json decoding failed thats mean more likely it was invalid,
+        // so deleting it from cache to prevent futher cache errors.
+        // if it keep repeating even after this, then smth really went wrong in json package.
+        cache.Client.Delete(cacheKey)
+    }
+
     scan, err := queryRow(sql, args...)
 
     if err != nil {
@@ -107,6 +123,14 @@ func queryDTO(sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
 
     dto := new(UserDTO.Indexed)
 
-    return dto, scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &dto.DeletedAt)
+    err = scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &dto.DeletedAt)
+
+    if err != nil {
+        return nil, err
+    }
+
+    cache.Client.EncodeAndSet(cacheKey, dto)
+
+    return dto, nil
 }
 
