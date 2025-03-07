@@ -12,7 +12,7 @@ import (
 	"sentinel/packages/presentation/api/http/router"
 	"sentinel/packages/util"
 
-	"github.com/StepanAnanin/weaver"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 var logo = `
@@ -27,7 +27,7 @@ var logo = `
 `
 
 func main() {
-	ver := "1.1.2.1"
+	ver := "1.2.0.0"
 
 	// Program wasn't run and/or tested on Windows and MacOS.
 	// (Probably it will work, but required minor code modifications)
@@ -49,7 +49,28 @@ func main() {
 
 	Router := router.Create()
 
-	http.Handle("/", Router)
+    // TODO configure this properly
+    cors := middleware.CORSConfig{
+        Skipper:      middleware.DefaultSkipper,
+        AllowOrigins: []string{"*"},
+        AllowCredentials: true,
+        AllowMethods: []string{
+            http.MethodGet,
+            http.MethodHead,
+            http.MethodPut,
+            http.MethodPatch,
+            http.MethodPost,
+            http.MethodDelete,
+        },
+    }
+
+    Router.Use(middleware.CORSWithConfig(cors))
+    Router.Use(middleware.Recover())
+    // Router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))
+
+    if config.Debug.Enabled {
+        Router.Use(middleware.Logger())
+    }
 
 	log.Println("[ SERVER ] Initializng router: OK")
 
@@ -67,11 +88,8 @@ func main() {
 		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected results. \n\n")
 	}
 
-	weaver.Settings.DefaultOrigin = config.HTTP.AllowedOrigin
+    err := Router.Start(":" + config.HTTP.Port)
 
-	if err := http.ListenAndServe(":"+config.HTTP.Port, Router); err != nil {
-		log.Println("[ CRITICAL ERROR ] Server error has occurred, the program will stop")
-
-		panic(err)
-	}
+    Router.Logger.Fatal(err)
 }
+
