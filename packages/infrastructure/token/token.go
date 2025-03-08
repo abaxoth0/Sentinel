@@ -1,7 +1,6 @@
 package token
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
@@ -80,33 +79,29 @@ func Generate(payload *UserDTO.Payload) (*AccessToken, *RefreshToken) {
 	return accessToken, refreshToken
 }
 
-// Retrieves and validates access token from request.
+// Retrieves and validates access token from authorization header.
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
-func GetAccessToken(req *http.Request) (*jwt.Token, *Error.Status) {
-    var r *jwt.Token
-
-	authHeaderValue := req.Header.Get("Authorization")
-
-	if authHeaderValue == "" {
-		return r, unauthorized
+func GetAccessToken(authHeader string) (*jwt.Token, *Error.Status) {
+	if authHeader == "" {
+		return nil, unauthorized
 	}
 
-	accessTokenStr := strings.Split(authHeaderValue, "Bearer ")[1]
+	accessTokenStr := strings.Split(authHeader, "Bearer ")[1]
 
     if accessTokenStr == "null" {
-        return r, invalidAccessToken
+        return nil, invalidAccessToken
     }
 
 	token, expired := parseAccessToken(accessTokenStr)
 
 	if !token.Valid {
-		return r, invalidAccessToken
+		return nil, invalidAccessToken
 	}
 
 	if expired {
-		return r, accessTokenExpired
+		return nil, accessTokenExpired
 	}
 
 	return token, nil
@@ -116,28 +111,15 @@ func GetAccessToken(req *http.Request) (*jwt.Token, *Error.Status) {
 //
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error, this error is either http.ErrNoCookie, either ExternalError.Error
-func GetRefreshToken(req *http.Request) (*jwt.Token, error) {
-	var emptyToken *jwt.Token
-
-	authCookie, err := req.Cookie(RefreshTokenKey)
-
-	if err != nil {
-		// If this condition is true, that mean error ocured inside of "req.Cookie(...)"
-		if !errors.Is(err, http.ErrNoCookie) {
-			log.Fatalln(err)
-		}
-
-		return emptyToken, err
-	}
-
-	token, expired := parseRefreshToken(authCookie.Value)
+func GetRefreshToken(cookie *http.Cookie) (*jwt.Token, *Error.Status) {
+	token, expired := parseRefreshToken(cookie.Value)
 
 	if !token.Valid {
-		return emptyToken, invalidRefreshToken
+		return nil, invalidRefreshToken
 	}
 
 	if expired {
-		return emptyToken, refreshTokenExpired
+		return nil, refreshTokenExpired
 	}
 
 	return token, nil
@@ -162,3 +144,4 @@ func parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
 
 	return token, exp
 }
+
