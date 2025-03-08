@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -18,7 +19,8 @@ type dbConfig struct {
 
 type httpServerConfig struct {
 	Port          string
-	AllowedOrigin string
+	AllowedOrigins []string
+    Secured       bool
 }
 
 type jwtConfing struct {
@@ -75,9 +77,10 @@ func Init() {
 		panic(err)
 	}
 
-	requiredVariables := [16]string{
-		"ALLOWED_ORIGIN",
+	requiredVariables := [17]string{
 		"SERVER_PORT",
+		"HTTP_ALLOWED_ORIGINS",
+        "HTTP_SECURED",
 		"DEBUG_ENABLED",
 		"DB_URI",
 		"DB_DEFAULT_TIMEOUT",
@@ -110,7 +113,8 @@ func Init() {
 
 	HTTP = httpServerConfig{
 		Port:          getEnv("SERVER_PORT"),
-		AllowedOrigin: getEnv("ALLOWED_ORIGIN"),
+		AllowedOrigins: strings.Split(getEnv("HTTP_ALLOWED_ORIGINS"), ","),
+        Secured: getEnv("HTTP_SECURED") == "true",
 	}
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodEdDSA.Alg(), func() jwt.SigningMethod { return jwt.SigningMethodEdDSA })
