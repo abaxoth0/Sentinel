@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"runtime"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authorization"
@@ -11,8 +10,6 @@ import (
 	"sentinel/packages/infrastructure/config"
 	"sentinel/packages/presentation/api/http/router"
 	"sentinel/packages/util"
-
-	"github.com/labstack/echo/v4/middleware"
 )
 
 var logo = `
@@ -48,28 +45,6 @@ func main() {
 	log.Println("[ SERVER ] Initializng router...")
 
 	Router := router.Create()
-
-    cors := middleware.CORSConfig{
-        Skipper:      middleware.DefaultSkipper,
-        AllowOrigins: config.HTTP.AllowedOrigins,
-        AllowCredentials: true,
-        AllowMethods: []string{
-            http.MethodGet,
-            http.MethodHead,
-            http.MethodPut,
-            http.MethodPatch,
-            http.MethodPost,
-            http.MethodDelete,
-        },
-    }
-
-    Router.Use(middleware.CORSWithConfig(cors))
-    Router.Use(middleware.Recover())
-    // Router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))
-
-    if config.Debug.Enabled {
-        Router.Use(middleware.Logger())
-    }
 
 	log.Println("[ SERVER ] Initializng router: OK")
 
