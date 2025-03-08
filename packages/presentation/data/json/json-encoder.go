@@ -1,10 +1,11 @@
 package json
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"strings"
+
+    json "github.com/json-iterator/go"
 )
 
 type Encoder struct {
@@ -17,7 +18,7 @@ func Decode[T interface{}](input io.Reader) (T, error) {
 	var result T
 
 	if err := json.NewDecoder(input).Decode(&result); err != nil {
-		log.Printf("\n[ ERROR ] Failed to decode JSON\n%s", err)
+        log.Printf("\n[ ERROR ] Failed to decode JSON:\n%v\n", err)
 
 		return result, err
 	}
@@ -35,7 +36,7 @@ func Encode(target interface{}) ([]byte, error) {
 	result, err := json.Marshal(target)
 
 	if err != nil {
-		log.Printf("\n[ ERROR ] Failed to marshal json\n%s", err)
+        log.Printf("\n[ ERROR ] Failed to marshal json:\n%v\n", err)
 
 		return nil, err
 	}

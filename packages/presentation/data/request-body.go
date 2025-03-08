@@ -28,20 +28,3 @@ type UidAndRolesBody struct {
 	Roles []string `json:"roles"`
 }
 
-type TokenResponseBody struct {
-	Message     string `json:"message"`
-	AccessToken string `json:"accessToken"`
-}
-
-type MessageResponseBody struct {
-	Message string `json:"message"`
-}
-
-type LoginExistanceResponseBody struct {
-	Exists bool `json:"exists"`
-}
-
-type UserRolesResponseBody struct {
-	Roles []string `json:"roles"`
-}
-
