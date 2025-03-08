@@ -49,10 +49,9 @@ func main() {
 
 	Router := router.Create()
 
-    // TODO configure this properly
     cors := middleware.CORSConfig{
         Skipper:      middleware.DefaultSkipper,
-        AllowOrigins: []string{"*"},
+        AllowOrigins: config.HTTP.AllowedOrigins,
         AllowCredentials: true,
         AllowMethods: []string{
             http.MethodGet,
@@ -74,7 +73,9 @@ func main() {
 
 	log.Println("[ SERVER ] Initializng router: OK")
 
-	util.ClearTerminal()
+    if !config.Debug.Enabled {
+	    util.ClearTerminal()
+    }
 
 	fmt.Print(logo)
 
