@@ -6,7 +6,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
-	"sentinel/packages/presentation/api/http/response"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/golang-jwt/jwt"
@@ -14,10 +13,10 @@ import (
 )
 
 func Login(ctx echo.Context) error {
-    body, err := datamodel.Decode[datamodel.AuthRequestBody](ctx.Request().Body)
+    var body datamodel.AuthRequestBody
 
-    if err != nil {
-        return response.FailedToDecodeRequestBody
+    if err := ctx.Bind(&body); err != nil {
+        return err
     }
 
     user, e := authentication.Login(body.Login, body.Password)
