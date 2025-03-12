@@ -80,14 +80,20 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
 
 	err := rbac.Authorize(action, resource, userRoles)
 
-	cacheValue := cacheOK
+    var cacheValue string
 
 	if err != nil {
 		cacheValue = err.Error()
-	}
+	} else {
+        cacheValue = cacheOK
+    }
 
-	cache.Client.Set(cacheKey, cacheValue)
+    cache.Client.Set(cacheKey, cacheValue)
 
-	return Error.NewStatusError(err.Error(), http.StatusForbidden)
+    if err != nil {
+	    return Error.NewStatusError(err.Error(), http.StatusForbidden)
+    }
+
+    return nil
 }
 
