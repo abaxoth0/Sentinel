@@ -1,60 +1,212 @@
-# Technical info
+# TECH STACK
 
 -   Programming language: Go (1.22.3)
 
--   Database: MongoDB
+-   Database: PostgreSQL
 
 -   Cache: Redis
 
--   HTTP libraries: mux (`github.com/gorilla/mux`); weaver (`github.com/StepanAnanin/weaver`)
+-   Transport: HTTP (lib: echo `github.com/labstack/echo`)
 
--   Authorization system: RBAC (`github.com/StepanAnanin/SentinelRBAC`)
+-   API architecture: REST
 
--   Hash fucntion used for passwords: bcrypt (ed25519)
+-   Data presentation format: JSON
 
--   Authentication type: toke-based (JWT)
+-   Authorization method: RBAC - Role-Based Access Control (lib: SentinelRBAC `github.com/StepanAnanin/SentinelRBAC`)
+
+-   Password hashing method: bcrypt (ed25519)
+
+-   Authentication: toke-based (JWT)
 
 -   Supported OS: Linux
 
+-   Architecture: Onion Architecture
+
 # API
 
-## IMPORTANT
+>[!IMPORTANT]
+>Response will have status 401 (Unauthorized) if access token expired.
+>
+>Response will have status 409 (Conflict) if refresh token expired, also in this case authentication cookie will be deleted.
 
-    Response will have status 401 (Unauthorized) if access token expired.
+>[!NOTE]
+> All things marked via :red_circle: are required.
 
-    Response will have status 409 (Conflict) if refresh token expired, also in this case authentication cookie will be deleted.
-    Refresh token used only in "/refresh" endpoint. (And mustn't be used in anywhere else)
+## /auth
+Handles user authentication. Methods:
+- GET:
+    - Action: get user id, login and roles
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - `NONE`
+    - Response body:
+      - id (string) - user id
+      - login (string) - user login
+      - roles (string[]) - user roles
+- POST:
+    - Action: generate access and refresh token, then set refresh token to refreshToken cookie
+    - Required request headers:
+      - `NONE`
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: login (string) - user login
+      - :red_circle: password (string) - user password
+    - Response body:
+      - message (string) - response message
+      - accessToken (string) - access token
+- PUT:
+    - Action: generate new authentication tokens
+    - Required request headers:
+      - `NONE`
+    - Required request cookies:
+      - :red_circle: refreshToken (string) - refresh token
+    - Required request body:
+      - `NONE`
+    - Response body:
+      - message (string) - response message
+      - accessToken (string) - access token
+- DELETE:
+    - Action: terminate authentication by removing refreshToken cookie
+    - Required request headers:
+      - `NONE`
+    - Required request cookies:
+      - :red_circle: refreshToken (string) - refresh token
+    - Required request body:
+      - `NONE`
+    - Response body:
+      - message (string) - response message
+      - accessToken (string) - access token
 
-## Endpoints
+## /user
+Handles user creation and soft deletion. Methods:
+- POST:
+    - Action: create new user
+    - Required request headers:
+      - `NONE`
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: login (string) - user login
+      - :red_circle: password (string) - user password
+    - Response body:
+      - `NONE`
+- DELETE:
+    - Action: soft delete user
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: uid (string) - user id
+    - Response body:
+      - `NONE`
+## /user/drop
+Handles user hard deletion. Methods:
+- DELETE:
+    - Action: hard delete user
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: uid (string) - user id
+    - Response body:
+      - `NONE`
 
--   /login [ POST ] — Used to login. Request body must contain: login (string), password (string)
+## /user/restore
+Handles the recovery of a soft deleted user. Methods:
+- POST:
+    - Action: restore soft deleted user
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: uid (string) - user id
+    - Response body:
+      - `NONE`
 
--   /logout [ DELETE ] — Used to logout. User must be authenticated.
+## /user/password
+Handles user password change. Methods:
+- PATCH:
+    - Action: change user password
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: uid (string) - user id
+      - :red_circle: password (string) - new user password
+    - Response body:
+      - `NONE`
 
--   /refresh [ PUT ] — Used to refresh access and refresh tokens. User must be authenticated. **IMPORTANT: Response will have status 409 (conflict) if refresh token expired**.
+## /user/login
+Handles user login change. Methods:
+- PATCH:
+    - Action: change user login
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: uid (string) - user id
+      - :red_circle: login (string) - new user login
+    - Response body:
+      - `NONE`
 
--   /verify [ GET ] — Used to verify user authentication, also can be used for authorization. User must be authenticated. Returns user's ID, login and role if access token is valid.
+## /user/roles
+Handles user roles change. Methods:
+- PATCH:
+    - Action: change user roles
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: uid (string) - user id
+      - :red_circle: roles (string[]) - array of new user roles
+    - Response body:
+      - `NONE`
 
--   /user/create [ POST ] — Used to create a new user. Request body must contain: login (unique string), password (string).
+## /user/login/check
+Handles checking existance of user login. Methods:
+- POST:
+    - Action: check if login already in use 
+    - Required request headers:
+      - `NONE`
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - :red_circle: login (string) - user login
+    - Response body:
+      - exists (bool) - `true` if login is already in use, `false` otherwise
 
--   /user/delete [ DELETE ] — Used to soft delete user with passed uid. User must be authenticated and if he want to soft delete any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string). **IMPORTANT: Users with admin role cannot be deleted**.
+## /roles/:serviceID
+Handles getting list of all roles in service with :red_circle: `serviceID`. Methods: 
+- GET:
+    - Action: get list of all user roles in specified service
+    - Required request headers:
+      - `NONE`
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - `NONE`
+    - Response body:
+      - roles (string[]) - array with all roles in specified server
 
--   /user/restore [ PUT ] — Used to restore soft deleted user with passed uid. User must be authenticated. Request body must contain: uid (unique string).
-
--   /user/drop [ DELETE ] — Used to hard delete user with passed uid. User must be authenticated and if he want to hard delete any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string). **IMPORTANT: Users with admin role cannot be deleted**.
-
--   /user/drop/all-soft-deleted [ DELETE ] — Used to hard delete all soft deleted users. User must be authenticated and must be administrator to do that.
-
--   /user/change/login [ PATCH ] — Used to change login of user with passed uid. User must be authenticated and if he want to change login of any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string), login (unique string). **IMPORTANT: Users with admin role cannot be modified by any other users than themselves**.
-
--   /user/change/password [ PATCH ] — Used to change password of user with passed uid. User must be authenticated and if he want to change password of any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string), password (string). **IMPORTANT: Users with admin role cannot be modified by any other users than themselves**.
-
--   /user/change/role [ PATCH ] — Used to change role of user with passed uid. User must be authenticated and if he want to change role of any other user then himself he must be a moderator or administrator to do that. Request body must contain: uid (unique string), role (string). **IMPORTANT: Users with admin role cannot be modified by any other users than themselves**.
-
--   /user/check/login [ POST ] — Used to check is login free to use. Request body must contain: login (string)
-
--   /user/check/role [ POST ] — Used to get role of user with passed uid. User must be authenticated and be a moderator or administrator to do that. Request body must contain: uid (unique string).
-
--   /roles [ GET ] — Used to get list of all existing roles.
-
--   /cache/drop [ DELETE ] — Used to delete all cache. User must be authenticated and be an administrator to do that.
+## /cache
+Handles cache control. Methods:
+- DELETE:
+    - Action: clear all cache
+    - Required request headers:
+      - :red_circle: Authorization (string) - access token in Bearer Token format
+    - Required request cookies:
+      - `NONE`
+    - Request body:
+      - `NONE`
+    - Response body:
+      - `NONE`
