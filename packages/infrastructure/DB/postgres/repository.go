@@ -9,10 +9,14 @@ import (
     "net/http"
 )
 
+// TODO change properties by login instead of id
+//      requires datamodel refactoring
+
 type repository struct {
     //
 }
 
+// TODO Check if user exists
 func (_ *repository) Create(login string, password string) (*Error.Status) {
 	hashedPassword, err := hashPassword(password)
 
@@ -56,7 +60,7 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
 
     return queryExec(
         `UPDATE "user" SET deletedAt = $1
-         WHERE id = $1;`,
+         WHERE id = $2 AND deletedAt = 0;`,
         util.UnixTimeNow(), filter.TargetUID,
     )
 }
@@ -78,7 +82,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 
     return queryExec(
         `UPDATE "user" SET deletedAt = 0
-         WHERE id = $1;`,
+         WHERE id = $1 AND deletedAt <> 0;`,
         filter.TargetUID,
     )
 }
@@ -125,18 +129,20 @@ func (_ *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
 
     return queryExec(
         `UPDATE "user" SET login = $1
-         WHERE id = $2 AND deletedAt <> 0;`,
+         WHERE id = $2;`,
         newLogin, filter.TargetUID,
     )
 }
 
 func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status {
-    if err := authorization.Authorize(
-        authorization.Action.ChangePassword,
-        authorization.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return err
+    if filter.RequesterUID != filter.TargetUID {
+        if err := authorization.Authorize(
+            authorization.Action.ChangePassword,
+            authorization.Resource.User,
+            filter.RequesterRoles,
+        ); err != nil {
+            return err
+        }
     }
 
 	hashedPassword, e := hashPassword(newPassword)
@@ -147,12 +153,21 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
 
     return queryExec(
         `UPDATE "user" SET password = $1
-         WHERE id = $2 AND deletedAt <> 0;`,
+         WHERE id = $2;`,
         hashedPassword, filter.TargetUID,
     )
 }
 
 func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status {
+    if filter.TargetUID == filter.RequesterUID &&
+       slices.Contains(filter.RequesterRoles, "admin") &&
+       !slices.Contains(newRoles, "admin") {
+          return Error.NewStatusError(
+              "Нельзя снять роль администратора с самого себя",
+               http.StatusForbidden,
+          )
+    }
+
     if err := authorization.Authorize(
         authorization.Action.ChangeRoles,
         authorization.Resource.User,
@@ -163,7 +178,7 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
 
     return queryExec(
         `UPDATE "user" SET roles = $1
-         WHERE id = $2 AND deletedAt <> 0;`,
+         WHERE id = $2;`,
         newRoles, filter.TargetUID,
     )
 }
