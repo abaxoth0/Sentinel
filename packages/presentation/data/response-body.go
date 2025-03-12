@@ -13,7 +13,7 @@ type LoginExistanceResponseBody struct {
 	Exists bool `json:"exists"`
 }
 
-type UserRolesResponseBody struct {
+type RolesResponseBody struct {
 	Roles []string `json:"roles"`
 }
 

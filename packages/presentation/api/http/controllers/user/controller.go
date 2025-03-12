@@ -167,7 +167,7 @@ func GetRoles(ctx echo.Context) error {
 
     return ctx.JSON(
         http.StatusOK,
-        datamodel.UserRolesResponseBody{
+        datamodel.RolesResponseBody{
             Roles: roles,
         },
     )

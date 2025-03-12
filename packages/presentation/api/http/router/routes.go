@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/config"
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
+	Roles "sentinel/packages/presentation/api/http/controllers/roles"
 	User "sentinel/packages/presentation/api/http/controllers/user"
 
 	"github.com/labstack/echo/v4"
@@ -12,7 +13,7 @@ import (
 
 // i could just explicitly pass empty string in routes when i need it
 // but it looks really awful, shitty and not obvious
-const groupRootPath = ""
+const rootPath = ""
 
 func Create() *echo.Echo {
 	router := echo.New()
@@ -48,21 +49,25 @@ func Create() *echo.Echo {
 
     authGroup := router.Group("/auth")
 
-    authGroup.GET(groupRootPath, Auth.Verify)
-    authGroup.POST(groupRootPath, Auth.Login)
-    authGroup.PUT(groupRootPath, Auth.Refresh)
-    authGroup.DELETE(groupRootPath, Auth.Logout)
+    authGroup.GET(rootPath, Auth.Verify)
+    authGroup.POST(rootPath, Auth.Login)
+    authGroup.PUT(rootPath, Auth.Refresh)
+    authGroup.DELETE(rootPath, Auth.Logout)
 
     userGroup := router.Group("/user")
 
-    userGroup.POST(groupRootPath, User.Create)
-    userGroup.DELETE(groupRootPath, User.SoftDelete)
+    userGroup.POST(rootPath, User.Create)
+    userGroup.DELETE(rootPath, User.SoftDelete)
     userGroup.POST("/restore", User.Restore)
     userGroup.DELETE("/drop", User.Drop)
 
     userGroup.PATCH("/login", User.ChangeLogin)
     userGroup.PATCH("/password", User.ChangePassword)
     userGroup.PATCH("/roles", User.ChangeRoles)
+
+    rolesGroup := router.Group("/roles")
+
+    rolesGroup.GET("/:serviceID", Roles.GetAll)
 
     return router
 }
