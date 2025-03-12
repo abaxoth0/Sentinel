@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/config"
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
+	Cache "sentinel/packages/presentation/api/http/controllers/cache"
 	Roles "sentinel/packages/presentation/api/http/controllers/roles"
 	User "sentinel/packages/presentation/api/http/controllers/user"
 
@@ -68,6 +69,10 @@ func Create() *echo.Echo {
     rolesGroup := router.Group("/roles")
 
     rolesGroup.GET("/:serviceID", Roles.GetAll)
+
+    cacheGroup := router.Group("/cache")
+
+    cacheGroup.DELETE(rootPath, Cache.Drop)
 
     return router
 }
