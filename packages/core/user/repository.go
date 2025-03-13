@@ -19,6 +19,8 @@ type seeker interface {
 	FindUserByLogin(string) (*UserDTO.Indexed, *Error.Status)
 
 	IsLoginExists(login string) (bool, *Error.Status)
+
+    GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status)
 }
 
 // Responsible for CUD in CRUD
@@ -38,7 +40,5 @@ type repository interface {
 	ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status
 
 	ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status
-
-	GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status)
 }
 

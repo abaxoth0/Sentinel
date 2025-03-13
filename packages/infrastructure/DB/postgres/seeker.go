@@ -4,8 +4,10 @@ import (
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
+	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	"strconv"
+	"strings"
 )
 
 type seeker struct {
@@ -88,5 +90,37 @@ func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
     cache.Client.Set(cacheKey, true)
 
     return true, nil
+}
+
+func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
+    if err := authorization.Authorize(
+        authorization.Action.GetRoles,
+        authorization.Resource.User,
+        filter.RequesterRoles,
+    ); err != nil {
+        return nil, err
+    }
+
+    if rawRoles, hit := cache.Client.Get(userRolesCacheKey(filter.TargetUID)); hit {
+        return strings.Split(rawRoles, ","), nil
+    }
+
+    sql := `SELECT roles FROM "user" WHERE id = $1 AND deletedAt = 0;`
+
+    scan, err := queryRow(sql, filter.TargetUID)
+
+    if err != nil {
+        return nil, err
+    }
+
+    roles := []string{}
+
+    if e := scan(false, &roles); e != nil {
+        return nil, e
+    }
+
+    cache.Client.Set(userRolesCacheKey(filter.TargetUID), strings.Join(roles, ","))
+
+    return roles, nil
 }
 
