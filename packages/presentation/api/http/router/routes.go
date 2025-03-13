@@ -66,6 +66,7 @@ func Create() *echo.Echo {
     userGroup.PATCH("/login", User.ChangeLogin)
     userGroup.PATCH("/password", User.ChangePassword)
     userGroup.PATCH("/roles", User.ChangeRoles)
+    userGroup.GET("/roles", User.GetRoles)
 
     rolesGroup := router.Group("/roles")
 
