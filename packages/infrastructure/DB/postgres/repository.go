@@ -1,19 +1,27 @@
 package postgres
 
 import (
+	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/util"
 	"slices"
-    "net/http"
 )
-
-// TODO change properties by login instead of id
-//      requires datamodel refactoring
 
 type repository struct {
     //
+}
+
+func handleUserCache(err *Error.Status, keys ...string) *Error.Status {
+    if err == nil {
+        for _, key := range keys {
+            cache.Client.Delete(key)
+        }
+    }
+
+    return err
 }
 
 // TODO Check if user exists
@@ -58,10 +66,14 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
         )
     }
 
-    return queryExec(
-        `UPDATE "user" SET deletedAt = $1
-         WHERE id = $2 AND deletedAt = 0;`,
-        util.UnixTimeNow(), filter.TargetUID,
+    return handleUserCache(
+        queryExec(
+            `UPDATE "user" SET deletedAt = $1
+             WHERE id = $2 AND deletedAt = 0;`,
+             util.UnixTimeNow(), filter.TargetUID,
+        ),
+        userCacheKey(filter.TargetUID, false),
+        userRolesCacheKey(filter.TargetUID),
     )
 }
 
@@ -80,13 +92,18 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
-    return queryExec(
-        `UPDATE "user" SET deletedAt = 0
-         WHERE id = $1 AND deletedAt <> 0;`,
-        filter.TargetUID,
+    return handleUserCache(
+        queryExec(
+            `UPDATE "user" SET deletedAt = 0
+             WHERE id = $1 AND deletedAt <> 0;`,
+             filter.TargetUID,
+        ),
+        userCacheKey(filter.TargetUID, true),
+        userRolesCacheKey(filter.TargetUID),
     )
 }
 
+// TODO Allow to hard deleted only soft deleted users
 func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
     if err := authorization.Authorize(
         authorization.Action.Drop,
@@ -96,10 +113,14 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
-    return queryExec(
-        `DELETE FROM "user"
-         WHERE id = $1;`,
-        filter.TargetUID,
+    return handleUserCache(
+        queryExec(
+            `DELETE FROM "user"
+             WHERE id = $1;`,
+             filter.TargetUID,
+        ),
+        userCacheKey(filter.TargetUID, true),
+        userRolesCacheKey(filter.TargetUID),
     )
 }
 
@@ -112,9 +133,13 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
-    return queryExec(
-        `DELETE FROM "user"
-         WHERE deletedAt <> 0;`,
+    return handleUserCache(
+        queryExec(
+            `DELETE FROM "user"
+             WHERE deletedAt <> 0;`,
+        ),
+        userCacheKey(filter.TargetUID, true),
+        userRolesCacheKey(filter.TargetUID),
     )
 }
 
@@ -127,10 +152,13 @@ func (_ *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
         return err
     }
 
-    return queryExec(
-        `UPDATE "user" SET login = $1
-         WHERE id = $2;`,
-        newLogin, filter.TargetUID,
+    return handleUserCache(
+        queryExec(
+            `UPDATE "user" SET login = $1
+             WHERE id = $2;`,
+             newLogin, filter.TargetUID,
+        ),
+        userCacheKey(filter.TargetUID, false),
     )
 }
 
@@ -151,10 +179,13 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
         return e
     }
 
-    return queryExec(
-        `UPDATE "user" SET password = $1
-         WHERE id = $2;`,
-        hashedPassword, filter.TargetUID,
+    return handleUserCache(
+        queryExec(
+            `UPDATE "user" SET password = $1
+             WHERE id = $2;`,
+            hashedPassword, filter.TargetUID,
+        ),
+        userCacheKey(filter.TargetUID, false),
     )
 }
 
@@ -176,36 +207,14 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
         return err
     }
 
-    return queryExec(
-        `UPDATE "user" SET roles = $1
-         WHERE id = $2;`,
-        newRoles, filter.TargetUID,
+    return handleUserCache(
+        queryExec(
+            `UPDATE "user" SET roles = $1
+             WHERE id = $2;`,
+             newRoles, filter.TargetUID,
+        ),
+        userCacheKey(filter.TargetUID, false),
+        userRolesCacheKey(filter.TargetUID),
     )
-}
-
-func (_ *repository) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
-    if err := authorization.Authorize(
-        authorization.Action.GetRoles,
-        authorization.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return nil, err
-    }
-
-    sql := `SELECT roles FROM "user" WHERE id = $1;`
-
-    scan, err := queryRow(sql, filter.TargetUID)
-
-    if err != nil {
-        return nil, err
-    }
-
-    roles := []string{}
-
-    if e := scan(false, &roles); e != nil {
-        return nil, e
-    }
-
-    return roles, nil
 }
 
