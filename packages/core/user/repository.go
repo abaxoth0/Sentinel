@@ -12,6 +12,8 @@ type Repository interface {
 
 // Responsible for R in CRUD
 type seeker interface {
+	FindAnyUserByID(string) (*UserDTO.Indexed, *Error.Status)
+
 	FindUserByID(string) (*UserDTO.Indexed, *Error.Status)
 
 	FindSoftDeletedUserByID(string) (*UserDTO.Indexed, *Error.Status)

@@ -72,8 +72,9 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
              WHERE id = $2 AND deletedAt = 0;`,
              util.UnixTimeNow(), filter.TargetUID,
         ),
-        userCacheKey(filter.TargetUID, false),
-        userRolesCacheKey(filter.TargetUID),
+        deletedUserCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
+        userRolesCacheKeyBase + filter.TargetUID,
     )
 }
 
@@ -98,12 +99,12 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
              WHERE id = $1 AND deletedAt <> 0;`,
              filter.TargetUID,
         ),
-        userCacheKey(filter.TargetUID, true),
-        userRolesCacheKey(filter.TargetUID),
+        deletedUserCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
+        userRolesCacheKeyBase + filter.TargetUID,
     )
 }
 
-// TODO Allow to hard deleted only soft deleted users
 func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
     if err := authorization.Authorize(
         authorization.Action.Drop,
@@ -113,14 +114,28 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
+    user, err := driver.FindAnyUserByID(filter.TargetUID)
+
+    if err != nil {
+        return err
+    }
+
+    if user.DeletedAt == 0 {
+        return Error.NewStatusError(
+            "Only soft deleted users can be dropped",
+            http.StatusBadRequest,
+        )
+    }
+
     return handleUserCache(
         queryExec(
             `DELETE FROM "user"
-             WHERE id = $1;`,
+             WHERE id = $1 AND deletedAt <> 0;`,
              filter.TargetUID,
         ),
-        userCacheKey(filter.TargetUID, true),
-        userRolesCacheKey(filter.TargetUID),
+        deletedUserCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
+        userRolesCacheKeyBase + filter.TargetUID,
     )
 }
 
@@ -138,8 +153,9 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
             `DELETE FROM "user"
              WHERE deletedAt <> 0;`,
         ),
-        userCacheKey(filter.TargetUID, true),
-        userRolesCacheKey(filter.TargetUID),
+        deletedUserCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
+        userRolesCacheKeyBase + filter.TargetUID,
     )
 }
 
@@ -158,7 +174,8 @@ func (_ *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
              WHERE id = $2;`,
              newLogin, filter.TargetUID,
         ),
-        userCacheKey(filter.TargetUID, false),
+        userCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
     )
 }
 
@@ -185,7 +202,8 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
              WHERE id = $2;`,
             hashedPassword, filter.TargetUID,
         ),
-        userCacheKey(filter.TargetUID, false),
+        userCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
     )
 }
 
@@ -213,8 +231,9 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
              WHERE id = $2;`,
              newRoles, filter.TargetUID,
         ),
-        userCacheKey(filter.TargetUID, false),
-        userRolesCacheKey(filter.TargetUID),
+        userCacheKeyBase + filter.TargetUID,
+        anyUserCacheKeyBase + filter.TargetUID,
+        userRolesCacheKeyBase + filter.TargetUID,
     )
 }
 

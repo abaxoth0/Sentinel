@@ -16,7 +16,7 @@ type seeker struct {
 
 var invalidUID = Error.NewStatusError("Invalid ID", http.StatusBadRequest)
 
-func (_ *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+func (_ *seeker) findAnyUserByID(id string, cacheKey string) (*UserDTO.Indexed, *Error.Status) {
     parsedID, e := strconv.ParseInt(id, 10, 64);
 
     if e != nil {
@@ -24,28 +24,48 @@ func (_ *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     }
 
     return queryDTO(
-        cache.UserKeyPrefix + "id:" + id,
+        cacheKey,
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
-         WHERE id = $1 AND deletedAt = 0;`,
+         WHERE id = $1;`,
         parsedID,
     )
 }
 
-func (_ *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    parsedID, e := strconv.ParseInt(id, 10, 64);
 
-    if e != nil {
-        return nil, invalidUID
+func (s *seeker) findUserByID(id string, deleted bool) (*UserDTO.Indexed, *Error.Status) {
+    var cacheKey string
+
+    if deleted {
+        cacheKey = deletedUserCacheKeyBase + id
+    } else {
+        cacheKey = userCacheKeyBase + id
     }
 
-    return queryDTO(
-        cache.DeletedUserKeyPrefix + "id:" + id,
-        `SELECT id, login, password, roles, deletedAt
-         FROM "user"
-         WHERE id = $1 AND deletedAt <> 0;`,
-        parsedID,
-    )
+    user, err := s.findAnyUserByID(id, cacheKey)
+
+    if err != nil {
+        return nil, err
+    }
+
+    if deleted && user.DeletedAt == 0 {
+        return nil, Error.StatusUserNotFound
+    }
+
+    return user, nil
+}
+
+func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+    // TODO invalidate
+    return s.findAnyUserByID(id, anyUserCacheKeyBase + id)
+}
+
+func (s *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+    return s.findUserByID(id, false)
+}
+
+func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+    return s.findUserByID(id, true)
 }
 
 func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
@@ -101,7 +121,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return nil, err
     }
 
-    if rawRoles, hit := cache.Client.Get(userRolesCacheKey(filter.TargetUID)); hit {
+    if rawRoles, hit := cache.Client.Get(userRolesCacheKeyBase + filter.TargetUID); hit {
         return strings.Split(rawRoles, ","), nil
     }
 
@@ -119,7 +139,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return nil, e
     }
 
-    cache.Client.Set(userRolesCacheKey(filter.TargetUID), strings.Join(roles, ","))
+    cache.Client.Set(userRolesCacheKeyBase + filter.TargetUID, strings.Join(roles, ","))
 
     return roles, nil
 }
