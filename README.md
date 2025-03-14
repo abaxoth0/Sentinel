@@ -22,6 +22,15 @@
 
 -   Architecture: Onion Architecture
 
+# License
+
+This project is licensed under the GNU Affero General Public License (AGPL).  
+Please see the [LICENSE](LICENSE) file for the full license text.
+
+### Additional Terms
+The [NOTICE](NOTICE) file is considered part of the license. By using, modifying,  
+or distributing this software, you agree to comply with the terms outlined in the NOTICE file.
+
 # API
 
 >[!IMPORTANT]
