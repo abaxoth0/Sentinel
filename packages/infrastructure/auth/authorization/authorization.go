@@ -1,14 +1,11 @@
 package authorization
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	Error "sentinel/packages/errors"
-	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/infrastructure/config"
-	"strings"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 )
@@ -62,36 +59,31 @@ func Init() {
 
 var user = rbac.NewEntity("user")
 
-// Checks if user with role == userRoleName can perform action on user with role == targetRoleName.
+var insufficientPermissions = Error.NewStatusError(
+    "Недостаточно прав для выполнения данной операции",
+    http.StatusForbidden,
+)
+
+// Checks if user with specified roles can perform action on given resource.
+// If can't - returns *Error.Status, nil otherwise.
 //
 // This method authorize operations only in THIS service!
 // Operations on other services must be authorized by themselves!
 func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) *Error.Status {
-	cacheKey := fmt.Sprintf("%s[%s->%s]", action.String(), strings.Join(userRoles, ","), resource.Name)
-	cacheOK := "K"
-
-	if cacheValue, hit := cache.Client.Get(cacheKey); hit {
-		if cacheValue == cacheOK {
-			return nil
-		}
-
-		return Error.NewStatusError(cacheValue, http.StatusForbidden)
-	}
-
 	err := rbac.Authorize(action, resource, userRoles)
 
-    var cacheValue string
-
-	if err != nil {
-		cacheValue = err.Error()
-	} else {
-        cacheValue = cacheOK
-    }
-
-    cache.Client.Set(cacheKey, cacheValue)
-
     if err != nil {
-	    return Error.NewStatusError(err.Error(), http.StatusForbidden)
+        if err == rbac.InsufficientPermissions {
+            return insufficientPermissions
+        }
+
+        // if err is not nil and not rbac.InsufficientPermissions that means
+        // resource permissions wasn't defined for some one of given roles
+        // (see rbac.Authorize source code)
+        return Error.NewStatusError(
+            err.Error(),
+            http.StatusInternalServerError,
+        )
     }
 
     return nil

@@ -45,7 +45,7 @@ var Action = &action{
 		Update: true,
 	}),
 
-	GetRoles: user.NewAction("get_role", &rbac.Permissions{
+	GetRoles: user.NewAction("get_roles", &rbac.Permissions{
 		Read: true,
 	}),
 }
