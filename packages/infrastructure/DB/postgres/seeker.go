@@ -1,12 +1,10 @@
 package postgres
 
 import (
-	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
-	"strconv"
 	"strings"
 )
 
@@ -14,41 +12,31 @@ type seeker struct {
     //
 }
 
-var invalidUID = Error.NewStatusError("Invalid ID", http.StatusBadRequest)
-
-func (_ *seeker) findAnyUserByID(id string, cacheKey string) (*UserDTO.Indexed, *Error.Status) {
-    parsedID, e := strconv.ParseInt(id, 10, 64);
-
-    if e != nil {
-        return nil, invalidUID
-    }
-
-    return queryDTO(
+// TODO now value can be only a string, rework that.
+//      (make it a function with some generic instead of seeker's method?)
+func (s *seeker) findUserBy(
+    property userProperty,
+    propertyValue string,
+    state userState,
+    cacheKey string,
+) (*UserDTO.Indexed, *Error.Status) {
+    user, err := queryDTO(
         cacheKey,
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
-         WHERE id = $1;`,
-        parsedID,
+         WHERE ` + string(property) + ` = $1;`,
+        propertyValue,
     )
-}
-
-
-func (s *seeker) findUserByID(id string, deleted bool) (*UserDTO.Indexed, *Error.Status) {
-    var cacheKey string
-
-    if deleted {
-        cacheKey = deletedUserCacheKeyBase + id
-    } else {
-        cacheKey = userCacheKeyBase + id
-    }
-
-    user, err := s.findAnyUserByID(id, cacheKey)
 
     if err != nil {
         return nil, err
     }
 
-    if deleted && user.DeletedAt == 0 {
+    if state == deletedUserState && user.DeletedAt == 0 {
+        return nil, Error.StatusUserNotFound
+    }
+
+    if state == notDeletedUserState && user.DeletedAt != 0 {
         return nil, Error.StatusUserNotFound
     }
 
@@ -56,26 +44,19 @@ func (s *seeker) findUserByID(id string, deleted bool) (*UserDTO.Indexed, *Error
 }
 
 func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    // TODO invalidate
-    return s.findAnyUserByID(id, anyUserCacheKeyBase + id)
+    return s.findUserBy(idProperty, id, anyUserState, anyUserCacheKeyBase + id)
 }
 
 func (s *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    return s.findUserByID(id, false)
+    return s.findUserBy(idProperty, id, notDeletedUserState, userCacheKeyBase + id)
 }
 
 func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    return s.findUserByID(id, true)
+    return s.findUserBy(idProperty, id, deletedUserState, deletedUserCacheKeyBase + id)
 }
 
-func (_ *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
-    return queryDTO(
-        cache.UserKeyPrefix + "login:" + login,
-        `SELECT id, login, password, roles, deletedAt
-         FROM "user"
-         WHERE login = $1 AND deletedAt = 0;`,
-        login,
-    )
+func (s *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
+    return s.findUserBy(loginProperty, login, anyUserState, cache.UserKeyPrefix + "any_login:" + login)
 }
 
 func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {

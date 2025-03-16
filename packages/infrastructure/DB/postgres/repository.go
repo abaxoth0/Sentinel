@@ -8,6 +8,8 @@ import (
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/util"
 	"slices"
+
+	"github.com/google/uuid"
 )
 
 type repository struct {
@@ -33,9 +35,9 @@ func (_ *repository) Create(login string, password string) (*Error.Status) {
     }
 
     return queryExec(
-        `INSERT INTO "user" (login, password, roles, deletedAt) VALUES
-        ($1, $2, $3, $4);`,
-        login, hashedPassword, []string{authorization.Host.OriginRoleName}, 0,
+        `INSERT INTO "user" (id, login, password, roles, deletedAt) VALUES
+        ($1, $2, $3, $4, $5);`,
+        uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, 0,
     )
 }
 

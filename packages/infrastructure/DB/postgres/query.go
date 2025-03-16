@@ -13,6 +13,30 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Represents column name in user table
+//
+// All data of this types must be a predefined consts,
+// to avoid SQL-injection vulnerability.
+// Doing so there are no need in property validation cuz
+// all properties are predefined and correct,
+// the only way to bypass this is to use RCE exploit.
+type userProperty string
+
+const (
+    idProperty userProperty = "id"
+    loginProperty userProperty = "login"
+)
+
+// Represents user deletion status, might be:
+// deleted (deletedState), not deleted (notDeletedState), any (anyState)
+type userState byte
+
+const (
+    notDeletedUserState userState = 0
+    deletedUserState userState = 1
+    anyUserState userState = 2
+)
+
 func logQueryError(query string, err error) *Error.Status {
     if err == context.DeadlineExceeded {
         fmt.Printf("[ ERROR ] Query timeout:\n%s\n", query)
