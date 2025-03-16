@@ -43,7 +43,11 @@ func Create(ctx echo.Context) error {
 
     if err != nil {
         if is, e := Error.IsStatusError(err); is {
-            return ctx.JSON(e.Status, e.Message)
+            return ctx.JSON(
+                e.Status,
+                datamodel.MessageResponseBody{
+                    Message: e.Message,
+            })
         }
 
         return err
