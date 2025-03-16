@@ -20,6 +20,8 @@ type seeker interface {
 
 	FindUserByLogin(string) (*UserDTO.Indexed, *Error.Status)
 
+	FindAnyUserByLogin(string) (*UserDTO.Indexed, *Error.Status)
+
 	IsLoginExists(login string) (bool, *Error.Status)
 
     GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status)

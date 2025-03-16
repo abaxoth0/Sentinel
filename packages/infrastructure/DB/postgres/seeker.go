@@ -15,8 +15,8 @@ type seeker struct {
 // TODO now value can be only a string, rework that.
 //      (make it a function with some generic instead of seeker's method?)
 func (s *seeker) findUserBy(
-    property userProperty,
-    propertyValue string,
+    conditionProperty userProperty,
+    conditionPropertyValue string,
     state userState,
     cacheKey string,
 ) (*UserDTO.Indexed, *Error.Status) {
@@ -24,8 +24,8 @@ func (s *seeker) findUserBy(
         cacheKey,
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
-         WHERE ` + string(property) + ` = $1;`,
-        propertyValue,
+         WHERE ` + string(conditionProperty) + ` = $1;`,
+        conditionPropertyValue,
     )
 
     if err != nil {
@@ -44,51 +44,63 @@ func (s *seeker) findUserBy(
 }
 
 func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    return s.findUserBy(idProperty, id, anyUserState, anyUserCacheKeyBase + id)
+    return s.findUserBy(
+        idProperty,
+        id,
+        anyUserState,
+        cache.KeyBase[cache.AnyUserById] + id,
+    )
 }
 
 func (s *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    return s.findUserBy(idProperty, id, notDeletedUserState, userCacheKeyBase + id)
+    return s.findUserBy(
+        idProperty,
+        id,
+        notDeletedUserState,
+        cache.KeyBase[cache.UserById] + id,
+    )
 }
 
 func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
-    return s.findUserBy(idProperty, id, deletedUserState, deletedUserCacheKeyBase + id)
+    return s.findUserBy(
+        idProperty,
+        id,
+        deletedUserState,
+        cache.KeyBase[cache.DeletedUserById] + id,
+    )
+}
+
+func (s *seeker) FindAnyUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
+    return s.findUserBy(
+        loginProperty,
+        login,
+        anyUserState,
+        cache.KeyBase[cache.AnyUserByLogin] + login,
+    )
 }
 
 func (s *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
-    return s.findUserBy(loginProperty, login, anyUserState, cache.UserKeyPrefix + "any_login:" + login)
+    return s.findUserBy(
+        loginProperty,
+        login,
+        notDeletedUserState,
+        cache.KeyBase[cache.UserByLogin] + login,
+    )
 }
 
-func (_ *seeker) IsLoginExists(target string) (bool, *Error.Status) {
-    cacheKey := cache.UserKeyPrefix + "loginExists:" + target
+func (s *seeker) IsLoginExists(login string) (bool, *Error.Status) {
+    cacheKey := cache.KeyBase[cache.UserByLogin] + login
 
-    if cachedData, hit := cache.Client.Get(cacheKey); hit {
-        return cachedData == "true", nil
-    }
-
-    var id int
-
-    scan, err := queryRow(
-        `SELECT id
-         FROM "user"
-         WHERE login = $1 and deletedAt = 0;`,
-        target,
-    )
+    _, err := s.findUserBy(loginProperty, login, notDeletedUserState, cacheKey)
 
     if err != nil {
-        return false, err
-    }
-
-    if e := scan(false, &id); e != nil {
-        if e == Error.StatusUserNotFound {
+        if err == Error.StatusUserNotFound {
             cache.Client.Set(cacheKey, false)
             return false, nil
         }
 
-        return false, e
+        return false, err
     }
-
-    cache.Client.Set(cacheKey, true)
 
     return true, nil
 }
@@ -102,7 +114,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return nil, err
     }
 
-    if rawRoles, hit := cache.Client.Get(userRolesCacheKeyBase + filter.TargetUID); hit {
+    if rawRoles, hit := cache.Client.Get(cache.KeyBase[cache.UserRolesById] + filter.TargetUID); hit {
         return strings.Split(rawRoles, ","), nil
     }
 
@@ -120,7 +132,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return nil, e
     }
 
-    cache.Client.Set(userRolesCacheKeyBase + filter.TargetUID, strings.Join(roles, ","))
+    cache.Client.Set(cache.KeyBase[cache.UserRolesById] + filter.TargetUID, strings.Join(roles, ","))
 
     return roles, nil
 }

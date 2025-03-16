@@ -26,18 +26,47 @@ func handleUserCache(err *Error.Status, keys ...string) *Error.Status {
     return err
 }
 
-// TODO Check if user exists
-func (_ *repository) Create(login string, password string) (*Error.Status) {
+var loginAlreadyInUse = Error.NewStatusError(
+    "Login already in use",
+    http.StatusConflict,
+)
+
+func (_ *repository) checkLogin(login string) *Error.Status {
+    _, err := driver.FindAnyUserByLogin(login)
+
+    if err != Error.StatusUserNotFound {
+        // if error is persist, but it's not an Error.StatusUserNotFound
+        if err != nil {
+            return err
+        }
+
+        // if there are no any error (which means that user with this login exists)
+        return loginAlreadyInUse
+    }
+
+    // login is free to use, there are no error
+    return nil
+}
+
+func (r *repository) Create(login string, password string) (*Error.Status) {
+    if err := r.checkLogin(login); err != nil {
+        return err
+    }
+
 	hashedPassword, err := hashPassword(password)
 
     if err != nil {
         return nil
     }
 
-    return queryExec(
-        `INSERT INTO "user" (id, login, password, roles, deletedAt) VALUES
-        ($1, $2, $3, $4, $5);`,
-        uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, 0,
+    return handleUserCache(
+        queryExec(
+            `INSERT INTO "user" (id, login, password, roles, deletedAt) VALUES
+             ($1, $2, $3, $4, $5);`,
+             uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, 0,
+        ),
+        cache.KeyBase[cache.UserByLogin] + login,
+        cache.KeyBase[cache.AnyUserByLogin] + login,
     )
 }
 
@@ -74,9 +103,11 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
              WHERE id = $2 AND deletedAt = 0;`,
              util.UnixTimeNow(), filter.TargetUID,
         ),
-        deletedUserCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
-        userRolesCacheKeyBase + filter.TargetUID,
+        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
@@ -89,7 +120,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
-    _, err := driver.FindSoftDeletedUserByID(filter.TargetUID)
+    user, err := driver.FindSoftDeletedUserByID(filter.TargetUID)
 
     if err != nil {
         return err
@@ -101,9 +132,13 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
              WHERE id = $1 AND deletedAt <> 0;`,
              filter.TargetUID,
         ),
-        deletedUserCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
-        userRolesCacheKeyBase + filter.TargetUID,
+        // TODO ... is that just me or it's looks kinda bad?
+        //      Try to find a better way to invalidate cache
+        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
@@ -135,9 +170,11 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
              WHERE id = $1 AND deletedAt <> 0;`,
              filter.TargetUID,
         ),
-        deletedUserCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
-        userRolesCacheKeyBase + filter.TargetUID,
+        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
@@ -155,18 +192,30 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
             `DELETE FROM "user"
              WHERE deletedAt <> 0;`,
         ),
-        deletedUserCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
-        userRolesCacheKeyBase + filter.TargetUID,
+        // TODO there are a problem with cache invalidation in this case,
+        //      must be deleted all cache for users with 'deleted' and 'any' state,
+        //      maybe there are some delete pattern option?
+        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
     )
 }
 
-func (_ *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status {
+func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status {
     if err := authorization.Authorize(
         authorization.Action.ChangeLogin,
         authorization.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
+        return err
+    }
+
+    user, err := driver.FindUserByID(filter.TargetUID)
+
+    if err != nil {
+        return err
+    }
+
+    if err := r.checkLogin(newLogin); err != nil {
         return err
     }
 
@@ -176,8 +225,10 @@ func (_ *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
              WHERE id = $2;`,
              newLogin, filter.TargetUID,
         ),
-        userCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
@@ -192,6 +243,12 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
         }
     }
 
+    user, err := driver.FindUserByID(filter.TargetUID)
+
+    if err != nil {
+        return err
+    }
+
 	hashedPassword, e := hashPassword(newPassword)
 
     if e != nil {
@@ -204,8 +261,10 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
              WHERE id = $2;`,
             hashedPassword, filter.TargetUID,
         ),
-        userCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
@@ -217,6 +276,12 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
               "Нельзя снять роль администратора с самого себя",
                http.StatusForbidden,
           )
+    }
+
+    user, err := driver.FindUserByID(filter.TargetUID)
+
+    if err != nil {
+        return err
     }
 
     if err := authorization.Authorize(
@@ -233,9 +298,11 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
              WHERE id = $2;`,
              newRoles, filter.TargetUID,
         ),
-        userCacheKeyBase + filter.TargetUID,
-        anyUserCacheKeyBase + filter.TargetUID,
-        userRolesCacheKeyBase + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
