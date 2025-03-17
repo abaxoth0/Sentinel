@@ -5,11 +5,30 @@ import (
 	Error "sentinel/packages/errors"
 )
 
-type Model struct {
-	Login string
-	Roles []string
-	Password string
-}
+// Represents one of user's properties, excluding password.
+//
+// To avoid possible vulnerabilities like SQL-injections
+// all data of this type must be a predefined consts.
+// Doing so there are no need in property validation cuz
+// all properties are predefined and correct.
+type Property string
+
+const (
+    IdProperty Property = "id"
+    LoginProperty Property = "login"
+    RolesProperty Property = "roles"
+    DeletedAtProperty Property = "deletedAt"
+)
+
+// Represents user deletion state, might be:
+// deleted (deletedState), not deleted (notDeletedState), any (anyState)
+type State byte
+
+const (
+    NotDeletedState State = 0
+    DeletedState State = 1
+    AnyState State = 2
+)
 
 func VerifyPassword(password string) *Error.Status {
 	passwordSize := len(password)
@@ -24,3 +43,4 @@ func VerifyPassword(password string) *Error.Status {
 
 	return nil
 }
+

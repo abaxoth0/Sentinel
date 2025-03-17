@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
@@ -15,12 +16,12 @@ type seeker struct {
 // TODO now value can be only a string, rework that.
 //      (make it a function with some generic instead of seeker's method?)
 func (s *seeker) findUserBy(
-    conditionProperty userProperty,
+    conditionProperty user.Property,
     conditionPropertyValue string,
-    state userState,
+    state user.State,
     cacheKey string,
 ) (*UserDTO.Indexed, *Error.Status) {
-    user, err := queryDTO(
+    dto, err := queryDTO(
         cacheKey,
         `SELECT id, login, password, roles, deletedAt
          FROM "user"
@@ -32,58 +33,58 @@ func (s *seeker) findUserBy(
         return nil, err
     }
 
-    if state == deletedUserState && user.DeletedAt == 0 {
+    if state == user.DeletedState && dto.DeletedAt == 0 {
         return nil, Error.StatusUserNotFound
     }
 
-    if state == notDeletedUserState && user.DeletedAt != 0 {
+    if state == user.NotDeletedState && dto.DeletedAt != 0 {
         return nil, Error.StatusUserNotFound
     }
 
-    return user, nil
+    return dto, nil
 }
 
 func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     return s.findUserBy(
-        idProperty,
+        user.IdProperty,
         id,
-        anyUserState,
+        user.AnyState,
         cache.KeyBase[cache.AnyUserById] + id,
     )
 }
 
 func (s *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     return s.findUserBy(
-        idProperty,
+        user.IdProperty,
         id,
-        notDeletedUserState,
+        user.NotDeletedState,
         cache.KeyBase[cache.UserById] + id,
     )
 }
 
 func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     return s.findUserBy(
-        idProperty,
+        user.IdProperty,
         id,
-        deletedUserState,
+        user.DeletedState,
         cache.KeyBase[cache.DeletedUserById] + id,
     )
 }
 
 func (s *seeker) FindAnyUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
     return s.findUserBy(
-        loginProperty,
+        user.LoginProperty,
         login,
-        anyUserState,
+        user.AnyState,
         cache.KeyBase[cache.AnyUserByLogin] + login,
     )
 }
 
 func (s *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
     return s.findUserBy(
-        loginProperty,
+        user.LoginProperty,
         login,
-        notDeletedUserState,
+        user.NotDeletedState,
         cache.KeyBase[cache.UserByLogin] + login,
     )
 }
@@ -91,7 +92,7 @@ func (s *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status)
 func (s *seeker) IsLoginExists(login string) (bool, *Error.Status) {
     cacheKey := cache.KeyBase[cache.UserByLogin] + login
 
-    _, err := s.findUserBy(loginProperty, login, notDeletedUserState, cacheKey)
+    _, err := s.findUserBy(user.LoginProperty, login, user.NotDeletedState, cacheKey)
 
     if err != nil {
         if err == Error.StatusUserNotFound {
