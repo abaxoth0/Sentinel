@@ -24,8 +24,6 @@ var logo = `
 `
 
 func main() {
-	ver := "1.2.0.0"
-
 	// Program wasn't run and/or tested on Windows and MacOS.
 	// (Probably it will work, but required minor code modifications)
 	if runtime.GOOS != "linux" {
@@ -54,9 +52,9 @@ func main() {
 
 	fmt.Print(logo)
 
-	fmt.Printf("  Authentication/authorization service (v%s)\n", ver)
+	fmt.Println("  Authentication/authorization service")
 
-	fmt.Println("  Mady by Stepan Ananin (xrf844@gmail.com)")
+	fmt.Println("  Mady by Stepan Ananin (xrf848@gmail.com)")
 
 	fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
