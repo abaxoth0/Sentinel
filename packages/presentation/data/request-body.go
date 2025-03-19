@@ -13,7 +13,7 @@ type UidBody struct {
 	UID string `json:"uid"`
 }
 
-func (body UidBody) GetUID() string {
+func (body *UidBody) GetUID() string {
     return body.UID
 }
 
@@ -26,7 +26,7 @@ type UidAndLoginBody struct {
 	Login string `json:"login"`
 }
 
-func (body UidAndLoginBody) GetUID() string {
+func (body *UidAndLoginBody) GetUID() string {
     return body.UID
 }
 
@@ -35,7 +35,7 @@ type UidAndPasswordBody struct {
 	Password string `json:"password"`
 }
 
-func (body UidAndPasswordBody) GetUID() string {
+func (body *UidAndPasswordBody) GetUID() string {
     return body.UID
 }
 
@@ -44,7 +44,7 @@ type UidAndRolesBody struct {
 	Roles []string `json:"roles"`
 }
 
-func (body UidAndRolesBody) GetUID() string {
+func (body *UidAndRolesBody) GetUID() string {
     return body.UID
 }
 

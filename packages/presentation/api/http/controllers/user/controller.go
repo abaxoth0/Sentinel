@@ -102,10 +102,8 @@ func DropAllDeleted(ctx echo.Context) error {
 
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
-func update[T datamodel.UidGetter](ctx echo.Context) error {
-    var body T
-
-    if err := ctx.Bind(&body); err != nil {
+func update(ctx echo.Context, body datamodel.UidGetter) error {
+    if err := ctx.Bind(body); err != nil {
         return err
     }
 
@@ -117,15 +115,12 @@ func update[T datamodel.UidGetter](ctx echo.Context) error {
 
     var e *Error.Status
 
-    // TODO try to rework this, now using of type switch
-    //      is kinda bad due to type safety issues
-    //      (cuz body explicitly casted to any)
-    switch b := any(body).(type) {
-    case datamodel.UidAndLoginBody:
+    switch b := body.(type) {
+    case *datamodel.UidAndLoginBody:
         e = DB.Database.ChangeLogin(filter, b.Login)
-    case datamodel.UidAndPasswordBody:
+    case *datamodel.UidAndPasswordBody:
         e = DB.Database.ChangePassword(filter, b.Password)
-    case datamodel.UidAndRolesBody:
+    case *datamodel.UidAndRolesBody:
         e = DB.Database.ChangeRoles(filter, b.Roles)
     default:
         return errors.New("Invalid update call: received unacceptable request body")
@@ -139,15 +134,15 @@ func update[T datamodel.UidGetter](ctx echo.Context) error {
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    return update[datamodel.UidAndLoginBody](ctx)
+    return update(ctx, new(datamodel.UidAndLoginBody))
 }
 
 func ChangePassword(ctx echo.Context) error {
-    return update[datamodel.UidAndPasswordBody](ctx)
+    return update(ctx, new(datamodel.UidAndPasswordBody))
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    return update[datamodel.UidAndRolesBody](ctx)
+    return update(ctx, new(datamodel.UidAndRolesBody))
 }
 
 func GetRoles(ctx echo.Context) error {
