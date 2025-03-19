@@ -17,6 +17,7 @@ const (
     IdProperty Property = "id"
     LoginProperty Property = "login"
     RolesProperty Property = "roles"
+    PasswordProperty Property = "password"
     DeletedAtProperty Property = "deletedAt"
 )
 
