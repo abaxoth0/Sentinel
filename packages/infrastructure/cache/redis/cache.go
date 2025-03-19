@@ -7,6 +7,7 @@ import (
 	"sentinel/packages/infrastructure/config"
 	"sentinel/packages/presentation/data/json"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -78,15 +79,22 @@ func (d *driver) Get(key string) (string, bool) {
     return cachedData, err == nil
 }
 
-// TODO restrict value to the types that go-redis can handle
-//      but performance should be in priority (so don't use type switching)
-
 // go-redis driver can handle only this types:
 // string, bool, []byte, int, int64, float64, time.Time
 //
 // use EncodeAndSet in case if value doesn't belong to any of this types
 // (like structs, hashmaps, slices etc)
 func(d *driver) Set(key string, value any) error {
+    // Alas, generics can't be used in methods
+    // (it can be passed to a struct, but thats kinda strange and
+    //  even so i failed to make it works as i want, so using type switch instead)
+    switch value.(type) {
+    case string, bool, []byte, int, int64, float64, time.Time:
+        // Type allowed, do nothing and just go forward
+    default:
+        return fmt.Errorf("invalid cache value type: %T", value)
+    }
+
     ctx, cancel := defaultTimeoutContext()
     defer cancel()
 
