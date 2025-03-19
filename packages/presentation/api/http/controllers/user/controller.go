@@ -8,6 +8,7 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
+	"sentinel/packages/presentation/api/http/response"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/golang-jwt/jwt"
@@ -39,6 +40,13 @@ func Create(ctx echo.Context) error {
         return err
     }
 
+    if err := body.Validate(); err != nil {
+        return echo.NewHTTPError(
+            http.StatusBadRequest,
+            err.Error(),
+            )
+    }
+
     err := DB.Database.Create(body.Login, body.Password)
 
     if err != nil {
@@ -47,7 +55,8 @@ func Create(ctx echo.Context) error {
                 e.Status,
                 datamodel.MessageResponseBody{
                     Message: e.Message,
-            })
+                },
+            )
         }
 
         return err
@@ -65,6 +74,10 @@ func handleUserStateUpdate(ctx echo.Context, upd stateUpdater) error {
 
     if err := ctx.Bind(&body); err != nil {
         return err
+    }
+
+    if err := body.Validate(); err != nil {
+        return response.RequestMissingUid
     }
 
     filter, err := newUserFilter(ctx, body.UID)
@@ -98,13 +111,18 @@ func DropAllDeleted(ctx echo.Context) error {
 
 // TODO try to find a way to merge 'update' and 'handleUserStateUpdate'
 
-// TODO check if request body is invalid and handle it properly
-
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body datamodel.UidGetter) error {
     if err := ctx.Bind(body); err != nil {
         return err
+    }
+
+    if err := body.Validate(); err != nil {
+        return echo.NewHTTPError(
+            http.StatusBadRequest,
+            err.Error(),
+            )
     }
 
     filter, err := newUserFilter(ctx, body.GetUID())
@@ -174,6 +192,10 @@ func GetRoles(ctx echo.Context) error {
 
 func IsLoginExists(ctx echo.Context) error {
     var body datamodel.LoginBody
+
+    if err := body.Validate(); err != nil {
+        return response.RequestMissingLogin
+    }
 
     if err := ctx.Bind(&body); err != nil {
         return err

@@ -19,6 +19,13 @@ func Login(ctx echo.Context) error {
         return err
     }
 
+    if err := body.Validate(); err != nil {
+        return echo.NewHTTPError(
+            http.StatusBadRequest,
+            err.Error(),
+            )
+    }
+
     user, e := authentication.Login(body.Login, body.Password)
 
     if e != nil {

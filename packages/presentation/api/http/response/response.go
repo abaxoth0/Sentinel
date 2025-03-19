@@ -2,6 +2,7 @@ package response
 
 import (
 	"net/http"
+	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/labstack/echo/v4"
 )
@@ -20,5 +21,25 @@ var FailedToReadRequestBody = echo.NewHTTPError(
 var FailedToDecodeRequestBody = echo.NewHTTPError(
     http.StatusBadRequest,
     "Failed to decode request body",
+)
+
+var RequestMissingUid = echo.NewHTTPError(
+    http.StatusBadRequest,
+    datamodel.InvalidUID.Error(),
+)
+
+var RequestMissingLogin = echo.NewHTTPError(
+    http.StatusBadRequest,
+    datamodel.InvalidLogin.Error(),
+)
+
+var RequestMissingPassword = echo.NewHTTPError(
+    http.StatusBadRequest,
+    datamodel.InvalidPassword.Error(),
+)
+
+var RequestMissingRoles = echo.NewHTTPError(
+    http.StatusBadRequest,
+    datamodel.InvalidRoles.Error(),
 )
 
