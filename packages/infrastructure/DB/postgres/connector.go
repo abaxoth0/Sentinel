@@ -64,6 +64,13 @@ func (c *connector) Connect() {
     fmt.Println("[ DATABASE ] Ping connection: OK")
 
     c.pool = pool
+
+    err = c.postConnection()
+
+    if err != nil {
+        fmt.Println(err.Error())
+        os.Exit(1)
+    }
 }
 
 func (c *connector) Disconnect() {
@@ -92,5 +99,49 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
     }
 
     return connection, nil
+}
+
+
+func (c *connector) postConnection() error {
+    fmt.Println("[ DATABASE ] Post-connection...")
+
+    if err := c.initializeTable(
+        "user",
+        `CREATE TABLE IF NOT EXISTS "user" (
+            id uuid PRIMARY KEY,
+            login VARCHAR(72) UNIQUE NOT NULL,
+            password CHAR(60) NOT NULL,
+            roles VARCHAR(32)[] NOT NULL,
+            deleted_at TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );`,
+    ); err != nil {
+        return err
+    }
+
+    fmt.Println("[ DATABASE ] Post-connection: OK")
+
+    return nil
+}
+
+func (c *connector) initializeTable(tableName string, query string) error {
+    con, err := c.getConnection()
+
+    if err != nil {
+        return err
+    }
+
+    defer con.Release()
+
+    fmt.Printf("[ DATABASE ] Verifying that table '%s' exists...\n", tableName)
+
+    if _, e := con.Exec(c.ctx, query); e != nil {
+        return fmt.Errorf("[ DATABASE ] Failed to verify that table '%s' exists:\n%v\n", tableName, err)
+    }
+
+
+    fmt.Printf("[ DATABASE ] Verifying that table '%s' exists: OK\n", tableName)
+
+    return nil
 }
 
