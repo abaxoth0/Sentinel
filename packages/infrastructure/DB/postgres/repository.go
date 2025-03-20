@@ -102,6 +102,7 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
              WHERE id = $1 AND deleted_at IS NULL;`,
              filter.TargetUID,
         ),
+        cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
@@ -133,6 +134,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
         ),
         // TODO ... is that just me or it's looks kinda bad?
         //      Try to find a better way to invalidate cache
+        cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
