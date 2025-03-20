@@ -1,11 +1,22 @@
 package userdto
 
-type Indexed struct {
-    ID        string   `json:"id"`
-	Login     string   `json:"login"`
-	Password  string   `json:"password"`
-	Roles     []string `json:"roles"`
-	DeletedAt int64    `json:"deletedAt"`
+import "time"
+
+type Basic struct {
+    ID           string    `json:"id"`
+	Login        string    `json:"login"`
+	Password     string    `json:"password"`
+	Roles        []string  `json:"roles"`
+	DeletedAt    time.Time `json:"deletedAt"`
+}
+
+type Extended struct {
+    ID           string    `json:"id"`
+	Login        string    `json:"login"`
+	Password     string    `json:"password"`
+	Roles        []string  `json:"roles"`
+	DeletedAt    time.Time `json:"deletedAt"`
+    CreatedAt    time.Time `json:"createdAt"`
 }
 
 type Payload struct {

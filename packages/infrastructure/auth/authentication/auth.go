@@ -15,7 +15,7 @@ var invalidAuthCreditinals = Error.NewStatusError(
 )
 
 // Returns indexedUser if auth data is correct, ExternalError otherwise.
-func Login(login string, password string) (*UserDTO.Indexed, *Error.Status) {
+func Login(login string, password string) (*UserDTO.Basic, *Error.Status) {
 	user, err := DB.Database.FindUserByLogin(login)
 
 	if err != nil {

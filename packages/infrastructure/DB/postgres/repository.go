@@ -6,7 +6,6 @@ import (
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/util"
 	"slices"
 
 	"github.com/google/uuid"
@@ -61,9 +60,9 @@ func (r *repository) Create(login string, password string) (*Error.Status) {
 
     return handleUserCache(
         queryExec(
-            `INSERT INTO "user" (id, login, password, roles, deletedAt) VALUES
+            `INSERT INTO "user" (id, login, password, roles, deleted_at) VALUES
              ($1, $2, $3, $4, $5);`,
-             uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, 0,
+             uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, nil,
         ),
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
@@ -99,9 +98,9 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
 
     return handleUserCache(
         queryExec(
-            `UPDATE "user" SET deletedAt = $1
-             WHERE id = $2 AND deletedAt = 0;`,
-             util.UnixTimeNow(), filter.TargetUID,
+            `UPDATE "user" SET deleted_at = NOW()
+             WHERE id = $1 AND deleted_at IS NULL;`,
+             filter.TargetUID,
         ),
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
@@ -128,8 +127,8 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 
     return handleUserCache(
         queryExec(
-            `UPDATE "user" SET deletedAt = 0
-             WHERE id = $1 AND deletedAt <> 0;`,
+            `UPDATE "user" SET deleted_at = NULL
+             WHERE id = $1 AND deleted_at IS NOT NULL;`,
              filter.TargetUID,
         ),
         // TODO ... is that just me or it's looks kinda bad?
@@ -157,7 +156,7 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
-    if user.DeletedAt == 0 {
+    if user.DeletedAt.IsZero() {
         return Error.NewStatusError(
             "Only soft deleted users can be dropped",
             http.StatusBadRequest,
@@ -167,7 +166,7 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
     return handleUserCache(
         queryExec(
             `DELETE FROM "user"
-             WHERE id = $1 AND deletedAt <> 0;`,
+             WHERE id = $1 AND deleted_at IS NOT NULL;`,
              filter.TargetUID,
         ),
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
@@ -190,7 +189,7 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
     return handleUserCache(
         queryExec(
             `DELETE FROM "user"
-             WHERE deletedAt <> 0;`,
+             WHERE deleted_at IS NOT NULL;`,
         ),
         // TODO there are a problem with cache invalidation in this case,
         //      must be deleted all cache for users with 'deleted' and 'any' state,

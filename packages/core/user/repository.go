@@ -12,15 +12,15 @@ type Repository interface {
 
 // Responsible for R in CRUD
 type seeker interface {
-	FindAnyUserByID(string) (*UserDTO.Indexed, *Error.Status)
+	FindAnyUserByID(string) (*UserDTO.Basic, *Error.Status)
 
-	FindUserByID(string) (*UserDTO.Indexed, *Error.Status)
+	FindUserByID(string) (*UserDTO.Basic, *Error.Status)
 
-	FindSoftDeletedUserByID(string) (*UserDTO.Indexed, *Error.Status)
+	FindSoftDeletedUserByID(string) (*UserDTO.Basic, *Error.Status)
 
-	FindUserByLogin(string) (*UserDTO.Indexed, *Error.Status)
+	FindUserByLogin(string) (*UserDTO.Basic, *Error.Status)
 
-	FindAnyUserByLogin(string) (*UserDTO.Indexed, *Error.Status)
+	FindAnyUserByLogin(string) (*UserDTO.Basic, *Error.Status)
 
 	IsLoginExists(login string) (bool, *Error.Status)
 

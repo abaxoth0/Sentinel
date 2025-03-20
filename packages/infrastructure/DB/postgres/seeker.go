@@ -20,10 +20,10 @@ func (s *seeker) findUserBy(
     conditionPropertyValue string,
     state user.State,
     cacheKey string,
-) (*UserDTO.Indexed, *Error.Status) {
-    dto, err := queryDTO(
+) (*UserDTO.Basic, *Error.Status) {
+    dto, err := queryBasicDTO(
         cacheKey,
-        `SELECT id, login, password, roles, deletedAt
+        `SELECT id, login, password, roles, deleted_at
          FROM "user"
          WHERE ` + string(conditionProperty) + ` = $1;`,
         conditionPropertyValue,
@@ -33,18 +33,18 @@ func (s *seeker) findUserBy(
         return nil, err
     }
 
-    if state == user.DeletedState && dto.DeletedAt == 0 {
+    if state == user.DeletedState && dto.DeletedAt.IsZero()  {
         return nil, Error.StatusUserNotFound
     }
 
-    if state == user.NotDeletedState && dto.DeletedAt != 0 {
+    if state == user.NotDeletedState && !dto.DeletedAt.IsZero() {
         return nil, Error.StatusUserNotFound
     }
 
     return dto, nil
 }
 
-func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Basic, *Error.Status) {
     return s.findUserBy(
         user.IdProperty,
         id,
@@ -53,7 +53,7 @@ func (s *seeker) FindAnyUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     )
 }
 
-func (s *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+func (s *seeker) FindUserByID(id string) (*UserDTO.Basic, *Error.Status) {
     return s.findUserBy(
         user.IdProperty,
         id,
@@ -62,7 +62,7 @@ func (s *seeker) FindUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
     )
 }
 
-func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.Status) {
+func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Basic, *Error.Status) {
     return s.findUserBy(
         user.IdProperty,
         id,
@@ -71,7 +71,7 @@ func (s *seeker) FindSoftDeletedUserByID(id string) (*UserDTO.Indexed, *Error.St
     )
 }
 
-func (s *seeker) FindAnyUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
+func (s *seeker) FindAnyUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
     return s.findUserBy(
         user.LoginProperty,
         login,
@@ -80,7 +80,7 @@ func (s *seeker) FindAnyUserByLogin(login string) (*UserDTO.Indexed, *Error.Stat
     )
 }
 
-func (s *seeker) FindUserByLogin(login string) (*UserDTO.Indexed, *Error.Status) {
+func (s *seeker) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
     return s.findUserBy(
         user.LoginProperty,
         login,
@@ -119,7 +119,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return strings.Split(rawRoles, ","), nil
     }
 
-    sql := `SELECT roles FROM "user" WHERE id = $1 AND deletedAt = 0;`
+    sql := `SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`
 
     scan, err := queryRow(sql, filter.TargetUID)
 

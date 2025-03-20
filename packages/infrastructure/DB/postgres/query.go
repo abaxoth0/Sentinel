@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/presentation/data/json"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -27,7 +29,7 @@ func logQueryError(query string, err error) *Error.Status {
 // Executes given SQL. If returnRow is true then returns resulting row and error,
 // otherwise returns nil and error.
 // Also substitutes given args (see pgx docs for details).
-func runSQL(returnRow bool, sql string, args []any) (pgx.Row, *Error.Status) {
+func runSQL(returnRow bool, query string, args []any) (pgx.Row, *Error.Status) {
     con, err := driver.getConnection()
 
     if err != nil {
@@ -41,11 +43,11 @@ func runSQL(returnRow bool, sql string, args []any) (pgx.Row, *Error.Status) {
     defer cancel()
 
     if returnRow {
-        return con.QueryRow(ctx, sql, args...), nil
+        return con.QueryRow(ctx, query, args...), nil
     }
 
-    if _, e := con.Exec(ctx, sql, args...); e != nil {
-        return nil, logQueryError(sql, e)
+    if _, e := con.Exec(ctx, query, args...); e != nil {
+        return nil, logQueryError(query, e)
     }
 
     return nil, nil
@@ -57,8 +59,8 @@ func runSQL(returnRow bool, sql string, args []any) (pgx.Row, *Error.Status) {
 type scanRow = func(safe bool, dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
-func queryRow(sql string, args ...any) (scanRow, *Error.Status) {
-    row, err := runSQL(true, sql, args)
+func queryRow(query string, args ...any) (scanRow, *Error.Status) {
+    row, err := runSQL(true, query, args)
 
     if err != nil {
         return nil, err
@@ -86,7 +88,7 @@ func queryRow(sql string, args ...any) (scanRow, *Error.Status) {
                 return Error.StatusUserNotFound
             }
 
-            return logQueryError(sql, e)
+            return logQueryError(query, e)
         }
 
         return nil
@@ -101,9 +103,9 @@ func queryExec(sql string, args ...any) (*Error.Status) {
 }
 
 // Works same as 'queryRow', but also scans resulting row into '*UserDTO.Indexed'
-func queryDTO(cacheKey string, sql string, args ...any) (*UserDTO.Indexed, *Error.Status) {
+func queryBasicDTO(cacheKey string, query string, args ...any) (*UserDTO.Basic, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
-        r, err := json.DecodeString[UserDTO.Indexed](cached)
+        r, err := json.DecodeString[UserDTO.Basic](cached)
 
         if err == nil {
             return &r, nil
@@ -115,19 +117,28 @@ func queryDTO(cacheKey string, sql string, args ...any) (*UserDTO.Indexed, *Erro
         cache.Client.Delete(cacheKey)
     }
 
-    scan, err := queryRow(sql, args...)
+    scan, err := queryRow(query, args...)
 
     if err != nil {
         return nil, err
     }
 
-    dto := new(UserDTO.Indexed)
+    dto := new(UserDTO.Basic)
 
-    err = scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &dto.DeletedAt)
+    var deletedAt sql.NullTime
+
+    err = scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &deletedAt)
 
     if err != nil {
         return nil, err
     }
+
+    if deletedAt.Valid {
+        dto.DeletedAt = deletedAt.Time
+    } else {
+        dto.DeletedAt = time.Time{}
+    }
+
 
     cache.Client.EncodeAndSet(cacheKey, dto)
 
