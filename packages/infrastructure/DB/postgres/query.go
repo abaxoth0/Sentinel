@@ -10,7 +10,6 @@ import (
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/presentation/data/json"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -102,10 +101,14 @@ func queryExec(sql string, args ...any) (*Error.Status) {
     return err
 }
 
-// Works same as 'queryRow', but also scans resulting row into '*UserDTO.Indexed'
-func queryBasicDTO(cacheKey string, query string, args ...any) (*UserDTO.Basic, *Error.Status) {
+// Works same as queryRow, but also scans resulting row into specified D
+func queryUserDTO[D UserDTO.Basic |  UserDTO.Extended | UserDTO.Audit](
+    cacheKey string,
+    query string,
+    args ...any,
+) (*D, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
-        r, err := json.DecodeString[UserDTO.Basic](cached)
+        r, err := json.DecodeString[D](cached)
 
         if err == nil {
             return &r, nil
@@ -123,22 +126,65 @@ func queryBasicDTO(cacheKey string, query string, args ...any) (*UserDTO.Basic, 
         return nil, err
     }
 
-    dto := new(UserDTO.Basic)
+    dto := new(D)
 
     var deletedAt sql.NullTime
 
-    err = scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &deletedAt)
+    switch DTO := any(dto).(type){
+    case *UserDTO.Basic:
+        err = scan(
+            false,
+            &DTO.ID,
+            &DTO.Login,
+            &DTO.Password,
+            &DTO.Roles,
+            &deletedAt,
+            &DTO.IsActive,
+        )
+
+        setTime(&DTO.DeletedAt, deletedAt)
+    case *UserDTO.Extended:
+        var createdAt sql.NullTime
+
+        err = scan(
+            false,
+            &DTO.ID,
+            &DTO.Login,
+            &DTO.Password,
+            &DTO.Roles,
+            &deletedAt,
+            &createdAt,
+            &DTO.IsActive,
+        )
+
+        setTime(&DTO.DeletedAt, deletedAt)
+        setTime(&DTO.CreatedAt, createdAt)
+    case *UserDTO.Audit:
+        var changedAt sql.NullTime
+
+        err = scan(
+            false,
+            &DTO.ID,
+            &DTO.ChangedUserID,
+            &DTO.ChangedByUserID,
+            &DTO.Operation,
+            &DTO.Login,
+            &DTO.Password,
+            &DTO.Roles,
+            &deletedAt,
+            &changedAt,
+            &DTO.IsActive,
+        )
+
+        setTime(&DTO.DeletedAt, deletedAt)
+        setTime(&DTO.ChangedAt, changedAt)
+    default:
+        panic(fmt.Sprintf("invalid DTO type, expected *UserDTO.Basic or *UserDTO.Extended, but got: %T\n", DTO))
+    }
 
     if err != nil {
         return nil, err
     }
-
-    if deletedAt.Valid {
-        dto.DeletedAt = deletedAt.Time
-    } else {
-        dto.DeletedAt = time.Time{}
-    }
-
 
     cache.Client.EncodeAndSet(cacheKey, dto)
 

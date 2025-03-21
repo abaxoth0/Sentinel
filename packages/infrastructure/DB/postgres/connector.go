@@ -119,6 +119,24 @@ func (c *connector) postConnection() error {
         return err
     }
 
+    if err := c.initializeTable(
+        "audit_user",
+        `CREATE TABLE IF NOT EXISTS "audit_user" (
+            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            changed_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
+            changed_by_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
+            operation CHAR(1) NOT NULL,
+            login VARCHAR(72) NOT NULL,
+            password CHAR(60) NOT NULL,
+            roles VARCHAR(32)[] NOT NULL,
+            deleted_at TIMESTAMP,
+            changed_at TIMESTAMP NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT false
+        );`,
+    ); err != nil {
+        return err
+    }
+
     fmt.Println("[ DATABASE ] Post-connection: OK")
 
     return nil

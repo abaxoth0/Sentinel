@@ -13,31 +13,35 @@ type seeker struct {
     //
 }
 
+// TODO Now users can be found only by one property,
+//      there are no way to create some complex search filter.
+//      do smth with that.
+
 // TODO now value can be only a string, rework that.
 //      (make it a function with some generic instead of seeker's method?)
 func (s *seeker) findUserBy(
     conditionProperty user.Property,
-    conditionPropertyValue string,
+    conditionValue string,
     state user.State,
     cacheKey string,
 ) (*UserDTO.Basic, *Error.Status) {
-    dto, err := queryBasicDTO(
+    dto, err := queryUserDTO[UserDTO.Basic](
         cacheKey,
-        `SELECT id, login, password, roles, deleted_at
+        `SELECT id, login, password, roles, deleted_at, is_active
          FROM "user"
          WHERE ` + string(conditionProperty) + ` = $1;`,
-        conditionPropertyValue,
+        conditionValue,
     )
 
     if err != nil {
         return nil, err
     }
 
-    if state == user.DeletedState && dto.DeletedAt.IsZero()  {
+    if state == user.NotDeletedState && dto.IsDeleted() {
         return nil, Error.StatusUserNotFound
     }
 
-    if state == user.NotDeletedState && !dto.DeletedAt.IsZero() {
+    if state == user.DeletedState && !dto.IsDeleted() {
         return nil, Error.StatusUserNotFound
     }
 

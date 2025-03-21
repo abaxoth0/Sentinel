@@ -96,11 +96,19 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
         )
     }
 
+    audit := newAudit(deleteOperation, filter, user)
+
+    if err := insertAuditUser(&audit); err != nil {
+        return err
+    }
+
     return handleUserCache(
         queryExec(
-            `UPDATE "user" SET deleted_at = NOW()
-             WHERE id = $1 AND deleted_at IS NULL;`,
-             filter.TargetUID,
+            `UPDATE "user" SET deleted_at = $1
+             WHERE id = $2 AND deleted_at IS NULL;`,
+             // deleted_at set manualy instead of using NOW()
+             // cuz changed_at and deleted_at should be synchronized
+             audit.ChangedAt, filter.TargetUID,
         ),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
@@ -126,6 +134,12 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
+    audit := newAudit(restoreOperation, filter, user)
+
+    if err := insertAuditUser(&audit); err != nil {
+        return err
+    }
+
     return handleUserCache(
         queryExec(
             `UPDATE "user" SET deleted_at = NULL
@@ -143,6 +157,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
     )
 }
 
+// TODO add audit (there are some problem with foreign keys)
 func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
     if err := authorization.Authorize(
         authorization.Action.Drop,
@@ -179,6 +194,7 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
     )
 }
 
+// TODO add audit (this method really cause a lot of problems)
 func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
     if err := authorization.Authorize(
         authorization.Action.DropAllSoftDeleted,
@@ -220,6 +236,12 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
         return err
     }
 
+    audit := newAudit(updatedOperation, filter, user)
+
+    if err := insertAuditUser(&audit); err != nil {
+        return err
+    }
+
     return handleUserCache(
         queryExec(
             `UPDATE "user" SET login = $1
@@ -256,6 +278,12 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
         return e
     }
 
+    audit := newAudit(updatedOperation, filter, user)
+
+    if err := insertAuditUser(&audit); err != nil {
+        return err
+    }
+
     return handleUserCache(
         queryExec(
             `UPDATE "user" SET password = $1
@@ -290,6 +318,12 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
         authorization.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
+        return err
+    }
+
+    audit := newAudit(restoreOperation, filter, user)
+
+    if err := insertAuditUser(&audit); err != nil {
         return err
     }
 
