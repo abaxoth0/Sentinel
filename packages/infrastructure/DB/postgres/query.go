@@ -14,21 +14,29 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func logQueryError(query string, err error) *Error.Status {
+type query struct {
+    sql string
+    args []any
+}
+
+func newQuery(sql string, args ...any) *query {
+    return &query{sql, args}
+}
+
+func (q *query) toStatusError(err error) *Error.Status {
     if err == context.DeadlineExceeded {
-        fmt.Printf("[ ERROR ] Query timeout:\n%s\n", query)
+        fmt.Printf("[ ERROR ] Query timeout:\n%s\n", q.sql)
         return Error.StatusTimeout
     }
 
-    fmt.Printf("[ ERROR ] Failed to execute query `%s`: \n%v\n", query, err.Error())
-
+    fmt.Printf("[ ERROR ] Failed to execute query `%s`: \n%v\n", q.sql, err.Error())
     return Error.StatusInternalError
 }
 
 // Executes given SQL. If returnRow is true then returns resulting row and error,
 // otherwise returns nil and error.
-// Also substitutes given args (see pgx docs for details).
-func runSQL(returnRow bool, query string, args []any) (pgx.Row, *Error.Status) {
+// Also substitutes query args (see pgx docs for details).
+func(q *query) runSQL(returnRow bool) (pgx.Row, *Error.Status) {
     con, err := driver.getConnection()
 
     if err != nil {
@@ -42,11 +50,11 @@ func runSQL(returnRow bool, query string, args []any) (pgx.Row, *Error.Status) {
     defer cancel()
 
     if returnRow {
-        return con.QueryRow(ctx, query, args...), nil
+        return con.QueryRow(ctx, q.sql, q.args...), nil
     }
 
-    if _, e := con.Exec(ctx, query, args...); e != nil {
-        return nil, logQueryError(query, e)
+    if _, e := con.Exec(ctx, q.sql, q.args...); e != nil {
+        return nil, q.toStatusError(e)
     }
 
     return nil, nil
@@ -58,14 +66,15 @@ func runSQL(returnRow bool, query string, args []any) (pgx.Row, *Error.Status) {
 type scanRow = func(safe bool, dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
-func queryRow(query string, args ...any) (scanRow, *Error.Status) {
-    row, err := runSQL(true, query, args)
+func (q *query) Row() (scanRow, *Error.Status) {
+    row, err := q.runSQL(true)
 
     if err != nil {
         return nil, err
     }
 
     return func (safe bool, dests ...any) *Error.Status {
+        // TODO pass safe as env variable?
         if safe {
             for _, dest := range dests {
                 typeof := reflect.TypeOf(dest)
@@ -87,7 +96,7 @@ func queryRow(query string, args ...any) (scanRow, *Error.Status) {
                 return Error.StatusUserNotFound
             }
 
-            return logQueryError(query, e)
+            return q.toStatusError(e)
         }
 
         return nil
@@ -95,20 +104,17 @@ func queryRow(query string, args ...any) (scanRow, *Error.Status) {
 }
 
 // Wrapper for '*pgxpool.Con.Exec'
-func queryExec(sql string, args ...any) (*Error.Status) {
-    _, err := runSQL(false, sql, args)
+func (q *query) Exec() (*Error.Status) {
+    _, err := q.runSQL(false)
 
     return err
 }
 
-// Works same as queryRow, but also scans resulting row into specified D
-func queryUserDTO[D UserDTO.Basic |  UserDTO.Extended | UserDTO.Audit](
-    cacheKey string,
-    query string,
-    args ...any,
-) (*D, *Error.Status) {
+// Works same as queryRow, but also creates and returns
+// UserDTO.Basic after scanning resulting row into it.
+func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
-        r, err := json.DecodeString[D](cached)
+        r, err := json.DecodeString[UserDTO.Basic](cached)
 
         if err == nil {
             return &r, nil
@@ -120,67 +126,19 @@ func queryUserDTO[D UserDTO.Basic |  UserDTO.Extended | UserDTO.Audit](
         cache.Client.Delete(cacheKey)
     }
 
-    scan, err := queryRow(query, args...)
+    scan, err := q.Row()
 
     if err != nil {
         return nil, err
     }
 
-    dto := new(D)
+    dto := new(UserDTO.Basic)
 
     var deletedAt sql.NullTime
 
-    switch DTO := any(dto).(type){
-    case *UserDTO.Basic:
-        err = scan(
-            false,
-            &DTO.ID,
-            &DTO.Login,
-            &DTO.Password,
-            &DTO.Roles,
-            &deletedAt,
-            &DTO.IsActive,
-        )
+    err = scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &deletedAt, &dto.IsActive)
 
-        setTime(&DTO.DeletedAt, deletedAt)
-    case *UserDTO.Extended:
-        var createdAt sql.NullTime
-
-        err = scan(
-            false,
-            &DTO.ID,
-            &DTO.Login,
-            &DTO.Password,
-            &DTO.Roles,
-            &deletedAt,
-            &createdAt,
-            &DTO.IsActive,
-        )
-
-        setTime(&DTO.DeletedAt, deletedAt)
-        setTime(&DTO.CreatedAt, createdAt)
-    case *UserDTO.Audit:
-        var changedAt sql.NullTime
-
-        err = scan(
-            false,
-            &DTO.ID,
-            &DTO.ChangedUserID,
-            &DTO.ChangedByUserID,
-            &DTO.Operation,
-            &DTO.Login,
-            &DTO.Password,
-            &DTO.Roles,
-            &deletedAt,
-            &changedAt,
-            &DTO.IsActive,
-        )
-
-        setTime(&DTO.DeletedAt, deletedAt)
-        setTime(&DTO.ChangedAt, changedAt)
-    default:
-        panic(fmt.Sprintf("invalid DTO type, expected *UserDTO.Basic or *UserDTO.Extended, but got: %T\n", DTO))
-    }
+    setTime(&dto.DeletedAt, deletedAt)
 
     if err != nil {
         return nil, err

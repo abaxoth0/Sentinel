@@ -35,9 +35,7 @@ func newAudit(operation string, filter *UserDTO.Filter, user *UserDTO.Basic) Use
 func insertAuditUser(dto *UserDTO.Audit) *Error.Status {
     var deletedAt = util.Ternary(dto.IsDeleted(), &dto.DeletedAt, nil)
 
-    // TODO mergre and move 'audit_user' and 'user' interactions into transactions
-
-    return queryExec(
+    query := newQuery(
         `INSERT INTO "audit_user"
          (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at, is_active)
          VALUES
@@ -52,5 +50,7 @@ func insertAuditUser(dto *UserDTO.Audit) *Error.Status {
         dto.ChangedAt,
         dto.IsActive,
     )
+
+    return query.Exec()
 }
 

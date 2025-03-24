@@ -47,6 +47,7 @@ func (_ *repository) checkLogin(login string) *Error.Status {
     return nil
 }
 
+
 func (r *repository) Create(login string, password string) (*Error.Status) {
     if err := r.checkLogin(login); err != nil {
         return err
@@ -58,16 +59,19 @@ func (r *repository) Create(login string, password string) (*Error.Status) {
         return nil
     }
 
+    query := newQuery(
+        `INSERT INTO "user" (id, login, password, roles) VALUES
+        ($1, $2, $3, $4);`,
+        uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName},
+    )
+
     return handleUserCache(
-        queryExec(
-            `INSERT INTO "user" (id, login, password, roles, deleted_at) VALUES
-             ($1, $2, $3, $4, $5);`,
-             uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, nil,
-        ),
+        query.Exec(),
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
     )
 }
+
 
 // TODO Create new table for soft deleted users
 func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
@@ -102,14 +106,16 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
+    query := newQuery(
+        `UPDATE "user" SET deleted_at = $1
+        WHERE id = $2 AND deleted_at IS NULL;`,
+        // deleted_at set manualy instead of using NOW()
+        // cuz changed_at and deleted_at should be synchronized
+        audit.ChangedAt, filter.TargetUID,
+    )
+
     return handleUserCache(
-        queryExec(
-            `UPDATE "user" SET deleted_at = $1
-             WHERE id = $2 AND deleted_at IS NULL;`,
-             // deleted_at set manualy instead of using NOW()
-             // cuz changed_at and deleted_at should be synchronized
-             audit.ChangedAt, filter.TargetUID,
-        ),
+        query.Exec(),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
@@ -140,12 +146,14 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
+    query := newQuery(
+        `UPDATE "user" SET deleted_at = NULL
+        WHERE id = $1 AND deleted_at IS NOT NULL;`,
+        filter.TargetUID,
+    )
+
     return handleUserCache(
-        queryExec(
-            `UPDATE "user" SET deleted_at = NULL
-             WHERE id = $1 AND deleted_at IS NOT NULL;`,
-             filter.TargetUID,
-        ),
+        query.Exec(),
         // TODO ... is that just me or it's looks kinda bad?
         //      Try to find a better way to invalidate cache
         cache.KeyBase[cache.UserById] + filter.TargetUID,
@@ -180,12 +188,14 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
         )
     }
 
+    query := newQuery(
+        `DELETE FROM "user"
+        WHERE id = $1 AND deleted_at IS NOT NULL;`,
+        filter.TargetUID,
+    )
+
     return handleUserCache(
-        queryExec(
-            `DELETE FROM "user"
-             WHERE id = $1 AND deleted_at IS NOT NULL;`,
-             filter.TargetUID,
-        ),
+        query.Exec(),
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
@@ -204,11 +214,13 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
+    query := newQuery(
+        `DELETE FROM "user"
+        WHERE deleted_at IS NOT NULL;`,
+    )
+
     return handleUserCache(
-        queryExec(
-            `DELETE FROM "user"
-             WHERE deleted_at IS NOT NULL;`,
-        ),
+        query.Exec(),
         // TODO there are a problem with cache invalidation in this case,
         //      must be deleted all cache for users with 'deleted' and 'any' state,
         //      maybe there are some delete pattern option?
@@ -242,12 +254,14 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
         return err
     }
 
+    query := newQuery(
+        `UPDATE "user" SET login = $1
+        WHERE id = $2;`,
+        newLogin, filter.TargetUID,
+    )
+
     return handleUserCache(
-        queryExec(
-            `UPDATE "user" SET login = $1
-             WHERE id = $2;`,
-             newLogin, filter.TargetUID,
-        ),
+        query.Exec(),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
@@ -284,12 +298,14 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
         return err
     }
 
+    query := newQuery(
+        `UPDATE "user" SET password = $1
+        WHERE id = $2;`,
+        hashedPassword, filter.TargetUID,
+    )
+
     return handleUserCache(
-        queryExec(
-            `UPDATE "user" SET password = $1
-             WHERE id = $2;`,
-            hashedPassword, filter.TargetUID,
-        ),
+        query.Exec(),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
@@ -327,12 +343,14 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
         return err
     }
 
+    query := newQuery(
+        `UPDATE "user" SET roles = $1
+        WHERE id = $2;`,
+        newRoles, filter.TargetUID,
+    )
+
     return handleUserCache(
-        queryExec(
-            `UPDATE "user" SET roles = $1
-             WHERE id = $2;`,
-             newRoles, filter.TargetUID,
-        ),
+        query.Exec(),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserRolesById] + filter.TargetUID,

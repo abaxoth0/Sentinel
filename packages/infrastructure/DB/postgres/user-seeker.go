@@ -25,13 +25,14 @@ func (s *seeker) findUserBy(
     state user.State,
     cacheKey string,
 ) (*UserDTO.Basic, *Error.Status) {
-    dto, err := queryUserDTO[UserDTO.Basic](
-        cacheKey,
+    query := newQuery(
         `SELECT id, login, password, roles, deleted_at, is_active
-         FROM "user"
-         WHERE ` + string(conditionProperty) + ` = $1;`,
+        FROM "user"
+        WHERE ` + string(conditionProperty) + ` = $1;`,
         conditionValue,
     )
+
+    dto, err := query.RowBasicUserDTO(cacheKey)
 
     if err != nil {
         return nil, err
@@ -123,9 +124,12 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return strings.Split(rawRoles, ","), nil
     }
 
-    sql := `SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`
+    query := newQuery(
+        `SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`,
+        filter.TargetUID,
+    )
 
-    scan, err := queryRow(sql, filter.TargetUID)
+    scan, err := query.Row()
 
     if err != nil {
         return nil, err
