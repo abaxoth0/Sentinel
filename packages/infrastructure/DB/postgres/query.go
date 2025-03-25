@@ -9,6 +9,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/cache"
+	"sentinel/packages/infrastructure/config"
 	"sentinel/packages/presentation/data/json"
 
 	"github.com/jackc/pgx/v5"
@@ -61,9 +62,11 @@ func(q *query) runSQL(returnRow bool) (pgx.Row, *Error.Status) {
 }
 
 // Scans a row into the given destinations.
-// All args should be a pointers.
-// If safe is true, then all dests will be validated to be a pointers
-type scanRow = func(safe bool, dests ...any) *Error.Status
+// All dests must be pointers.
+// By default, dests are not validated,
+// but it can be added by setting env variable DEBUG_SAFE_DB_SCANS to true.
+// (works only if app launched in debug mode)
+type scanRow = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
 func (q *query) Row() (scanRow, *Error.Status) {
@@ -73,9 +76,8 @@ func (q *query) Row() (scanRow, *Error.Status) {
         return nil, err
     }
 
-    return func (safe bool, dests ...any) *Error.Status {
-        // TODO pass safe as env variable?
-        if safe {
+    return func (dests ...any) *Error.Status {
+        if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
             for _, dest := range dests {
                 typeof := reflect.TypeOf(dest)
 
@@ -136,7 +138,14 @@ func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status)
 
     var deletedAt sql.NullTime
 
-    err = scan(false, &dto.ID, &dto.Login, &dto.Password, &dto.Roles, &deletedAt, &dto.IsActive)
+    err = scan(
+        &dto.ID,
+        &dto.Login,
+        &dto.Password,
+        &dto.Roles,
+        &deletedAt,
+        &dto.IsActive,
+    )
 
     setTime(&dto.DeletedAt, deletedAt)
 

@@ -46,7 +46,8 @@ type cacheConfig struct {
 }
 
 type debugConfig struct {
-	Enabled bool
+	Enabled           bool
+    SafeDatabaseScans bool
 }
 
 func getEnv(key string) string {
@@ -77,11 +78,12 @@ func Init() {
 		panic(err)
 	}
 
-	requiredVariables := [17]string{
+	requiredVariables := [18]string{
 		"SERVER_PORT",
 		"HTTP_ALLOWED_ORIGINS",
         "HTTP_SECURED",
 		"DEBUG_ENABLED",
+        "DEBUG_SAFE_DB_SCANS",
 		"DB_URI",
 		"DB_DEFAULT_TIMEOUT",
 		"ACCESS_TOKEN_SECRET",
@@ -163,6 +165,7 @@ func Init() {
 
 	Debug = debugConfig{
 		Enabled: getEnv("DEBUG_ENABLED") == "true",
+        SafeDatabaseScans: getEnv("DEBUG_SAFE_DB_SCANS") == "true",
 	}
 
 	log.Println("[ CONFIG ] Initializing: OK")

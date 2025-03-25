@@ -137,7 +137,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
 
     roles := []string{}
 
-    if e := scan(false, &roles); e != nil {
+    if e := scan(&roles); e != nil {
         return nil, e
     }
 
