@@ -1,6 +1,5 @@
 package postgres
 
-// TODO add cache
 // TODO add logs
 
 type postgers struct {

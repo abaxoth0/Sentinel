@@ -72,8 +72,6 @@ func (r *repository) Create(login string, password string) (*Error.Status) {
     )
 }
 
-
-// TODO Create new table for soft deleted users
 func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
     // TODO add possibility to config what kind of users can delete themselves
     // all users can delete themselves, except admins (TEMP)
@@ -146,8 +144,6 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 
     return handleUserCache(
         execWithAudit(&audit, query),
-        // TODO ... is that just me or it's looks kinda bad?
-        //      Try to find a better way to invalidate cache
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
