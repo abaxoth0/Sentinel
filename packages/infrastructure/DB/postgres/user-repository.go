@@ -102,10 +102,6 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
 
     audit := newAudit(deleteOperation, filter, user)
 
-    if err := insertAuditUser(&audit); err != nil {
-        return err
-    }
-
     query := newQuery(
         `UPDATE "user" SET deleted_at = $1
         WHERE id = $2 AND deleted_at IS NULL;`,
@@ -115,7 +111,7 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
     )
 
     return handleUserCache(
-        query.Exec(),
+        execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
@@ -142,10 +138,6 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 
     audit := newAudit(restoreOperation, filter, user)
 
-    if err := insertAuditUser(&audit); err != nil {
-        return err
-    }
-
     query := newQuery(
         `UPDATE "user" SET deleted_at = NULL
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
@@ -153,7 +145,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
     )
 
     return handleUserCache(
-        query.Exec(),
+        execWithAudit(&audit, query),
         // TODO ... is that just me or it's looks kinda bad?
         //      Try to find a better way to invalidate cache
         cache.KeyBase[cache.UserById] + filter.TargetUID,
@@ -250,10 +242,6 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
 
     audit := newAudit(updatedOperation, filter, user)
 
-    if err := insertAuditUser(&audit); err != nil {
-        return err
-    }
-
     query := newQuery(
         `UPDATE "user" SET login = $1
         WHERE id = $2;`,
@@ -261,7 +249,7 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
     )
 
     return handleUserCache(
-        query.Exec(),
+        execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
@@ -294,10 +282,6 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
 
     audit := newAudit(updatedOperation, filter, user)
 
-    if err := insertAuditUser(&audit); err != nil {
-        return err
-    }
-
     query := newQuery(
         `UPDATE "user" SET password = $1
         WHERE id = $2;`,
@@ -305,7 +289,7 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
     )
 
     return handleUserCache(
-        query.Exec(),
+        execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
@@ -337,11 +321,7 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
         return err
     }
 
-    audit := newAudit(restoreOperation, filter, user)
-
-    if err := insertAuditUser(&audit); err != nil {
-        return err
-    }
+    audit := newAudit(updatedOperation, filter, user)
 
     query := newQuery(
         `UPDATE "user" SET roles = $1
@@ -350,7 +330,7 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
     )
 
     return handleUserCache(
-        query.Exec(),
+        execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
