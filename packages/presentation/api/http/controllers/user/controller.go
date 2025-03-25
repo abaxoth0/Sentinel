@@ -193,12 +193,12 @@ func GetRoles(ctx echo.Context) error {
 func IsLoginExists(ctx echo.Context) error {
     var body datamodel.LoginBody
 
-    if err := body.Validate(); err != nil {
-        return response.RequestMissingLogin
-    }
-
     if err := ctx.Bind(&body); err != nil {
         return err
+    }
+
+    if err := body.Validate(); err != nil {
+        return response.RequestMissingLogin
     }
 
     exists, e := DB.Database.IsLoginExists(body.Login)
