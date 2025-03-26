@@ -9,7 +9,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 	"sentinel/packages/presentation/data/json"
 
 	"github.com/jackc/pgx/v5"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 	"sentinel/packages/presentation/data/json"
 	"strings"
 	"time"

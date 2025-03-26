@@ -2,7 +2,7 @@ package authcontroller
 
 import (
 	"net/http"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/response"
 	"time"

@@ -7,7 +7,7 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 	"sentinel/packages/presentation/api/http/router"
 	"sentinel/packages/util"
 )

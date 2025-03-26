@@ -2,7 +2,7 @@ package router
 
 import (
 	"net/http"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
 	Cache "sentinel/packages/presentation/api/http/controllers/cache"
 	Roles "sentinel/packages/presentation/api/http/controllers/roles"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 	Error "sentinel/packages/errors"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 )

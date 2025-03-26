@@ -4,10 +4,7 @@ import (
 	"net/http"
 	"regexp"
 	Error "sentinel/packages/errors"
-
-	// TODO move configs out of any layer,
-    //      currently using them this way violates architecture
-    "sentinel/packages/infrastructure/config"
+    "sentinel/packages/config"
 )
 
 // Represents one of user's properties, excluding password.

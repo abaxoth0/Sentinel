@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	"sentinel/packages/infrastructure/config"
+	"sentinel/packages/config"
 	"sentinel/packages/util"
 	"strings"
 	"time"
