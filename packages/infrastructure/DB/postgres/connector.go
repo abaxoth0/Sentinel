@@ -11,8 +11,9 @@ import (
 )
 
 type connector struct {
-    ctx context.Context
-    pool  *pgxpool.Pool
+    ctx         context.Context
+    pool        *pgxpool.Pool
+    isConnected bool
 }
 
 func defaultTimeoutContext() (context.Context, context.CancelFunc) {
@@ -20,6 +21,10 @@ func defaultTimeoutContext() (context.Context, context.CancelFunc) {
 }
 
 func (c *connector) Connect() {
+    if c.isConnected {
+        panic("already connected to database")
+    }
+
     c.ctx = context.Background()
 
     fmt.Println("[ DATABASE ] Creating connection pool...")
@@ -71,10 +76,14 @@ func (c *connector) Connect() {
         fmt.Println(err.Error())
         os.Exit(1)
     }
+
+    c.isConnected = true
 }
 
 func (c *connector) Disconnect() {
     c.pool.Close()
+
+    c.isConnected = false
 }
 
 // Don't forget to release connection
