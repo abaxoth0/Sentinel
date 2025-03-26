@@ -237,6 +237,13 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
         return err
     }
 
+    if user.Login == newLogin {
+        return Error.NewStatusError(
+            "Login not changed: Current login and new login are the same",
+            http.StatusConflict,
+        )
+    }
+
     if err := r.checkLogin(newLogin); err != nil {
         return err
     }
