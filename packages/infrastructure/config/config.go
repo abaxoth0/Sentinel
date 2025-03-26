@@ -50,6 +50,10 @@ type debugConfig struct {
     SafeDatabaseScans bool
 }
 
+type appConfig struct {
+    IsLoginEmail bool
+}
+
 func getEnv(key string) string {
 	env, _ := os.LookupEnv(key)
 
@@ -64,6 +68,7 @@ var JWT jwtConfing
 var Authorization authorizationConfig
 var Cache cacheConfig
 var Debug debugConfig
+var App appConfig
 
 var isInit bool = false
 
@@ -78,7 +83,8 @@ func Init() {
 		panic(err)
 	}
 
-	requiredVariables := [18]string{
+	requiredVariables := []string{
+        "IS_LOGIN_EMAIL",
 		"SERVER_PORT",
 		"HTTP_ALLOWED_ORIGINS",
         "HTTP_SECURED",
@@ -109,12 +115,12 @@ func Init() {
 	queryTimeoutMultiplier, _ := strconv.ParseInt(getEnv("DB_DEFAULT_TIMEOUT"), 10, 64)
 
 	DB = dbConfig{
-		URI:                 getEnv("DB_URI"),
+		URI: getEnv("DB_URI"),
 		DefaultQueryTimeout: time.Second * time.Duration(queryTimeoutMultiplier),
 	}
 
 	HTTP = httpServerConfig{
-		Port:          getEnv("SERVER_PORT"),
+		Port: getEnv("SERVER_PORT"),
 		AllowedOrigins: strings.Split(getEnv("HTTP_ALLOWED_ORIGINS"), ","),
         Secured: getEnv("HTTP_SECURED") == "true",
 	}
@@ -167,6 +173,10 @@ func Init() {
 		Enabled: getEnv("DEBUG_ENABLED") == "true",
         SafeDatabaseScans: getEnv("DEBUG_SAFE_DB_SCANS") == "true",
 	}
+
+    App = appConfig{
+        IsLoginEmail: getEnv("IS_LOGIN_EMAIL") == "true",
+    }
 
 	log.Println("[ CONFIG ] Initializing: OK")
 

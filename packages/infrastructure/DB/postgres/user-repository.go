@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"net/http"
+	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
@@ -31,6 +32,10 @@ var loginAlreadyInUse = Error.NewStatusError(
 )
 
 func (_ *repository) checkLogin(login string) *Error.Status {
+    if err := user.VerifyLogin(login); err != nil {
+        return err
+    }
+
     _, err := driver.FindAnyUserByLogin(login)
 
     if err != Error.StatusUserNotFound {

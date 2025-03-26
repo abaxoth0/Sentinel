@@ -95,6 +95,10 @@ func (s *seeker) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
 }
 
 func (s *seeker) IsLoginExists(login string) (bool, *Error.Status) {
+    if err := user.VerifyLogin(login); err != nil {
+        return false, err
+    }
+
     cacheKey := cache.KeyBase[cache.UserByLogin] + login
 
     _, err := s.findUserBy(user.LoginProperty, login, user.NotDeletedState, cacheKey)
