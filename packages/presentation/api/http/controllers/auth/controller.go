@@ -45,6 +45,7 @@ func Login(ctx echo.Context) error {
         datamodel.TokenResponseBody{
             Message: "Пользователь успешно авторизован",
             AccessToken: accessToken.Value,
+            ExpiresIn: int(accessToken.TTL) / 1000,
         },
     )
 }
@@ -92,6 +93,7 @@ func Refresh(ctx echo.Context) error {
         datamodel.TokenResponseBody{
             Message: "Токены успешно обновлены",
             AccessToken: accessToken.Value,
+            ExpiresIn: int(accessToken.TTL) / 1000,
         },
     )
 }

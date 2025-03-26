@@ -3,6 +3,7 @@ package datamodel
 type TokenResponseBody struct {
 	Message     string `json:"message"`
 	AccessToken string `json:"accessToken"`
+    ExpiresIn   int    `json:"expiresIn"`
 }
 
 type MessageResponseBody struct {
