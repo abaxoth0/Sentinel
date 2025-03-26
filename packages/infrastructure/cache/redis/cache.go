@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sentinel/packages/config"
+	errs "sentinel/packages/errors"
 	"sentinel/packages/presentation/data/json"
 	"strings"
 	"time"
@@ -105,7 +106,7 @@ func(d *driver) Set(key string, value any) error {
 	return err
 }
 
-func (d *driver) EncodeAndSet(key string, value interface{}) error {
+func (d *driver) EncodeAndSet(key string, value any) error {
     encodedData, err := json.Encode(value)
 
     if err != nil {
@@ -139,5 +140,13 @@ func (d *driver) Drop() error {
     logAction("Drop", err)
 
 	return err
+}
+
+func (d *driver) DeleteOnError(err *errs.Status, keys ...string) *errs.Status {
+    if err == nil {
+        d.Delete(keys...)
+    }
+
+    return err
 }
 

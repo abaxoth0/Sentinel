@@ -16,16 +16,6 @@ type repository struct {
     //
 }
 
-func handleUserCache(err *Error.Status, keys ...string) *Error.Status {
-    if err == nil {
-        for _, key := range keys {
-            cache.Client.Delete(key)
-        }
-    }
-
-    return err
-}
-
 var loginAlreadyInUse = Error.NewStatusError(
     "Login already in use",
     http.StatusConflict,
@@ -70,7 +60,7 @@ func (r *repository) Create(login string, password string) (*Error.Status) {
         uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName},
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         query.Exec(),
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
@@ -113,7 +103,7 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
         audit.ChangedAt, filter.TargetUID,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
@@ -147,7 +137,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
         filter.TargetUID,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
@@ -187,7 +177,7 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
         filter.TargetUID,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         query.Exec(),
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
@@ -212,7 +202,7 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
         WHERE deleted_at IS NOT NULL;`,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         query.Exec(),
         // TODO there are a problem with cache invalidation in this case,
         //      must be deleted all cache for users with 'deleted' and 'any' state,
@@ -256,7 +246,7 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
         newLogin, filter.TargetUID,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
@@ -296,7 +286,7 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
         hashedPassword, filter.TargetUID,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
@@ -337,7 +327,7 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
         newRoles, filter.TargetUID,
     )
 
-    return handleUserCache(
+    return cache.Client.DeleteOnError(
         execWithAudit(&audit, query),
         cache.KeyBase[cache.UserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
