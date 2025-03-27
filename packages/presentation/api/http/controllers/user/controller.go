@@ -34,7 +34,7 @@ func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
 }
 
 func Create(ctx echo.Context) error {
-    var body datamodel.AuthRequestBody
+    var body datamodel.LoginPasswordBody
 
     if err := ctx.Bind(&body); err != nil {
         return err
@@ -134,11 +134,11 @@ func update(ctx echo.Context, body datamodel.UidGetter) error {
     var e *Error.Status
 
     switch b := body.(type) {
-    case *datamodel.UidAndLoginBody:
+    case *datamodel.UidLoginBody:
         e = DB.Database.ChangeLogin(filter, b.Login)
-    case *datamodel.UidAndPasswordBody:
+    case *datamodel.UidPasswordBody:
         e = DB.Database.ChangePassword(filter, b.Password)
-    case *datamodel.UidAndRolesBody:
+    case *datamodel.UidRolesBody:
         e = DB.Database.ChangeRoles(filter, b.Roles)
     default:
         return errors.New("Invalid update call: received unacceptable request body")
@@ -152,15 +152,15 @@ func update(ctx echo.Context, body datamodel.UidGetter) error {
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    return update(ctx, new(datamodel.UidAndLoginBody))
+    return update(ctx, new(datamodel.UidLoginBody))
 }
 
 func ChangePassword(ctx echo.Context) error {
-    return update(ctx, new(datamodel.UidAndPasswordBody))
+    return update(ctx, new(datamodel.UidPasswordBody))
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    return update(ctx, new(datamodel.UidAndRolesBody))
+    return update(ctx, new(datamodel.UidRolesBody))
 }
 
 func GetRoles(ctx echo.Context) error {

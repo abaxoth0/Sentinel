@@ -25,21 +25,16 @@ var FailedToDecodeRequestBody = echo.NewHTTPError(
 
 var RequestMissingUid = echo.NewHTTPError(
     http.StatusBadRequest,
-    datamodel.InvalidUID.Error(),
+    datamodel.MissingUID.Error(),
 )
 
 var RequestMissingLogin = echo.NewHTTPError(
     http.StatusBadRequest,
-    datamodel.InvalidLogin.Error(),
+    datamodel.MissingLogin.Error(),
 )
 
 var RequestMissingPassword = echo.NewHTTPError(
     http.StatusBadRequest,
-    datamodel.InvalidPassword.Error(),
-)
-
-var RequestMissingRoles = echo.NewHTTPError(
-    http.StatusBadRequest,
-    datamodel.InvalidRoles.Error(),
+    datamodel.MissingPassword.Error(),
 )
 

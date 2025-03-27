@@ -13,7 +13,7 @@ import (
 )
 
 func Login(ctx echo.Context) error {
-    var body datamodel.AuthRequestBody
+    var body datamodel.LoginPasswordBody
 
     if err := ctx.Bind(&body); err != nil {
         return err
