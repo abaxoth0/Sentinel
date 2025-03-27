@@ -14,6 +14,24 @@ var invalidAuthCreditinals = Error.NewStatusError(
     http.StatusBadRequest,
 )
 
+// Comapres current password of user with ID == 'uid' with specified 'password'.
+// If passwords hashes are equal - returns nil, otherwise returns *Error.Status.
+func ComparePasswords(uid string, password string) *Error.Status {
+    user, err := DB.Database.FindUserByID(uid)
+
+    if err != nil {
+        return err
+    }
+
+    e := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+
+    if e != nil {
+        return Error.NewStatusError("Invalid password", http.StatusBadRequest)
+    }
+
+    return nil
+}
+
 // Returns indexedUser if auth data is correct, ExternalError otherwise.
 func Login(login string, password string) (*UserDTO.Basic, *Error.Status) {
 	user, err := DB.Database.FindUserByLogin(login)
@@ -30,3 +48,4 @@ func Login(login string, password string) (*UserDTO.Basic, *Error.Status) {
 
 	return user, nil
 }
+

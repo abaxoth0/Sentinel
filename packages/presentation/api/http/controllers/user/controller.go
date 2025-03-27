@@ -6,6 +6,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/errors"
 	"sentinel/packages/infrastructure/DB"
+	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/response"
@@ -109,20 +110,36 @@ func DropAllDeleted(ctx echo.Context) error {
     return handleUserStateUpdate(ctx, DB.Database.DropAllSoftDeleted)
 }
 
+func validateSelfUpdate(filter *UserDTO.Filter, password string) *echo.HTTPError {
+    if filter.RequesterUID == filter.TargetUID {
+        if password == "" {
+            return echo.NewHTTPError(
+                http.StatusUnprocessableEntity,
+                "Password required when modifying your own account",
+            )
+        }
+
+        err := authentication.ComparePasswords(filter.TargetUID, password)
+
+        if err != nil {
+            return echo.NewHTTPError(err.Status, err.Message)
+        }
+    }
+
+    return nil
+}
+
 // TODO try to find a way to merge 'update' and 'handleUserStateUpdate'
 
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
-func update(ctx echo.Context, body datamodel.UidGetter) error {
+func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
     if err := ctx.Bind(body); err != nil {
         return err
     }
 
     if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(
-            http.StatusBadRequest,
-            err.Error(),
-            )
+        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     filter, err := newUserFilter(ctx, body.GetUID())
@@ -131,14 +148,18 @@ func update(ctx echo.Context, body datamodel.UidGetter) error {
         return err
     }
 
+    if err := validateSelfUpdate(filter, body.GetPassword()); err != nil {
+        return err
+    }
+
     var e *Error.Status
 
     switch b := body.(type) {
-    case *datamodel.UidLoginBody:
+    case *datamodel.ChangeLoginBody:
         e = DB.Database.ChangeLogin(filter, b.Login)
-    case *datamodel.UidPasswordBody:
-        e = DB.Database.ChangePassword(filter, b.Password)
-    case *datamodel.UidRolesBody:
+    case *datamodel.ChangePasswordBody:
+        e = DB.Database.ChangePassword(filter, b.NewPassword)
+    case *datamodel.ChangeRolesBody:
         e = DB.Database.ChangeRoles(filter, b.Roles)
     default:
         return errors.New("Invalid update call: received unacceptable request body")
@@ -152,15 +173,15 @@ func update(ctx echo.Context, body datamodel.UidGetter) error {
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    return update(ctx, new(datamodel.UidLoginBody))
+    return update(ctx, new(datamodel.ChangeLoginBody))
 }
 
 func ChangePassword(ctx echo.Context) error {
-    return update(ctx, new(datamodel.UidPasswordBody))
+    return update(ctx, new(datamodel.ChangePasswordBody))
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    return update(ctx, new(datamodel.UidRolesBody))
+    return update(ctx, new(datamodel.ChangeRolesBody))
 }
 
 func GetRoles(ctx echo.Context) error {

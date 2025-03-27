@@ -2,22 +2,31 @@ package datamodel
 
 import (
 	"fmt"
-	"slices"
+	"strings"
 )
 
-func requestBodyFieldMissingValue(field string) error {
+func missingRequestBodyFieldValue(field string) error {
     return fmt.Errorf("Invalid request body: field '%s' has no value", field)
 }
 
-func requestBodyFieldInvalidValue(field string) error {
+func invalidRequestBodyFieldValue(field string) error {
     return fmt.Errorf("Invalid request body: field '%s' has invalid value", field)
 }
 
-var MissingUID = requestBodyFieldMissingValue("uid")
-var MissingLogin = requestBodyFieldMissingValue("login")
-var MissingPassword = requestBodyFieldMissingValue("password")
-var MissingRoles = requestBodyFieldMissingValue("roles")
-var InvalidRoles = requestBodyFieldInvalidValue("roles")
+var MissingUID = missingRequestBodyFieldValue("uid")
+var InvalidUID = invalidRequestBodyFieldValue("uid")
+
+var MissingLogin = missingRequestBodyFieldValue("login")
+var InvalidLogin = invalidRequestBodyFieldValue("login")
+
+var MissingPassword = missingRequestBodyFieldValue("password")
+var InvalidPassword = invalidRequestBodyFieldValue("password")
+
+var MissingNewPassword = missingRequestBodyFieldValue("newPassword")
+var InvalidNewPassword = invalidRequestBodyFieldValue("newPassword")
+
+var MissingRoles = missingRequestBodyFieldValue("roles")
+var InvalidRoles = invalidRequestBodyFieldValue("roles")
 
 type RequestValidator interface {
     Validate() error
@@ -25,6 +34,15 @@ type RequestValidator interface {
 
 type UidGetter interface {
     GetUID() string
+}
+
+type PasswordGetter interface {
+    GetPassword() string
+}
+
+type UpdateUserRequestBody interface {
+    UidGetter
+    PasswordGetter
     RequestValidator
 }
 
@@ -35,6 +53,9 @@ type UidBody struct {
 func (b *UidBody) Validate() error {
     if b.UID == "" {
         return MissingUID
+    }
+    if strings.ReplaceAll(b.UID, " ", "") == "" {
+        return InvalidUID
     }
     return nil
 }
@@ -47,9 +68,16 @@ type PasswordBody struct {
     Password string
 }
 
+func (b *PasswordBody) GetPassword() string {
+    return b.Password
+}
+
 func (b *PasswordBody) Validate() error {
     if b.Password == "" {
-        return MissingUID
+        return MissingPassword
+    }
+    if strings.ReplaceAll(b.Password, " ", "") == "" {
+        return InvalidPassword
     }
     return nil
 }
@@ -62,6 +90,9 @@ func (b *LoginBody) Validate() error {
     if b.Login == "" {
         return MissingLogin
     }
+    if strings.ReplaceAll(b.Login, " ", "") == "" {
+        return InvalidLogin
+    }
     return nil
 }
 
@@ -73,8 +104,10 @@ func (b *RolesBody) Validate() error {
     if len(b.Roles) == 0 {
         return MissingRoles
     }
-    if slices.Contains(b.Roles, "") {
-        return InvalidRoles
+    for _, role := range b.Roles {
+        if strings.ReplaceAll(role, " ", "") == "" {
+            return InvalidRoles
+        }
     }
     return nil
 }
@@ -109,13 +142,39 @@ func (b *UidLoginBody) Validate() error {
     return nil
 }
 
-type UidPasswordBody struct {
+type ChangePasswordBody struct {
     UidBody `json:",inline"`
+    PasswordBody `json:",inline"`
+    NewPassword string `json:"newPassword"`
+}
+
+func (b *ChangePasswordBody) Validate() error {
+    if err := b.UidBody.Validate(); err != nil {
+        return err
+    }
+    if err := b.PasswordBody.Validate(); err != nil {
+        return err
+    }
+    if b.NewPassword == "" {
+        return MissingNewPassword
+    }
+    if strings.ReplaceAll(b.NewPassword, " ", "") == "" {
+        return InvalidNewPassword
+    }
+    return nil
+}
+
+type ChangeLoginBody struct {
+    UidBody `json:",inline"`
+    LoginBody `json:",inline"`
     PasswordBody `json:",inline"`
 }
 
-func (b *UidPasswordBody) Validate() error {
+func (b *ChangeLoginBody) Validate() error {
     if err := b.UidBody.Validate(); err != nil {
+        return err
+    }
+    if err := b.LoginBody.Validate(); err != nil {
         return err
     }
     if err := b.PasswordBody.Validate(); err != nil {
@@ -124,16 +183,20 @@ func (b *UidPasswordBody) Validate() error {
     return nil
 }
 
-type UidRolesBody struct {
+type ChangeRolesBody struct {
     UidBody `json:",inline"`
     RolesBody `json:",inline"`
+    PasswordBody `json:",inline"`
 }
 
-func (b *UidRolesBody) Validate() error {
+func (b *ChangeRolesBody) Validate() error {
     if err := b.UidBody.Validate(); err != nil {
         return err
     }
     if err := b.RolesBody.Validate(); err != nil {
+        return err
+    }
+    if err := b.PasswordBody.Validate(); err != nil {
         return err
     }
     return nil
