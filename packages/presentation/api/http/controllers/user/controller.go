@@ -9,7 +9,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
-	"sentinel/packages/presentation/api/http/response"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/golang-jwt/jwt"
@@ -78,7 +77,7 @@ func handleUserStateUpdate(ctx echo.Context, upd stateUpdater) error {
     }
 
     if err := body.Validate(); err != nil {
-        return response.RequestMissingUid
+        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     filter, err := newUserFilter(ctx, body.UID)
@@ -219,7 +218,7 @@ func IsLoginExists(ctx echo.Context) error {
     }
 
     if err := body.Validate(); err != nil {
-        return response.RequestMissingLogin
+        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     exists, e := DB.Database.IsLoginExists(body.Login)
