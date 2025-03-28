@@ -32,7 +32,7 @@ func Drop(ctx echo.Context) error {
         return echo.NewHTTPError(err.Status, err.Message)
     }
 
-    if err := cache.Client.Drop(); err != nil {
+    if err := cache.Client.FlushAll(); err != nil {
         return err
     }
 

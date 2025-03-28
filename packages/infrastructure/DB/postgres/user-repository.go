@@ -62,6 +62,7 @@ func (r *repository) Create(login string, password string) (*Error.Status) {
 
     return cache.Client.DeleteOnError(
         query.Exec(),
+        // TODO try to replace that everywhere with cache.client.DeletePattern
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
     )
@@ -202,14 +203,11 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
         WHERE deleted_at IS NOT NULL;`,
     )
 
-    return cache.Client.DeleteOnError(
-        query.Exec(),
-        // TODO there are a problem with cache invalidation in this case,
-        //      must be deleted all cache for users with 'deleted' and 'any' state,
-        //      maybe there are some delete pattern option?
-        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
-    )
+    err := query.Exec()
+
+    cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
+
+    return err
 }
 
 func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status {

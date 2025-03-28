@@ -61,6 +61,7 @@ func Create() *echo.Echo {
     userGroup.DELETE(rootPath, User.SoftDelete)
     userGroup.POST("/restore", User.Restore)
     userGroup.DELETE("/drop", User.Drop)
+    userGroup.DELETE("/drop/all", User.DropAllDeleted)
     userGroup.POST("/login/check", User.IsLoginExists)
 
     userGroup.PATCH("/login", User.ChangeLogin)

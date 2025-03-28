@@ -24,10 +24,15 @@ type client interface {
     Set(key string, value any) error
     EncodeAndSet(key string, value any) error
     Delete(keys ...string) error
-    Drop() error
+    FlushAll() error
     // If 'err' is not nil, then deletes cache for each of specified 'keys'.
     // returns 'err'.
     DeleteOnError(err *Error.Status, keys ...string) *Error.Status
+    // Deletes cache entries whose keys match the pattern.
+    // When need to delete a lot of entries consider using ProgressiveDeletePattern.
+    DeletePattern(pattern string) error
+    // Do the same as DeletePattern, but more optimized for deleting a large amount of entries
+    ProgressiveDeletePattern(pattern string) error
 }
 
 var Client client = redis.New()
