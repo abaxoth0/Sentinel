@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sentinel/packages/core/user"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"

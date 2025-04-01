@@ -3,8 +3,8 @@ package user
 import (
 	"net/http"
 	"regexp"
-	Error "sentinel/packages/errors"
-    "sentinel/packages/config"
+	Error "sentinel/packages/common/errors"
+    "sentinel/packages/common/config"
 )
 
 // Represents one of user's properties, excluding password.

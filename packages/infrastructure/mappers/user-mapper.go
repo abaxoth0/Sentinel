@@ -3,10 +3,10 @@ package usermapper
 import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/token"
-	"sentinel/packages/util"
+	"sentinel/packages/common/util"
 	"strings"
 
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 
 	"github.com/golang-jwt/jwt"
 )

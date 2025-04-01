@@ -1,7 +1,7 @@
 package structs
 
 import (
-    Error "sentinel/packages/errors"
+    Error "sentinel/packages/common/errors"
     "sync"
     "time"
 )

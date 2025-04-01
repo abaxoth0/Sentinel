@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"reflect"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/config"
+	"sentinel/packages/common/config"
 	"sentinel/packages/presentation/data/json"
 
 	"github.com/jackc/pgx/v5"

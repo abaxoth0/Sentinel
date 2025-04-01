@@ -2,7 +2,7 @@ package user
 
 import (
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 )
 
 type Repository interface {

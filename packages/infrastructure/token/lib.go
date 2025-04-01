@@ -2,9 +2,9 @@ package token
 
 import (
 	"net/http"
-	Error "sentinel/packages/errors"
-	"sentinel/packages/config"
-	"sentinel/packages/util"
+	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/config"
+	"sentinel/packages/common/util"
 
 	"github.com/golang-jwt/jwt"
 )

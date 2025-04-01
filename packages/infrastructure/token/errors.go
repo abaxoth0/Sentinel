@@ -2,7 +2,7 @@ package token
 
 import (
 	"net/http"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 )
 
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"

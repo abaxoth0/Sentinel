@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	Error "sentinel/packages/errors"
-	"sentinel/packages/config"
+	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/config"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 )

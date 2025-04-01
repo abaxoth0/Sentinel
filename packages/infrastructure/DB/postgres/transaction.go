@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"fmt"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 )
 
 type transaction struct {

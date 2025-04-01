@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	Error "sentinel/packages/errors"
-	"sentinel/packages/structs"
+	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/structs"
 	"sync"
 	"time"
 )

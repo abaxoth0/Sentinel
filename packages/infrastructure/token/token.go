@@ -4,14 +4,14 @@ import (
 	"log"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	"sentinel/packages/config"
-	"sentinel/packages/util"
+	"sentinel/packages/common/config"
+	"sentinel/packages/common/util"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
 
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 )
 
 type SignedToken struct {

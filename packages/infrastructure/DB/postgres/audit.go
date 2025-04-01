@@ -2,8 +2,8 @@ package postgres
 
 import (
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errors"
-	"sentinel/packages/util"
+	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/util"
 	"time"
 )
 

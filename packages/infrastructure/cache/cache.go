@@ -1,7 +1,7 @@
 package cache
 
 import (
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/cache/redis"
 )
 

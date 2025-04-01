@@ -7,9 +7,9 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/config"
+	"sentinel/packages/common/config"
 	"sentinel/packages/presentation/api/http/router"
-	"sentinel/packages/util"
+	"sentinel/packages/common/util"
 )
 
 var logo = `

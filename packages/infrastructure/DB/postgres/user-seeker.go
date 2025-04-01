@@ -3,7 +3,7 @@ package postgres
 import (
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	"strings"

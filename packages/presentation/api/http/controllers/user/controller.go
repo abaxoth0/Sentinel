@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"

@@ -3,7 +3,7 @@ package authentication
 import (
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/errors"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/DB"
 
 	"golang.org/x/crypto/bcrypt"
