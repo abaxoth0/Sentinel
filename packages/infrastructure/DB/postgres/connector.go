@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	Error "sentinel/packages/common/errors"
 	"time"
@@ -27,7 +28,7 @@ func (c *connector) Connect() {
 
     c.ctx = context.Background()
 
-    fmt.Println("[ DATABASE ] Creating connection pool...")
+    log.Println("[ DATABASE ] Creating connection pool...")
 
     config, err := pgxpool.ParseConfig("postgres://postgres:1234@localhost:5432/sentinel")
 
@@ -37,20 +38,20 @@ func (c *connector) Connect() {
     config.MaxConnLifetime = time.Minute * 60
 
     if err != nil {
-        fmt.Printf("Unable to parse DB connection string: %v\n", err.Error())
+        log.Printf("Unable to parse DB connection string: %v\n", err.Error())
         os.Exit(1)
     }
 
     pool, err := pgxpool.NewWithConfig(c.ctx, config)
 
     if err != nil {
-        fmt.Printf("Failed to create connection pool: %v\n", err.Error())
+        log.Printf("Failed to create connection pool: %v\n", err.Error())
         os.Exit(1)
     }
 
-    fmt.Println("[ DATABASE ] Creating connection pool: OK")
+    log.Println("[ DATABASE ] Creating connection pool: OK")
 
-    fmt.Println("[ DATABASE ] Ping connection...")
+    log.Println("[ DATABASE ] Ping connection...")
 
     ctx, cancel := defaultTimeoutContext()
 
@@ -58,22 +59,22 @@ func (c *connector) Connect() {
 
     if err = pool.Ping(ctx); err != nil {
         if err == context.DeadlineExceeded {
-            fmt.Printf("[ DATABASE ] Error: Ping timeout")
+            log.Printf("[ DATABASE ] Error: Ping timeout")
             os.Exit(1)
         }
 
-        fmt.Printf("[ DATABASE ] Failed to ping: %v\n", err.Error())
+        log.Printf("[ DATABASE ] Failed to ping: %v\n", err.Error())
         os.Exit(1)
     }
 
-    fmt.Println("[ DATABASE ] Ping connection: OK")
+    log.Println("[ DATABASE ] Ping connection: OK")
 
     c.pool = pool
 
     err = c.postConnection()
 
     if err != nil {
-        fmt.Println(err.Error())
+        log.Println(err.Error())
         os.Exit(1)
     }
 
@@ -99,7 +100,7 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
             return nil, Error.StatusTimeout
         }
 
-        fmt.Printf(
+        log.Printf(
             "[ ERROR ] Failed to acquire connection from pool: \n%v\n",
             err.Error(),
         )
@@ -112,7 +113,7 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
 
 
 func (c *connector) postConnection() error {
-    fmt.Println("[ DATABASE ] Post-connection...")
+    log.Println("[ DATABASE ] Post-connection...")
 
     if err := c.initializeTable(
         "user",
@@ -146,7 +147,7 @@ func (c *connector) postConnection() error {
         return err
     }
 
-    fmt.Println("[ DATABASE ] Post-connection: OK")
+    log.Println("[ DATABASE ] Post-connection: OK")
 
     return nil
 }
@@ -160,14 +161,14 @@ func (c *connector) initializeTable(tableName string, query string) error {
 
     defer con.Release()
 
-    fmt.Printf("[ DATABASE ] Verifying that table '%s' exists...\n", tableName)
+    log.Printf("[ DATABASE ] Verifying that table '%s' exists...\n", tableName)
 
     if _, e := con.Exec(c.ctx, query); e != nil {
         return fmt.Errorf("[ DATABASE ] Failed to verify that table '%s' exists:\n%v\n", tableName, err)
     }
 
 
-    fmt.Printf("[ DATABASE ] Verifying that table '%s' exists: OK\n", tableName)
+    log.Printf("[ DATABASE ] Verifying that table '%s' exists: OK\n", tableName)
 
     return nil
 }

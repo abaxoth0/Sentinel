@@ -26,7 +26,7 @@ func hashPassword(password string) ([]byte, *Error.Status) {
     return hashedPassword, nil
 }
 
-// if T is valid set V to it, otherwise set V to time.Time{}
+// Sets V equal to T if T is valid, otherwise sets V to time.Time{}
 func setTime(V *time.Time, T sql.NullTime) {
     if T.Valid {
         *V = T.Time

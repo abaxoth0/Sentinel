@@ -65,7 +65,7 @@ var insufficientPermissions = Error.NewStatusError(
 )
 
 // Checks if user with specified roles can perform action on given resource.
-// If can't - returns *Error.Status, nil otherwise.
+// Returns *Error.Status if user has insufficient permissions or smth is missconfigured, otherwise returns nil.
 //
 // This method authorize operations only in THIS service!
 // Operations on other services must be authorized by themselves!

@@ -32,7 +32,6 @@ func ComparePasswords(uid string, password string) *Error.Status {
     return nil
 }
 
-// Returns indexedUser if auth data is correct, ExternalError otherwise.
 func Login(login string, password string) (*UserDTO.Basic, *Error.Status) {
 	user, err := DB.Database.FindUserByLogin(login)
 

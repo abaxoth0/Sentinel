@@ -33,25 +33,21 @@ const IssuerKey string = "iss"
 // Roles
 const SubjectKey string = "sub"
 
+func newTokenBuilder(payload *UserDTO.Payload, TTL int64) *jwt.Token {
+    return jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
+        IssuedAt: time.Now().Unix(),
+        // For certain values see config
+        ExpiresAt: TTL,
+        Id:        payload.ID,
+        Issuer:    payload.Login,
+        Subject:   strings.Join(payload.Roles, ","),
+    })
+}
+
 // Generate access and refresh tokens.
 func Generate(payload *UserDTO.Payload) (*AccessToken, *RefreshToken) {
-	accessTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-		IssuedAt: time.Now().Unix(),
-		// For certain values see config
-		ExpiresAt: generateAccessTokenTtlTimestamp(),
-		Id:        payload.ID,
-		Issuer:    payload.Login,
-		Subject:   strings.Join(payload.Roles, ","),
-	})
-
-	refreshTokenBuilder := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-		IssuedAt: time.Now().Unix(),
-		// For certain values see config
-		ExpiresAt: generateRefreshTokenTtlTimestamp(),
-		Id:        payload.ID,
-		Issuer:    payload.Login,
-		Subject:   strings.Join(payload.Roles, ","),
-	})
+	accessTokenBuilder := newTokenBuilder(payload, generateAccessTokenTtlTimestamp())
+	refreshTokenBuilder := newTokenBuilder(payload, generateRefreshTokenTtlTimestamp())
 
 	accessTokenStr, e := accessTokenBuilder.SignedString(config.JWT.AccessTokenPrivateKey)
 	refreshTokenStr, err := refreshTokenBuilder.SignedString(config.JWT.RefreshTokenPrivateKey)
@@ -107,10 +103,10 @@ func GetAccessToken(authHeader string) (*jwt.Token, *Error.Status) {
 	return token, nil
 }
 
-// Retrieves and validates refresh token from request.
+// Retrieves and validates refresh token from auth cookie.
 //
-// Returns token pointer and nil if valid and not expired token was found.
-// Otherwise returns empty token pointer and error, this error is either http.ErrNoCookie, either ExternalError.Error
+// Returns pointer to token and nil if valid and not expired token was found.
+// Otherwise returns empty pointer to token and *Error.Status.
 func GetRefreshToken(cookie *http.Cookie) (*jwt.Token, *Error.Status) {
 	token, expired := parseRefreshToken(cookie.Value)
 

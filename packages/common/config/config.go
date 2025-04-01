@@ -134,6 +134,14 @@ func Init() {
 	AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
 	RefreshTokenSecret := []byte(getEnv("REFRESH_TOKEN_SECRET"))
 
+    if len(AccessTokenSecret) != 32 {
+        panic("invalid length of access token secret (must be 32 bytes long)")
+    }
+
+    if len(RefreshTokenSecret) != 32 {
+        panic("invalid length of refresh token secret (must be 32 bytes long)")
+    }
+
 	AccessTokenPrivateKey := ed25519.NewKeyFromSeed(AccessTokenSecret)
 	RefreshTokenPrivateKey := ed25519.NewKeyFromSeed(RefreshTokenSecret)
 

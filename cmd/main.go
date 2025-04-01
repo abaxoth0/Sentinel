@@ -9,35 +9,18 @@ import (
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/common/config"
 	"sentinel/packages/presentation/api/http/router"
-	"sentinel/packages/common/util"
 )
 
-var logo = `
-
-  ███████╗ ███████╗ ███╗   ██╗ ████████╗ ██╗ ███╗   ██╗ ███████╗ ██╗
-  ██╔════╝ ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██║ ████╗  ██║ ██╔════╝ ██║
-  ███████╗ █████╗   ██╔██╗ ██║    ██║    ██║ ██╔██╗ ██║ █████╗   ██║
-  ╚════██║ ██╔══╝   ██║╚██╗██║    ██║    ██║ ██║╚██╗██║ ██╔══╝   ██║
-  ███████║ ███████╗ ██║ ╚████║    ██║    ██║ ██║ ╚████║ ███████╗ ███████╗
-  ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝ ╚═╝  ╚═══╝ ╚══════╝ ╚══════╝
-
-`
-
 func main() {
-	// Program wasn't run and/or tested on Windows and MacOS.
-	// (Probably it will work, but required minor code modifications)
+	// Program wasn't tested on OS other than Linux.
 	if runtime.GOOS != "linux" {
-		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux.")
+		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
 	}
 
     config.Init()
-
     authorization.Init()
-
     cache.Client.Init()
-
 	DB.Database.Connect()
-
 	defer DB.Database.Disconnect()
 
 	log.Println("[ SERVER ] Initializng router...")
@@ -46,24 +29,33 @@ func main() {
 
 	log.Println("[ SERVER ] Initializng router: OK")
 
-    if !config.Debug.Enabled {
-	    util.ClearTerminal()
-    }
-
-	fmt.Print(logo)
-
-	fmt.Println("  Authentication/authorization service")
-
-	fmt.Println("  Mady by Stepan Ananin (xrf848@gmail.com)")
-
-	fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
-
-	if config.Debug.Enabled {
-		fmt.Printf("[ WARNING ] Debug mode enabled. Some functions may work different and return unexpected results. \n\n")
-	}
+    printAppInfo()
 
     err := Router.Start(":" + config.HTTP.Port)
 
     Router.Logger.Fatal(err)
+}
+
+func printAppInfo() {
+    fmt.Print(`
+
+  ███████╗ ███████╗ ███╗   ██╗ ████████╗ ██╗ ███╗   ██╗ ███████╗ ██╗
+  ██╔════╝ ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██║ ████╗  ██║ ██╔════╝ ██║
+  ███████╗ █████╗   ██╔██╗ ██║    ██║    ██║ ██╔██╗ ██║ █████╗   ██║
+  ╚════██║ ██╔══╝   ██║╚██╗██║    ██║    ██║ ██║╚██╗██║ ██╔══╝   ██║
+  ███████║ ███████╗ ██║ ╚████║    ██║    ██║ ██║ ╚████║ ███████╗ ███████╗
+  ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝ ╚═╝  ╚═══╝ ╚══════╝ ╚══════╝
+
+`)
+
+    fmt.Println("  Authentication/authorization service")
+
+    fmt.Println("  Mady by Stepan Ananin (xrf848@gmail.com)")
+
+    fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
+
+    if config.Debug.Enabled {
+        fmt.Printf("[ WARNING ] Debug mode enabled.\n\n")
+    }
 }
 
