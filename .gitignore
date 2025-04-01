@@ -2,3 +2,7 @@ cmd/.env
 
 # builded project
 cmd/main
+
+# place for testing some random stuff
+testing/playground.go
+
