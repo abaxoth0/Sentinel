@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	Error "sentinel/packages/errors"
 	"sentinel/packages/structs"
 	"sync"
+	"time"
 )
 
 type Mailer struct {
     queue *structs.SyncFifoQueue[Mail]
     name string
+    done chan bool
     isRunning bool
     ctx context.Context
     cancel context.CancelFunc
@@ -27,6 +30,7 @@ func NewMailer(name string, ctx context.Context) *Mailer {
         ctx: ctx,
         cancel: cancel,
         queue: structs.NewSyncFifoQueue[Mail](),
+        done: make(chan bool),
     }
 }
 
@@ -47,12 +51,15 @@ func (m *Mailer) Run() error {
     for {
         select {
         case <- m.ctx.Done():
+            close(m.done) // notify waiters that mailer loop done it's work
             return nil
         default:
-            mail, ok := m.queue.Pop()
+            mail, ok := m.queue.PreserveAndPop()
 
             if !ok {
-                m.queue.WaitTillNotEmpty()
+                // wait 1 second to avoid loading CPU too much
+                // while there are no work.
+                m.queue.WaitTillNotEmpty(time.Second)
                 continue
             }
 
@@ -66,6 +73,8 @@ func (m *Mailer) Run() error {
 // Stops mailer loop.
 // Doesn't wait for all emails to be send.
 func (m *Mailer) Stop() error {
+    log.Printf("[ EMAIL ] Mailer '%s' is shutting down...\n", m.name)
+
     m.mut.Lock()
 
     if !m.isRunning {
@@ -77,16 +86,39 @@ func (m *Mailer) Stop() error {
 
     m.mut.Unlock()
 
-    m.queue.WaitTillEmpty()
+    log.Printf("[ EMAIL ] Mailer '%s' is waiting till mail queue is empty...\n", m.name)
 
+    if timeout := m.queue.WaitTillEmpty(time.Second * 5); timeout != nil {
+        log.Printf("[ EMAIL ] Mailer '%s': timeout waiting till queue is empty.\n", m.name)
+    } else {
+        log.Printf("[ EMAIL ] Mailer '%s' is waiting till mail queue is empty: OK\n", m.name)
+    }
+
+    log.Printf("[ EMAIL ] Mailer '%s' waiting till current work is finished...\n", m.name)
+
+    // at this point mailer loop still can process some mail so...
     m.cancel()
 
-    log.Printf(
-        "[ EMAIL ] Mailer '%s' shut down with %d pending emails.\n",
-        m.name, m.queue.Size(),
-    )
+    for {
+        select {
+        // ...wait till mailer loop will finish it's current work...
+        case <-m.done:
+            log.Printf("[ EMAIL ] Mailer '%s' waiting till current work is finished: OK\n", m.name)
+            log.Printf(
+                "[ EMAIL ] Mailer '%s' shut down with %d pending emails.\n",
+                m.name, m.queue.Size(),
+                )
 
-    return nil
+            return nil
+        // ... or after some long time.
+        case <-time.After(time.Second * 5):
+            log.Printf("[ EMAIL ] Mailer '%s': timeout waiting till current job is done. Rolling back queue.\n", m.name)
+
+            m.queue.RollBack()
+
+            return Error.StatusTimeout
+        }
+    }
 }
 
 // Returns all pending emails. Can't be called while mailer is running.

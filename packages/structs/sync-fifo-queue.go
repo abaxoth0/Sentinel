@@ -1,20 +1,23 @@
 package structs
 
 import (
+    Error "sentinel/packages/errors"
     "sync"
+    "time"
 )
 
 // TODO add size limit
-// TODO add Peek() (non destructive way to read head element)
+// TODO add batch processing
 
 // Concurrency-safe first-in-first-out queue
-type SyncFifoQueue[T any] struct {
+type SyncFifoQueue[T comparable] struct {
     elems []T
     mut sync.Mutex
     cond *sync.Cond
+    preserved T
 }
 
-func NewSyncFifoQueue[T any]() *SyncFifoQueue[T] {
+func NewSyncFifoQueue[T comparable]() *SyncFifoQueue[T] {
     q := new(SyncFifoQueue[T])
 
     q.cond = sync.NewCond(&q.mut)
@@ -37,8 +40,23 @@ func (q *SyncFifoQueue[T]) Push(v T) {
     }
 }
 
-// Deletes and returns first element of queue and true if queue isn't empty,
-// if queue is empty returns zero-value of T and false.
+// If queue isn't empty - returns first element of queue and true.
+// If queue is empty - returns zero-value of T and false.
+func (q *SyncFifoQueue[T]) Peek() (T, bool) {
+    q.mut.Lock()
+    defer q.mut.Unlock()
+
+    var v T
+
+    if len(q.elems) == 0 {
+        return v, false
+    }
+
+    return q.elems[0], true
+}
+
+// If queue isn't empty - deletes and returns first element of queue and true.
+// If queue is empty - returns zero-value of T and false.
 func (q *SyncFifoQueue[T]) Pop() (T, bool) {
     q.mut.Lock()
     defer q.mut.Unlock()
@@ -59,6 +77,49 @@ func (q *SyncFifoQueue[T]) Pop() (T, bool) {
     return v, true
 }
 
+// Preserves the head element of the queue
+func (q *SyncFifoQueue[T]) Preserve() {
+    q.mut.Lock()
+    defer q.mut.Unlock()
+
+    if len(q.elems) == 0 {
+        return
+    }
+
+    q.preserved = q.elems[0]
+}
+
+// Restores preserved element.
+// Does nothing if no element was preserved.
+func (q *SyncFifoQueue[T]) RollBack() {
+    q.mut.Lock()
+    defer q.mut.Unlock()
+
+    var zero T
+
+    if q.preserved == zero {
+        return
+    }
+
+    swap := make([]T, len(q.elems) + 1)
+
+    swap[0] = q.preserved
+    q.preserved = zero
+
+    for i, e := range q.elems {
+        swap[i + 1] = e
+    }
+
+    q.elems = swap
+}
+
+// Do what is supposed by it's name:
+// Just calls Preserve() and after that calls and returns Pop()
+func (q *SyncFifoQueue[T]) PreserveAndPop() (T, bool) {
+    q.Preserve()
+    return q.Pop()
+}
+
 /*
     IMPORTANT:
     DO NOT CALL THIS METHOD IN OTHER METHODS OF THIS STURCT,
@@ -73,37 +134,120 @@ func (q *SyncFifoQueue[T]) Size() int {
     return l
 }
 
-// TODO Two functions below are pretty the main difference in conditions,
-//      so maybe try to create a new function and use this function as wrappers for that?
+// TODO Two functions below are pretty same. The main difference in conditions,
+//      so maybe try to create a new function and use this function as wrappers for both of them?
 
 // Waits till queue size is equal to 0.
-func (q *SyncFifoQueue[T]) WaitTillEmpty() {
+// To disable timeout set it to equal or less then 0.
+// returns Error.TimeoutStatus if timeout exceeded, nil otherwise.
+func (q *SyncFifoQueue[T]) WaitTillEmpty(timeout time.Duration) *Error.Status {
     q.mut.Lock()
     defer q.mut.Unlock()
 
     if len(q.elems) == 0 {
-        return
+        return nil
     }
 
-    for len(q.elems) != 0 {
-        q.cond.Wait()
+    if timeout <= 0 {
+        for len(q.elems) != 0 {
+            q.cond.Wait()
+        }
+        return nil
     }
 
+    timer := time.NewTimer(timeout)
+    defer timer.Stop()
+
+    for len(q.elems) > 0 {
+        done := make(chan bool)
+
+        go func (){
+            q.cond.Wait()
+            close(done)
+        }()
+
+        select {
+        case <-done:
+            if len(q.elems) > 0 {
+                return nil
+            }
+        case <-timer.C:
+            q.cond.Broadcast()
+            /*
+               IMPORTANT
+                Need wait till q.cond.Wait() finish it's work,
+                cuz it's unlocks mutex while waiting and lock it again before returning,
+                so if q.cond.Wait() still waits that means mutext is unlocked.
+                On this state may occur 2 type of erros:
+                1) If mutex unlocking before returning from this function (which is currently so):
+                   Attempt to unlock a mutex that is already unlocked by q.cond.Wait() will cause panic.
+                2) If mutex isn't unlocking before returning:
+                   q.cond.Wait() will lock it after finishing it's work and that will cause a deadlock.
+            */
+            <-done
+            return Error.StatusTimeout
+        }
+    }
+
+    return nil
 }
 
 // Waits till queue size is more then 0.
-func (q *SyncFifoQueue[T]) WaitTillNotEmpty() {
+// To disable timeout set it to equal or less then 0.
+// returns Error.TimeoutStatus if timeout exceeded, nil otherwise.
+func (q *SyncFifoQueue[T]) WaitTillNotEmpty(timeout time.Duration) *Error.Status {
     q.mut.Lock()
+    defer q.mut.Unlock()
 
     if len(q.elems) > 0 {
-        q.mut.Unlock()
-        return
+        return nil
     }
 
-    for len(q.elems) == 0 {
-        q.cond.Wait()
+    if timeout <= 0 {
+        for len(q.elems) == 0 {
+            q.cond.Wait()
+        }
+        return nil
     }
-    q.mut.Unlock()
+
+    timer := time.NewTimer(timeout)
+    defer timer.Stop()
+
+    // TODO test that, need to check amount of spawned goroutins in different cases
+    for len(q.elems) == 0 {
+        done := make(chan bool)
+
+        go func (){
+            q.cond.Wait()
+            close(done)
+        }()
+
+        select {
+        case <-done:
+            // TODO is there a point in this condition? function still returns nil
+            // UPD i tested this func without that and all seems to work fine
+            if len(q.elems) > 0 {
+                return nil
+            }
+        case <-timer.C:
+            q.cond.Broadcast()
+            /*
+               IMPORTANT
+                Need wait till q.cond.Wait() finish it's work,
+                cuz it's unlocks mutex while waiting and lock it again before returning,
+                so if q.cond.Wait() still waits that means mutext is unlocked.
+                On this state may occur 2 type of erros:
+                1) If mutex unlocking before returning from this function (which is currently so):
+                   Attempt to unlock a mutex that is already unlocked by q.cond.Wait() will cause panic.
+                2) If mutex isn't unlocking before returning:
+                   q.cond.Wait() will lock it after finishing it's work and that will cause a deadlock.
+            */
+            <-done
+            return Error.StatusTimeout
+        }
+    }
+
+    return nil
 }
 
 // Get copy of []T that is used by this queue under the hood
