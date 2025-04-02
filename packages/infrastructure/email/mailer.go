@@ -11,7 +11,7 @@ import (
 )
 
 type Mailer struct {
-    queue *structs.SyncFifoQueue[Mail]
+    queue *structs.SyncFifoQueue[Email]
     name string
     done chan bool
     isRunning bool
@@ -29,7 +29,7 @@ func NewMailer(name string, ctx context.Context) *Mailer {
         name: name,
         ctx: ctx,
         cancel: cancel,
-        queue: structs.NewSyncFifoQueue[Mail](),
+        queue: structs.NewSyncFifoQueue[Email](),
         done: make(chan bool),
     }
 }
@@ -54,7 +54,7 @@ func (m *Mailer) Run() error {
             close(m.done) // notify waiters that mailer loop done it's work
             return nil
         default:
-            mail, ok := m.queue.PreserveAndPop()
+            email, ok := m.queue.PreserveAndPop()
 
             if !ok {
                 // wait 1 second to avoid loading CPU too much
@@ -63,9 +63,9 @@ func (m *Mailer) Run() error {
                 continue
             }
 
-            if err := mail.Send(); err != nil {
+            if err := email.Send(); err != nil {
                 // Try to send email again if first attempt failed
-                if err := mail.Send(); err != nil {
+                if err := email.Send(); err != nil {
                     log.Printf("[ EMAIL ] Error sending email in mailer '%s': %v", m.name, err)
                 }
             }
@@ -89,17 +89,17 @@ func (m *Mailer) Stop() error {
 
     m.mut.Unlock()
 
-    log.Printf("[ EMAIL ] Mailer '%s' is waiting till mail queue is empty...\n", m.name)
+    log.Printf("[ EMAIL ] Mailer '%s' is waiting till queue is empty...\n", m.name)
 
     if timeout := m.queue.WaitTillEmpty(time.Second * 5); timeout != nil {
         log.Printf("[ EMAIL ] Mailer '%s': timeout waiting till queue is empty.\n", m.name)
     } else {
-        log.Printf("[ EMAIL ] Mailer '%s' is waiting till mail queue is empty: OK\n", m.name)
+        log.Printf("[ EMAIL ] Mailer '%s' is waiting till queue is empty: OK\n", m.name)
     }
 
     log.Printf("[ EMAIL ] Mailer '%s' waiting till current work is finished...\n", m.name)
 
-    // at this point mailer loop still can process some mail so...
+    // at this point mailer loop still can process some email so...
     m.cancel()
 
     for {
@@ -125,19 +125,19 @@ func (m *Mailer) Stop() error {
 }
 
 // Returns all pending emails. Can't be called while mailer is running.
-func (m *Mailer) Drain() ([]Mail, error) {
+func (m *Mailer) Drain() ([]Email, error) {
     m.mut.Lock()
     defer m.mut.Unlock()
 
     if m.isRunning {
-        return nil, fmt.Errorf("failed to drain mails from mailer '%s': mailer is running", m.name)
+        return nil, fmt.Errorf("failed to drain emails from mailer '%s': mailer is running", m.name)
     }
 
     return m.queue.Unwrap(), nil
 }
 
-// Pushes new mail to mailer queue
-func (m *Mailer) Push(mail Mail) error {
+// Pushes new email to mailer queue
+func (m *Mailer) Push(email Email) error {
     m.mut.Lock()
     defer m.mut.Unlock()
 
@@ -145,7 +145,7 @@ func (m *Mailer) Push(mail Mail) error {
         return fmt.Errorf("can't push to mailer '%s', mailer isn't running", m.name)
     }
 
-    m.queue.Push(mail)
+    m.queue.Push(email)
 
     return nil
 }
