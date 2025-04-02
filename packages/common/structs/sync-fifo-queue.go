@@ -134,22 +134,14 @@ func (q *SyncFifoQueue[T]) Size() int {
     return l
 }
 
-// TODO Two functions below are pretty same. The main difference in conditions,
-//      so maybe try to create a new function and use this function as wrappers for both of them?
-
-// Waits till queue size is equal to 0.
-// To disable timeout set it to equal or less then 0.
-// returns Error.TimeoutStatus if timeout exceeded, nil otherwise.
-func (q *SyncFifoQueue[T]) WaitTillEmpty(timeout time.Duration) *Error.Status {
+// If timeout <= 0: Waits till 'waitCond' returns true.
+// If timeout > 0: Waits till either 'waitCond' returns true, either timeout exceeded.
+func (q *SyncFifoQueue[T]) wait(timeout time.Duration, waitCond func() bool) *Error.Status {
     q.mut.Lock()
     defer q.mut.Unlock()
 
-    if len(q.elems) == 0 {
-        return nil
-    }
-
     if timeout <= 0 {
-        for len(q.elems) != 0 {
+        for waitCond() {
             q.cond.Wait()
         }
         return nil
@@ -158,7 +150,7 @@ func (q *SyncFifoQueue[T]) WaitTillEmpty(timeout time.Duration) *Error.Status {
     timer := time.NewTimer(timeout)
     defer timer.Stop()
 
-    for len(q.elems) > 0 {
+    for waitCond() {
         done := make(chan bool)
 
         go func (){
@@ -168,9 +160,6 @@ func (q *SyncFifoQueue[T]) WaitTillEmpty(timeout time.Duration) *Error.Status {
 
         select {
         case <-done:
-            if len(q.elems) > 0 {
-                return nil
-            }
         case <-timer.C:
             q.cond.Broadcast()
             /*
@@ -192,62 +181,36 @@ func (q *SyncFifoQueue[T]) WaitTillEmpty(timeout time.Duration) *Error.Status {
     return nil
 }
 
+// Waits till queue size is equal to 0.
+// To disable timeout set it to <= 0.
+// returns Error.TimeoutStatus if timeout exceeded, nil otherwise.
+func (q *SyncFifoQueue[T]) WaitTillEmpty(timeout time.Duration) *Error.Status {
+    q.mut.Lock()
+
+    if len(q.elems) == 0 {
+        q.mut.Unlock()
+        return nil
+    }
+
+    q.mut.Unlock()
+
+    return q.wait(timeout, func () bool { return len(q.elems) > 0 })
+}
+
 // Waits till queue size is more then 0.
-// To disable timeout set it to equal or less then 0.
+// To disable timeout set it to <= 0.
 // returns Error.TimeoutStatus if timeout exceeded, nil otherwise.
 func (q *SyncFifoQueue[T]) WaitTillNotEmpty(timeout time.Duration) *Error.Status {
     q.mut.Lock()
-    defer q.mut.Unlock()
 
     if len(q.elems) > 0 {
+        q.mut.Unlock()
         return nil
     }
 
-    if timeout <= 0 {
-        for len(q.elems) == 0 {
-            q.cond.Wait()
-        }
-        return nil
-    }
+    q.mut.Unlock()
 
-    timer := time.NewTimer(timeout)
-    defer timer.Stop()
-
-    // TODO test that, need to check amount of spawned goroutins in different cases
-    for len(q.elems) == 0 {
-        done := make(chan bool)
-
-        go func (){
-            q.cond.Wait()
-            close(done)
-        }()
-
-        select {
-        case <-done:
-            // TODO is there a point in this condition? function still returns nil
-            // UPD i tested this func without that and all seems to work fine
-            if len(q.elems) > 0 {
-                return nil
-            }
-        case <-timer.C:
-            q.cond.Broadcast()
-            /*
-               IMPORTANT
-                Need wait till q.cond.Wait() finish it's work,
-                cuz it's unlocks mutex while waiting and lock it again before returning,
-                so if q.cond.Wait() still waits that means mutext is unlocked.
-                On this state may occur 2 type of erros:
-                1) If mutex unlocking before returning from this function (which is currently so):
-                   Attempt to unlock a mutex that is already unlocked by q.cond.Wait() will cause panic.
-                2) If mutex isn't unlocking before returning:
-                   q.cond.Wait() will lock it after finishing it's work and that will cause a deadlock.
-            */
-            <-done
-            return Error.StatusTimeout
-        }
-    }
-
-    return nil
+    return q.wait(timeout, func () bool { return len(q.elems) == 0 })
 }
 
 // Get copy of []T that is used by this queue under the hood
