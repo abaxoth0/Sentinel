@@ -64,7 +64,10 @@ func (m *Mailer) Run() error {
             }
 
             if err := mail.Send(); err != nil {
-                log.Printf("[ EMAIL ] Error sending email in mailer '%s': %v", m.name, err)
+                // Try to send email again if first attempt failed
+                if err := mail.Send(); err != nil {
+                    log.Printf("[ EMAIL ] Error sending email in mailer '%s': %v", m.name, err)
+                }
             }
         }
     }
