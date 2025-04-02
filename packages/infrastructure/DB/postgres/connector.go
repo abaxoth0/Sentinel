@@ -30,6 +30,7 @@ func (c *connector) Connect() {
 
     log.Println("[ DATABASE ] Creating connection pool...")
 
+    // TODO move it to a env variable
     config, err := pgxpool.ParseConfig("postgres://postgres:1234@localhost:5432/sentinel")
 
     config.MinConns = 10

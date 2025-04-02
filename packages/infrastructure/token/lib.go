@@ -10,11 +10,11 @@ import (
 )
 
 func generateAccessTokenTtlTimestamp() int64 {
-	return util.TimestampSinceNow(config.JWT.AccessTokenTTL)
+	return util.TimestampSinceNow(config.JWT.AccessTokenTTL())
 }
 
 func generateRefreshTokenTtlTimestamp() int64 {
-	return util.TimestampSinceNow(config.JWT.RefreshTokenTTL)
+	return util.TimestampSinceNow(config.JWT.RefreshTokenTTL())
 }
 
 var invalidTokenPayload = Error.NewStatusError(

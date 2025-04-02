@@ -30,10 +30,10 @@ func (d *driver) Init() {
 	log.Println("[ CACHE ] Initializng...")
 
 	d.client = redis.NewClient(&redis.Options{
-		Addr:        config.Cache.URI,
-		Password:    config.Cache.Password,
-		DB:          config.Cache.DB,
-		ReadTimeout: config.Cache.SocketTimeout,
+		Addr:        config.Secret.CacheURI,
+		Password:    config.Secret.CachePassword,
+		DB:          config.Secret.CacheDB,
+		ReadTimeout: config.Cache.SocketTimeout(),
     })
 
     ctx, cancel := defaultTimeoutContext()
@@ -49,12 +49,12 @@ func (d *driver) Init() {
 }
 
 func defaultTimeoutContext() (context.Context, context.CancelFunc) {
-    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout)
+    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout())
 }
 
 // timeout is x5 of defaultTimeoutContext
 func longTimeoutContext() (context.Context, context.CancelFunc) {
-    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout * 5)
+    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout() * 5)
 }
 
 func logged(action string, err error) error {
@@ -103,7 +103,7 @@ func(d *driver) Set(key string, value any) error {
     ctx, cancel := defaultTimeoutContext()
     defer cancel()
 
-	err := d.client.Set(ctx, key, value, config.Cache.TTL).Err()
+	err := d.client.Set(ctx, key, value, config.Cache.TTL()).Err()
 
    return logged("Set: " + key, err)
 }

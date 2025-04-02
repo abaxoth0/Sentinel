@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"sentinel/packages/common/config"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/common/config"
 	"sentinel/packages/presentation/api/http/router"
 )
 

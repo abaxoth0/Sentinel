@@ -1,190 +1,170 @@
 package config
 
 import (
-	"crypto/ed25519"
+	"io"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt"
-	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
+// Wrapper for time.ParseDuration. Panics on error.
+func parseDuration(raw string) time.Duration {
+    v, e := time.ParseDuration(raw)
+
+    if e != nil {
+        panic(e)
+    }
+
+    return v
+}
+
 type dbConfig struct {
-    URI                 string
-    DefaultQueryTimeout time.Duration
+    RawDefaultQueryTimeout string `yaml:"db-default-queuery-timeout" validate:"required"`
+}
+
+func (c * dbConfig) DefaultQueryTimeout() time.Duration {
+    return parseDuration(c.RawDefaultQueryTimeout)
 }
 
 type httpServerConfig struct {
-	Port          string
-	AllowedOrigins []string
-    Secured       bool
+    Secured        bool     `yaml:"http-secured" validate:"exists"`
+    Port           string   `yaml:"http-port" validate:"required"`
+    AllowedOrigins []string `yaml:"http-allowed-origins" validate:"required,min=1"`
 }
 
 type jwtConfing struct {
-	AccessTokenPrivateKey  ed25519.PrivateKey
-	AccessTokenPublicKey   ed25519.PublicKey
-	RefreshTokenPrivateKey ed25519.PrivateKey
-	RefreshTokenPublicKey  ed25519.PublicKey
-	AccessTokenTTL         time.Duration
-	RefreshTokenTTL        time.Duration
+    RawAccessTokenTTL  string `yaml:"access-token-ttl" validate:"required"`
+    RawRefreshTokenTTL string `yaml:"refresh-token-ttl" validate:"required"`
+}
+
+func (c *jwtConfing) AccessTokenTTL() time.Duration {
+    return parseDuration(c.RawAccessTokenTTL)
+}
+
+func (c *jwtConfing) RefreshTokenTTL() time.Duration {
+    return parseDuration(c.RawRefreshTokenTTL)
 }
 
 type authorizationConfig struct {
-    ServiceID string
+    ServiceID string `yaml:"service-id" validate:"required"`
 }
 
 type cacheConfig struct {
-    URI              string
-    Password         string
-    DB               int
-    SocketTimeout    time.Duration
-    TTL              time.Duration
-    OperationTimeout time.Duration
+    RawSocketTimeout    string `yaml:"cache-socket-timeout" validate:"required"`
+    RawOperationTimeout string `yaml:"cache-operation-timeout" validate:"required"`
+    RawTTL              string `yaml:"cache-ttl" validate:"required"`
+}
+
+func (c *cacheConfig) SocketTimeout() time.Duration {
+    return parseDuration(c.RawSocketTimeout)
+}
+
+func (c *cacheConfig) OperationTimeout() time.Duration {
+    return parseDuration(c.RawOperationTimeout)
+}
+
+func (c *cacheConfig) TTL() time.Duration {
+    return parseDuration(c.RawTTL)
 }
 
 type debugConfig struct {
-	Enabled           bool
-    SafeDatabaseScans bool
+    Enabled           bool `yaml:"debug-mode" validate:"exists"`
+    SafeDatabaseScans bool `yaml:"debug-safe-db-scans" validate:"exists"`
 }
 
 type appConfig struct {
-    IsLoginEmail bool
+    IsLoginEmail bool `yaml:"is-login-email" validate:"exists"`
 }
 
-func getEnv(key string) string {
-	env, _ := os.LookupEnv(key)
-
-	log.Println("[ ENV ] Loaded: " + key)
-
-	return env
+type configs struct {
+    dbConfig `yaml:",inline"`
+    httpServerConfig `yaml:",inline"`
+    jwtConfing `yaml:",inline"`
+    authorizationConfig `yaml:",inline"`
+    cacheConfig `yaml:",inline"`
+    debugConfig `yaml:",inline"`
+    appConfig `yaml:",inline"`
 }
 
-var DB dbConfig
-var HTTP httpServerConfig
-var JWT jwtConfing
-var Authorization authorizationConfig
-var Cache cacheConfig
-var Debug debugConfig
-var App appConfig
+var DB *dbConfig
+var HTTP *httpServerConfig
+var JWT *jwtConfing
+var Authorization *authorizationConfig
+var Cache *cacheConfig
+var Debug *debugConfig
+var App *appConfig
 
 var isInit bool = false
 
+func loadConfig(path string, dest *configs) {
+	log.Println("[ CONFIG ] Reading config file...")
+
+    file, err := os.Open(path)
+
+    if err != nil {
+        log.Printf("[ CONFIG ] Failed to open config file: %v\n", err)
+        os.Exit(1)
+    }
+
+    rawConfig, err := io.ReadAll(file)
+
+    if err != nil {
+        log.Printf("[ CONFIG ] Failed to read config file: %v\n", err)
+        os.Exit(1)
+    }
+
+    log.Println("[ CONFIG ] Reading config file: OK")
+
+    log.Println("[ CONFIG ] Parsing config file...")
+
+    if err := yaml.Unmarshal(rawConfig, dest); err != nil {
+        log.Printf("[ CONFIG ] Failed to parse config file: %v\n", err)
+        os.Exit(1)
+    }
+
+    log.Println("[ CONFIG ] Parsing config file: OK")
+
+    log.Println("[ CONFIG ] Validating config...")
+
+    validate := validator.New()
+
+    validate.RegisterValidation("exists", func(fl validator.FieldLevel) bool {
+        return true // Always pass (just ensure that the field exists)
+    })
+
+    if err := validate.Struct(dest); err != nil {
+        log.Printf("[ CONFIG ] Failed to validate config: %v\n", err)
+        os.Exit(1)
+    }
+
+    log.Println("[ CONFIG ] Validating config: OK")
+}
+
 func Init() {
     if isInit {
-        panic("configs was already initialized")
+        log.Fatalln("[ CONFIG ] Fatal error: already initialized")
     }
 
 	log.Println("[ CONFIG ] Initializing...")
 
-	if err := godotenv.Load(); err != nil {
-		panic(err)
-	}
+    configs := new(configs)
 
-	requiredVariables := []string{
-        "IS_LOGIN_EMAIL",
-		"SERVER_PORT",
-		"HTTP_ALLOWED_ORIGINS",
-        "HTTP_SECURED",
-		"DEBUG_ENABLED",
-        "DEBUG_SAFE_DB_SCANS",
-		"DB_URI",
-		"DB_DEFAULT_TIMEOUT",
-		"ACCESS_TOKEN_SECRET",
-		"REFRESH_TOKEN_SECRET",
-		"ACCESS_TOKEN_TTL",
-		"REFRESH_TOKEN_TTL",
-        "SERVICE_ID",
-		"CACHE_URI",
-		"CACHE_PASSWORD",
-		"CACHE_DB",
-		"CACHE_SOCKET_TIMEOUT",
-		"CACHE_TTL",
-        "CACHE_OPERATION_TIMEOUT",
-	}
-
-	// Check is all required env variables exists
-	for _, variable := range requiredVariables {
-		if _, exists := os.LookupEnv(variable); !exists {
-			log.Fatalln("[ CRITICAL ERROR ] Missing required env variable: " + variable)
-		}
-	}
-
-	queryTimeoutMultiplier, _ := strconv.ParseInt(getEnv("DB_DEFAULT_TIMEOUT"), 10, 64)
-
-	DB = dbConfig{
-		URI: getEnv("DB_URI"),
-		DefaultQueryTimeout: time.Second * time.Duration(queryTimeoutMultiplier),
-	}
-
-	HTTP = httpServerConfig{
-		Port: getEnv("SERVER_PORT"),
-		AllowedOrigins: strings.Split(getEnv("HTTP_ALLOWED_ORIGINS"), ","),
-        Secured: getEnv("HTTP_SECURED") == "true",
-	}
+    loadConfig("sentinel.config.yaml", configs)
+    loadSecrets()
 
 	jwt.RegisterSigningMethod(jwt.SigningMethodEdDSA.Alg(), func() jwt.SigningMethod { return jwt.SigningMethodEdDSA })
 
-	AccessTokenTtlMultiplier, _ := strconv.ParseInt(getEnv("ACCESS_TOKEN_TTL"), 10, 64)
-	RefreshTokenTtlMultiplier, _ := strconv.ParseInt(getEnv("REFRESH_TOKEN_TTL"), 10, 64)
-
-	// Both must be 32 bytes long
-	AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
-	RefreshTokenSecret := []byte(getEnv("REFRESH_TOKEN_SECRET"))
-
-    if len(AccessTokenSecret) != 32 {
-        panic("invalid length of access token secret (must be 32 bytes long)")
-    }
-
-    if len(RefreshTokenSecret) != 32 {
-        panic("invalid length of refresh token secret (must be 32 bytes long)")
-    }
-
-	AccessTokenPrivateKey := ed25519.NewKeyFromSeed(AccessTokenSecret)
-	RefreshTokenPrivateKey := ed25519.NewKeyFromSeed(RefreshTokenSecret)
-
-	// `priv.Public()` actually returns `ed25519.PublicKey` type, not `crypto.PublicKey`.
-	// Tested via `reflect.TypeOf()`
-	AccessTokenPublicKey := AccessTokenPrivateKey.Public().(ed25519.PublicKey)
-	RefreshTokenPublicKey := RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
-
-	JWT = jwtConfing{
-		AccessTokenPrivateKey:  AccessTokenPrivateKey,
-		RefreshTokenPrivateKey: RefreshTokenPrivateKey,
-		AccessTokenPublicKey:   AccessTokenPublicKey,
-		RefreshTokenPublicKey:  RefreshTokenPublicKey,
-		AccessTokenTTL:         time.Minute * time.Duration(AccessTokenTtlMultiplier),
-		RefreshTokenTTL:        time.Hour * 24 * time.Duration(RefreshTokenTtlMultiplier),
-	}
-
-    Authorization = authorizationConfig{
-        ServiceID: getEnv("SERVICE_ID"),
-    }
-
-	CacheDB, _ := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
-	CacheSocketTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_SOCKET_TIMEOUT"), 10, 64)
-	CacheTTLMultiplier, _ := strconv.ParseInt(getEnv("CACHE_TTL"), 10, 64)
-    CacheOperationTimeoutMultiplier, _ := strconv.ParseInt(getEnv("CACHE_OPERATION_TIMEOUT"), 10, 64)
-
-	Cache = cacheConfig{
-		URI:           getEnv("CACHE_URI"),
-		Password:      getEnv("CACHE_PASSWORD"),
-		DB:            int(CacheDB),
-		SocketTimeout: time.Second * time.Duration(CacheSocketTimeoutMultiplier),
-		TTL:           time.Minute * time.Duration(CacheTTLMultiplier),
-	    OperationTimeout: time.Second * time.Duration(CacheOperationTimeoutMultiplier),
-    }
-
-	Debug = debugConfig{
-		Enabled: getEnv("DEBUG_ENABLED") == "true",
-        SafeDatabaseScans: getEnv("DEBUG_SAFE_DB_SCANS") == "true",
-	}
-
-    App = appConfig{
-        IsLoginEmail: getEnv("IS_LOGIN_EMAIL") == "true",
-    }
+    DB = &configs.dbConfig
+    HTTP = &configs.httpServerConfig
+    JWT = &configs.jwtConfing
+    Authorization = &configs.authorizationConfig
+    Cache = &configs.cacheConfig
+    Debug = &configs.debugConfig
+    App = &configs.appConfig
 
 	log.Println("[ CONFIG ] Initializing: OK")
 
