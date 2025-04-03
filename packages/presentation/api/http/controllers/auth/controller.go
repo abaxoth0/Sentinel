@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
+	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/golang-jwt/jwt"
@@ -15,15 +16,8 @@ import (
 func Login(ctx echo.Context) error {
     var body datamodel.LoginPasswordBody
 
-    if err := ctx.Bind(&body); err != nil {
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
-    }
-
-    if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(
-            http.StatusBadRequest,
-            err.Error(),
-            )
     }
 
     user, e := authentication.Login(body.Login, body.Password)

@@ -3,12 +3,13 @@ package usercontroller
 import (
 	"errors"
 	"net/http"
-	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/common/errors"
+	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
+	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/golang-jwt/jwt"
@@ -36,15 +37,8 @@ func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
 func Create(ctx echo.Context) error {
     var body datamodel.LoginPasswordBody
 
-    if err := ctx.Bind(&body); err != nil {
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
-    }
-
-    if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(
-            http.StatusBadRequest,
-            err.Error(),
-            )
     }
 
     err := DB.Database.Create(body.Login, body.Password)
@@ -53,9 +47,7 @@ func Create(ctx echo.Context) error {
         if is, e := Error.IsStatusError(err); is {
             return ctx.JSON(
                 e.Status,
-                datamodel.MessageResponseBody{
-                    Message: e.Message,
-                },
+                datamodel.MessageResponseBody{ Message: e.Message },
             )
         }
 
@@ -72,12 +64,8 @@ type stateUpdater = func (*UserDTO.Filter) *Error.Status
 func handleUserStateUpdate(ctx echo.Context, upd stateUpdater) error {
     var body datamodel.UidBody
 
-    if err := ctx.Bind(&body); err != nil {
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
-    }
-
-    if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     filter, err := newUserFilter(ctx, body.UID)
@@ -133,12 +121,8 @@ func validateSelfUpdate(filter *UserDTO.Filter, password string) *echo.HTTPError
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
-    if err := ctx.Bind(body); err != nil {
+    if err := controller.BindAndValidate(ctx, body); err != nil {
         return err
-    }
-
-    if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     filter, err := newUserFilter(ctx, body.GetUID())
@@ -186,7 +170,7 @@ func ChangeRoles(ctx echo.Context) error {
 func GetRoles(ctx echo.Context) error {
     var body datamodel.UidBody
 
-    if err := ctx.Bind(&body); err != nil {
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
     }
 
@@ -204,21 +188,15 @@ func GetRoles(ctx echo.Context) error {
 
     return ctx.JSON(
         http.StatusOK,
-        datamodel.RolesResponseBody{
-            Roles: roles,
-        },
+        datamodel.RolesResponseBody{ Roles: roles },
     )
 }
 
 func IsLoginExists(ctx echo.Context) error {
     var body datamodel.LoginBody
 
-    if err := ctx.Bind(&body); err != nil {
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
-    }
-
-    if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     exists, e := DB.Database.IsLoginExists(body.Login)

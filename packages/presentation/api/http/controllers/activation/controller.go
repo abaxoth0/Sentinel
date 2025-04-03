@@ -3,6 +3,7 @@ package activationcontroller
 import (
 	"net/http"
 	"sentinel/packages/infrastructure/DB"
+	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 	"strings"
 
@@ -31,12 +32,8 @@ func Activate(ctx echo.Context) error {
 func Reactivate(ctx echo.Context) error {
     var body datamodel.LoginBody
 
-    if err := ctx.Bind(&body); err != nil {
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
-    }
-
-    if err := body.Validate(); err != nil {
-        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     if err := DB.Database.Reactivate(body.Login); err != nil {

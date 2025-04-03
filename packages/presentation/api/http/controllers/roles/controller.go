@@ -4,20 +4,21 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/auth/authorization"
 	datamodel "sentinel/packages/presentation/data"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
 
-var serviceIsNotSpecified = echo.NewHTTPError(
+var serviceIsMissing = echo.NewHTTPError(
     http.StatusBadRequest,
-    "Service isn't specified (missing serviceID cookie)",
+    "Service ID is missing",
 )
 
 func GetAll(ctx echo.Context) error {
     serviceID := ctx.Param("serviceID")
 
-    if serviceID == "" {
-        return serviceIsNotSpecified
+    if strings.ReplaceAll(serviceID, " ", "") == "" {
+        return serviceIsMissing
     }
 
     schema, e := authorization.Host.GetSchema(serviceID)
