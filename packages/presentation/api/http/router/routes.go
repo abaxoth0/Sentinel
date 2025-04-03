@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"sentinel/packages/common/config"
+	Activation "sentinel/packages/presentation/api/http/controllers/activation"
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
 	Cache "sentinel/packages/presentation/api/http/controllers/cache"
 	Roles "sentinel/packages/presentation/api/http/controllers/roles"
@@ -68,6 +69,11 @@ func Create() *echo.Echo {
     userGroup.PATCH("/password", User.ChangePassword)
     userGroup.PATCH("/roles", User.ChangeRoles)
     userGroup.GET("/roles", User.GetRoles)
+
+    activationGroup := router.Group("/activate")
+
+    activationGroup.GET("/:token", Activation.Activate)
+    activationGroup.PUT("/renew", Activation.Reactivate)
 
     rolesGroup := router.Group("/roles")
 

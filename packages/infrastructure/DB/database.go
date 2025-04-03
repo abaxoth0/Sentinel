@@ -1,6 +1,7 @@
 package DB
 
 import (
+	"sentinel/packages/core/activation"
 	"sentinel/packages/core/user"
 	"sentinel/packages/infrastructure/DB/postgres"
 )
@@ -8,6 +9,7 @@ import (
 type database interface {
 	connector
 	user.Repository
+    activation.Repository
 }
 
 type connector interface {
@@ -15,5 +17,6 @@ type connector interface {
 	Disconnect()
 }
 
+// Implemets all entities "Repository" interfaces
 var Database database = postgres.InitDriver()
 

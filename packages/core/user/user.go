@@ -3,17 +3,12 @@ package user
 import (
 	"net/http"
 	"regexp"
+	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
-    "sentinel/packages/common/config"
+	"sentinel/packages/core"
 )
 
-// Represents one of user's properties, excluding password.
-//
-// To avoid possible vulnerabilities like SQL-injections
-// all data of this type must be a predefined consts.
-// Doing so there are no need in property validation cuz
-// all properties are predefined and correct.
-type Property string
+type Property core.EntityProperty
 
 const (
     IdProperty Property = "id"
@@ -21,6 +16,7 @@ const (
     RolesProperty Property = "roles"
     PasswordProperty Property = "password"
     DeletedAtProperty Property = "deletedAt"
+    IsActiveProperty Property = "is_active"
 )
 
 // Represents user deletion state, might be:

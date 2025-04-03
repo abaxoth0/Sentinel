@@ -15,6 +15,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+type executable interface {
+    Exec() *Error.Status
+}
+
 type query struct {
     sql string
     args []any
@@ -90,12 +94,7 @@ func (q *query) Row() (scanRow, *Error.Status) {
 
         if e := row.Scan(dests...); e != nil {
             if errors.Is(e, pgx.ErrNoRows) {
-                // IMPORTANT since DB contains only users we
-                //           can consider that exactly user wans't found,
-                //           but if some other entity will be added to DB
-                //           this error must be change onto smth like
-                //           Error.StatusNotFound or Error.StatusNoResult
-                return Error.StatusUserNotFound
+                return Error.StatusNotFound
             }
 
             return q.toStatusError(e)
@@ -147,11 +146,14 @@ func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status)
         &dto.IsActive,
     )
 
-    setTime(&dto.DeletedAt, deletedAt)
-
     if err != nil {
+        if err == Error.StatusNotFound {
+            err.Message = "Пользователь не был найден"
+        }
         return nil, err
     }
+
+    setTime(&dto.DeletedAt, deletedAt)
 
     cache.Client.EncodeAndSet(cacheKey, dto)
 

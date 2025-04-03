@@ -2,9 +2,10 @@ package postgres
 
 import (
 	"net/http"
+	"sentinel/packages/common/config"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	"slices"
@@ -28,7 +29,7 @@ func (_ *repository) checkLogin(login string) *Error.Status {
 
     _, err := driver.FindAnyUserByLogin(login)
 
-    if err != Error.StatusUserNotFound {
+    if err != Error.StatusNotFound {
         // if error is persist, but it's not an Error.StatusUserNotFound
         if err != nil {
             return err
@@ -42,7 +43,6 @@ func (_ *repository) checkLogin(login string) *Error.Status {
     return nil
 }
 
-
 func (r *repository) Create(login string, password string) (*Error.Status) {
     if err := r.checkLogin(login); err != nil {
         return err
@@ -54,11 +54,19 @@ func (r *repository) Create(login string, password string) (*Error.Status) {
         return nil
     }
 
-    query := newQuery(
-        `INSERT INTO "user" (id, login, password, roles) VALUES
-        ($1, $2, $3, $4);`,
-        uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName},
+    var query executable
+
+    createUser := newQuery(
+        `INSERT INTO "user" (id, login, password, roles, is_active) VALUES
+         ($1, $2, $3, $4, $5);`,
+        uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, !config.App.IsLoginEmail,
     )
+
+    if config.App.IsLoginEmail {
+        query = newTransaction(createUser, newActivationQuery(login))
+    } else {
+        query = createUser
+    }
 
     return cache.Client.DeleteOnError(
         query.Exec(),

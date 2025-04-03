@@ -78,6 +78,11 @@ type debugConfig struct {
 
 type appConfig struct {
     IsLoginEmail bool `yaml:"is-login-email" validate:"exists"`
+    RawActivationTokenTTL string `yaml:"user-activation-token-ttl" validate:"required"`
+}
+
+func (c *appConfig) ActivationTokenTTL() time.Duration {
+    return parseDuration(c.RawActivationTokenTTL)
 }
 
 type configs struct {

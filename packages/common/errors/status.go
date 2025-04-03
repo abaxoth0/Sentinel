@@ -26,8 +26,8 @@ var StatusInternalError = NewStatusError(
     http.StatusInternalServerError,
 )
 
-var StatusUserNotFound = NewStatusError(
-    "Пользователь не был найден",
+var StatusNotFound = NewStatusError(
+    "Запрошенный ресурс не был найден",
     http.StatusNotFound,
 )
 

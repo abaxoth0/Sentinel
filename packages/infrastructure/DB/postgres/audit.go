@@ -32,14 +32,14 @@ func newAudit(operation string, filter *UserDTO.Filter, user *UserDTO.Basic) Use
     }
 }
 
-func execWithAudit(dto *UserDTO.Audit, queries ...*query) *Error.Status {
+func newAuditQuery(dto *UserDTO.Audit) *query {
     var deletedAt = util.Ternary(dto.IsDeleted(), &dto.DeletedAt, nil)
 
-    auditQuery := newQuery(
+    return newQuery(
         `INSERT INTO "audit_user"
-         (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at, is_active)
-         VALUES
-         ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at, is_active)
+        VALUES
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         dto.ChangedUserID,
         dto.ChangedByUserID,
         dto.Operation,
@@ -50,8 +50,10 @@ func execWithAudit(dto *UserDTO.Audit, queries ...*query) *Error.Status {
         dto.ChangedAt,
         dto.IsActive,
     )
+}
 
-    queries = append(queries, auditQuery)
+func execWithAudit(dto *UserDTO.Audit, queries ...*query) *Error.Status {
+    queries = append(queries, newAuditQuery(dto))
 
     return newTransaction(queries...).Exec()
 }
