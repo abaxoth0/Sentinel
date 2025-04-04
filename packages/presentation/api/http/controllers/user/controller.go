@@ -106,10 +106,8 @@ func validateSelfUpdate(filter *UserDTO.Filter, password string) *echo.HTTPError
             )
         }
 
-        err := authentication.ComparePasswords(filter.TargetUID, password)
-
-        if err != nil {
-            return echo.NewHTTPError(err.Status, err.Message)
+        if err := authentication.CompareHashAndPassword(filter.TargetUID, password); err != nil {
+            return echo.NewHTTPError(err.Status, "Неверный пароль")
         }
     }
 

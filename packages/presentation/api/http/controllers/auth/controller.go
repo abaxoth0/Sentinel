@@ -3,6 +3,7 @@ package authcontroller
 import (
 	"net/http"
 	UserDTO "sentinel/packages/core/user/DTO"
+	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
@@ -20,10 +21,21 @@ func Login(ctx echo.Context) error {
         return err
     }
 
-    user, e := authentication.Login(body.Login, body.Password)
+    user, err := DB.Database.FindAnyUserByLogin(body.Login)
 
-    if e != nil {
-        return echo.NewHTTPError(e.Status, e.Message)
+    if err != nil {
+        // if it's error on user side.
+        if err.Status > 399 && err.Status < 500 {
+            return echo.NewHTTPError(
+                authentication.InvalidAuthCreditinals.Status,
+                authentication.InvalidAuthCreditinals.Message,
+            )
+        }
+        return echo.NewHTTPError(err.Status, err.Message)
+    }
+
+    if err := authentication.CompareHashAndPassword(user.Password, body.Password); err != nil {
+        return echo.NewHTTPError(err.Status, err.Message)
     }
 
     accessToken, refreshToken := token.Generate(&UserDTO.Payload{
