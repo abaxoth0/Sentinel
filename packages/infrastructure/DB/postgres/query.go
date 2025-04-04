@@ -147,10 +147,7 @@ func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status)
     )
 
     if err != nil {
-        if err == Error.StatusNotFound {
-            err.Message = "Пользователь не был найден"
-        }
-        return nil, err
+        return nil, tryMapToUserNotFound(err)
     }
 
     setTime(&dto.DeletedAt, deletedAt)

@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/core/activation"
@@ -26,11 +25,6 @@ func newDeleteActivationQuery(property activation.Property, value string) *query
         value,
     )
 }
-
-var activationTokenExpired = Error.NewStatusError(
-    "Токен активации истёк. Запросите повторную активацию аккаунта.",
-    http.StatusGone,
-)
 
 func (_ *repository) Activate(token string) *Error.Status {
     activ, err := driver.FindActivationByToken(token)
@@ -84,12 +78,6 @@ func (_ *repository) Reactivate(login string) *Error.Status {
     activ, err := driver.FindActivationByUserLogin(login)
 
     if err != nil {
-        if err == Error.StatusNotFound {
-            return Error.NewStatusError(
-                "Activation token wasn't found",
-                http.StatusNotFound,
-            )
-        }
         return err
     }
 

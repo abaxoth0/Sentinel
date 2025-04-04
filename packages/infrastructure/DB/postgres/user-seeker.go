@@ -1,9 +1,9 @@
 package postgres
 
 import (
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	"strings"
@@ -142,6 +142,9 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
     roles := []string{}
 
     if e := scan(&roles); e != nil {
+        if e == Error.StatusNotFound {
+            return nil, userNotFound
+        }
         return nil, e
     }
 

@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"net/http"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/core/activation"
 	ActivationDTO "sentinel/packages/core/activation/DTO"
@@ -38,7 +37,7 @@ func (_ *seeker) findActivationBy(property activation.Property, value string) (*
         &createdAt,
     ); err != nil {
         if err == Error.StatusNotFound {
-            err.Message = "Пользователь не был найден"
+            return nil, activationNotFound
         }
         return nil, err
     }
@@ -48,11 +47,6 @@ func (_ *seeker) findActivationBy(property activation.Property, value string) (*
 
     return activation, nil
 }
-
-var invalidActivationTokenFormat = Error.NewStatusError(
-    "invalid activation token format. (UUID expected)",
-    http.StatusUnprocessableEntity,
-)
 
 func (_ *seeker) FindActivationByToken(token string) (*ActivationDTO.Basic, *Error.Status) {
     // TODO add this validation for other uuids, to get rid of some redundant db or cache requests?

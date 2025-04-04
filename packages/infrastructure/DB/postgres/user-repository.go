@@ -17,11 +17,6 @@ type repository struct {
     //
 }
 
-var loginAlreadyInUse = Error.NewStatusError(
-    "Login already in use",
-    http.StatusConflict,
-)
-
 func (_ *repository) checkLogin(login string) *Error.Status {
     if err := user.VerifyLogin(login); err != nil {
         return err
