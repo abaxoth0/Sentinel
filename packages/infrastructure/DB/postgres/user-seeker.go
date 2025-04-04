@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"net/http"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
@@ -104,7 +105,7 @@ func (s *seeker) IsLoginExists(login string) (bool, *Error.Status) {
     _, err := s.findUserBy(user.LoginProperty, login, user.NotDeletedState, cacheKey)
 
     if err != nil {
-        if err == Error.StatusNotFound {
+        if err.Status == http.StatusNotFound {
             cache.Client.Set(cacheKey, false)
             return false, nil
         }
@@ -128,6 +129,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return strings.Split(rawRoles, ","), nil
     }
 
+    // TODO is there a point doing that? why just not use DB.Database.FindUserByID()?
     query := newQuery(
         `SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`,
         filter.TargetUID,
