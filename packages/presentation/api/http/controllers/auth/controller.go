@@ -2,6 +2,7 @@ package authcontroller
 
 import (
 	"net/http"
+	Error "sentinel/packages/common/errors"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
@@ -24,11 +25,10 @@ func Login(ctx echo.Context) error {
     user, err := DB.Database.FindAnyUserByLogin(body.Login)
 
     if err != nil {
-        // if it's error on user side.
-        if err.Status > 399 && err.Status < 500 {
+        if err.Side() == Error.ClientSide {
             return echo.NewHTTPError(
-                authentication.InvalidAuthCreditinals.Status,
-                authentication.InvalidAuthCreditinals.Message,
+                authentication.InvalidAuthCreditinals.Status(),
+                authentication.InvalidAuthCreditinals.Error(),
             )
         }
         return controller.ConvertErrorStatusToHTTP(err)

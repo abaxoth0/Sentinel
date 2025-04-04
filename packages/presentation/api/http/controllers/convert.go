@@ -7,6 +7,6 @@ import (
 )
 
 func ConvertErrorStatusToHTTP(err *Error.Status) *echo.HTTPError {
-    return echo.NewHTTPError(err.Status, err.Message)
+    return echo.NewHTTPError(err.Status(), err.Error())
 }
 

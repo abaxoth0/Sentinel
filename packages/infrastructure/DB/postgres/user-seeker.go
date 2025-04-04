@@ -40,11 +40,11 @@ func (s *seeker) findUserBy(
     }
 
     if state == user.NotDeletedState && dto.IsDeleted() {
-        return nil, Error.StatusNotFound
+        return nil, userNotFound
     }
 
     if state == user.DeletedState && !dto.IsDeleted() {
-        return nil, Error.StatusNotFound
+        return nil, userNotFound
     }
 
     return dto, nil
@@ -105,7 +105,7 @@ func (s *seeker) IsLoginExists(login string) (bool, *Error.Status) {
     _, err := s.findUserBy(user.LoginProperty, login, user.NotDeletedState, cacheKey)
 
     if err != nil {
-        if err.Status == http.StatusNotFound {
+        if err.Status() == http.StatusNotFound {
             cache.Client.Set(cacheKey, false)
             return false, nil
         }
