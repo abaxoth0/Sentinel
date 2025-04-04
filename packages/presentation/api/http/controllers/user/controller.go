@@ -11,8 +11,10 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
+	"strings"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -166,13 +168,23 @@ func ChangeRoles(ctx echo.Context) error {
 }
 
 func GetRoles(ctx echo.Context) error {
-    var body datamodel.UidBody
+    uid := ctx.Param("uid")
 
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
+    if strings.ReplaceAll(uid, " ", "") == "" {
+        return echo.NewHTTPError(
+            http.StatusBadRequest,
+            "User ID is missing",
+        )
     }
 
-    filter, err := newUserFilter(ctx, body.UID)
+    if err := uuid.Validate(uid); err != nil {
+        return echo.NewHTTPError(
+            http.StatusBadRequest,
+            "The user ID has an invalid format (expected: UUID)",
+        )
+    }
+
+    filter, err := newUserFilter(ctx, uid)
 
     if err != nil {
         return err
