@@ -23,7 +23,7 @@ func Activate(ctx echo.Context) error {
     }
 
     if err := DB.Database.Activate(token); err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -37,7 +37,7 @@ func Reactivate(ctx echo.Context) error {
     }
 
     if err := DB.Database.Reactivate(body.Login); err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     return ctx.NoContent(http.StatusOK)

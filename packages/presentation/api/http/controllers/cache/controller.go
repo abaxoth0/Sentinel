@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
+	controller "sentinel/packages/presentation/api/http/controllers"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
@@ -15,13 +16,13 @@ func Drop(ctx echo.Context) error {
     accessToken, err := token.GetAccessToken(ctx.Request().Header.Get("Authorization"))
 
     if err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     filter, err := UserMapper.FilterDTOFromClaims(UserMapper.NoTarget, accessToken.Claims.(jwt.MapClaims))
 
     if err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if err := authorization.Authorize(
@@ -29,7 +30,7 @@ func Drop(ctx echo.Context) error {
         authorization.Resource.Cache,
         filter.RequesterRoles,
     ); err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if err := cache.Client.FlushAll(); err != nil {

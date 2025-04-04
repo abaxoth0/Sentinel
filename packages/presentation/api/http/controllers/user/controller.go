@@ -22,14 +22,14 @@ func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
     accessToken, err := token.GetAccessToken(authHeader)
 
     if err != nil {
-        return nil, echo.NewHTTPError(err.Status, err.Message)
+        return nil, controller.ConvertErrorStatusToHTTP(err)
     }
 
     // we can trust claims if token is valid
     filter, err := UserMapper.FilterDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
 
     if err != nil {
-        return nil, echo.NewHTTPError(err.Status, err.Message)
+        return nil, controller.ConvertErrorStatusToHTTP(err)
     }
 
     return filter, nil
@@ -42,17 +42,8 @@ func Create(ctx echo.Context) error {
         return err
     }
 
-    err := DB.Database.Create(body.Login, body.Password)
-
-    if err != nil {
-        if is, e := Error.IsStatusError(err); is {
-            return ctx.JSON(
-                e.Status,
-                datamodel.MessageResponseBody{ Message: e.Message },
-            )
-        }
-
-        return err
+    if err := DB.Database.Create(body.Login, body.Password); err != nil {
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -76,7 +67,7 @@ func handleUserStateUpdate(ctx echo.Context, upd stateUpdater) error {
     }
 
     if err := upd(filter); err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -148,7 +139,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
     }
 
     if e != nil {
-        return echo.NewHTTPError(e.Status, e.Message)
+        return controller.ConvertErrorStatusToHTTP(e)
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -193,7 +184,7 @@ func GetRoles(ctx echo.Context) error {
     roles, e := DB.Database.GetRoles(filter)
 
     if e != nil {
-        return echo.NewHTTPError(e.Status, e.Message)
+        return controller.ConvertErrorStatusToHTTP(e)
     }
 
     return ctx.JSON(
@@ -212,7 +203,7 @@ func IsLoginExists(ctx echo.Context) error {
     exists, e := DB.Database.IsLoginExists(body.Login)
 
     if e != nil {
-        return echo.NewHTTPError(e.Status, e.Message)
+        return controller.ConvertErrorStatusToHTTP(e)
     }
 
     return ctx.JSON(

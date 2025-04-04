@@ -31,11 +31,11 @@ func Login(ctx echo.Context) error {
                 authentication.InvalidAuthCreditinals.Message,
             )
         }
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if err := authentication.CompareHashAndPassword(user.Password, body.Password); err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     accessToken, refreshToken := token.Generate(&UserDTO.Payload{
@@ -81,13 +81,13 @@ func Refresh(ctx echo.Context) error {
     if e != nil {
         deleteCookie(ctx, authCookie)
 
-        return echo.NewHTTPError(e.Status, e.Message)
+        return controller.ConvertErrorStatusToHTTP(e)
     }
 
     payload, e := UserMapper.PayloadFromClaims(oldRefreshToken.Claims.(jwt.MapClaims))
 
     if e != nil {
-        return echo.NewHTTPError(e.Status, e.Message)
+        return controller.ConvertErrorStatusToHTTP(e)
     }
 
     accessToken, refreshToken := token.Generate(payload)
@@ -110,13 +110,13 @@ func Verify(ctx echo.Context) error {
     accessToken, err := token.GetAccessToken(authHeader)
 
     if err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
 
     if err != nil {
-        return echo.NewHTTPError(err.Status, err.Message)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     return ctx.JSON(http.StatusOK, payload)
