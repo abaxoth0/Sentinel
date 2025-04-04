@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
@@ -11,10 +12,8 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
-	"strings"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -170,18 +169,19 @@ func ChangeRoles(ctx echo.Context) error {
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
 
-    if strings.ReplaceAll(uid, " ", "") == "" {
-        return echo.NewHTTPError(
-            http.StatusBadRequest,
-            "User ID is missing",
-        )
-    }
-
-    if err := uuid.Validate(uid); err != nil {
-        return echo.NewHTTPError(
-            http.StatusBadRequest,
-            "The user ID has an invalid format (expected: UUID)",
-        )
+    if err := validation.UUID(uid); err != nil {
+        if err == Error.NoValue {
+            return echo.NewHTTPError(
+                http.StatusBadRequest,
+                "User ID is missing",
+            )
+        }
+        if err == Error.InvalidValue {
+            return echo.NewHTTPError(
+                http.StatusBadRequest,
+                "The user ID has an invalid format (expected: UUID)",
+            )
+        }
     }
 
     filter, err := newUserFilter(ctx, uid)

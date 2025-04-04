@@ -2,11 +2,11 @@ package postgres
 
 import (
 	"database/sql"
+	"net/http"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	"sentinel/packages/core/activation"
 	ActivationDTO "sentinel/packages/core/activation/DTO"
-
-	"github.com/google/uuid"
 )
 
 // TODO Add cache
@@ -49,9 +49,13 @@ func (_ *seeker) findActivationBy(property activation.Property, value string) (*
 }
 
 func (_ *seeker) FindActivationByToken(token string) (*ActivationDTO.Basic, *Error.Status) {
-    // TODO add this validation for other uuids, to get rid of some redundant db or cache requests?
-    if err := uuid.Validate(token); err != nil {
-        return nil, invalidActivationTokenFormat
+    if err := validation.UUID(token); err != nil {
+        if err == Error.NoValue {
+            return nil, Error.NewStatusError("Activation token is not specified", http.StatusBadRequest)
+        }
+        if err == Error.InvalidValue {
+            return nil, invalidActivationTokenFormat
+        }
     }
 
     return driver.findActivationBy(activation.TokenProperty, token)
