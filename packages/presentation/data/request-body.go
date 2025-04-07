@@ -2,6 +2,7 @@ package datamodel
 
 import (
 	"fmt"
+	"sentinel/packages/common/validation"
 	"strings"
 )
 
@@ -54,7 +55,7 @@ func (b *UidBody) Validate() error {
     if b.UID == "" {
         return MissingUID
     }
-    if strings.ReplaceAll(b.UID, " ", "") == "" {
+    if err := validation.UUID(b.UID); err != nil {
         return InvalidUID
     }
     return nil

@@ -89,18 +89,37 @@ func DropAllDeleted(ctx echo.Context) error {
     return handleUserStateUpdate(ctx, DB.Database.DropAllSoftDeleted)
 }
 
-func validateSelfUpdate(filter *UserDTO.Filter, password string) *echo.HTTPError {
+func validateSelfUpdate(filter *UserDTO.Filter, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
     if filter.RequesterUID == filter.TargetUID {
-        if password == "" {
-            return echo.NewHTTPError(
-                http.StatusUnprocessableEntity,
-                "Password required when modifying your own account",
-            )
+        if err := body.Validate(); err != nil {
+            return echo.NewHTTPError(http.StatusBadRequest, err.Error())
         }
 
-        if err := authentication.CompareHashAndPassword(filter.TargetUID, password); err != nil {
+        user, err := DB.Database.FindAnyUserByID(filter.TargetUID)
+
+        if err != nil {
+            return controller.ConvertErrorStatusToHTTP(err)
+        }
+
+        if err := authentication.CompareHashAndPassword(user.Password, body.GetPassword()); err != nil {
             return echo.NewHTTPError(err.Status(), "Неверный пароль")
         }
+
+        return nil
+    }
+
+    if err := body.Validate(); err != nil {
+        switch body.(type){
+        case *datamodel.ChangePasswordBody:
+            if err == datamodel.MissingNewPassword || err == datamodel.InvalidNewPassword {
+                return nil
+            }
+        default:
+            if err == datamodel.MissingPassword || err == datamodel.InvalidPassword {
+                return nil
+            }
+        }
+        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
     return nil
@@ -111,8 +130,16 @@ func validateSelfUpdate(filter *UserDTO.Filter, password string) *echo.HTTPError
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
-    if err := controller.BindAndValidate(ctx, body); err != nil {
+    // if err := controller.BindAndValidate(ctx, body); err != nil {
+    //     return err
+    // }
+
+    if err := ctx.Bind(body); err != nil {
         return err
+    }
+
+    if body.GetUID() == "" {
+        panic("fuck")
     }
 
     filter, err := newUserFilter(ctx, body.GetUID())
@@ -121,7 +148,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
         return err
     }
 
-    if err := validateSelfUpdate(filter, body.GetPassword()); err != nil {
+    if err := validateSelfUpdate(filter, body); err != nil {
         return err
     }
 

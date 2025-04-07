@@ -24,7 +24,7 @@ func (_ *repository) checkLogin(login string) *Error.Status {
 
     _, err := driver.FindAnyUserByLogin(login)
 
-    if err != Error.StatusNotFound {
+    if err.Status() != http.StatusNotFound {
         // if error is persist, but it's not an Error.StatusUserNotFound
         if err != nil {
             return err
