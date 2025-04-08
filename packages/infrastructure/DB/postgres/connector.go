@@ -82,10 +82,31 @@ func (c *connector) Connect() {
     c.isConnected = true
 }
 
-func (c *connector) Disconnect() {
-    c.pool.Close()
+func (c *connector) Disconnect() error {
+    if !c.isConnected {
+        return fmt.Errorf("connection not established")
+    }
+
+    log.Println("[ DATABASE ] Closing connection pool...")
+
+    done := make(chan bool)
+
+    go func() {
+        c.pool.Close()
+        close(done)
+    }()
+
+    select {
+    case <-done:
+    case <-time.After(time.Second * 10):
+        return fmt.Errorf("timeout exceeded")
+    }
+
+    log.Println("[ DATABASE ] Closing connection pool: OK")
 
     c.isConnected = false
+
+    return nil
 }
 
 // Don't forget to release connection

@@ -19,7 +19,8 @@ const DeletedUserKeyPrefix string = "sd_user_"
 const AnyUserKeyPrefix string = "any_user_"
 
 type client interface {
-    Init()
+    Connect()
+    Close() error
     Get(key string) (string, bool)
     Set(key string, value any) error
     EncodeAndSet(key string, value any) error

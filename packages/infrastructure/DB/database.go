@@ -14,7 +14,7 @@ type database interface {
 
 type connector interface {
 	Connect()
-	Disconnect()
+	Disconnect() error
 }
 
 // Implemets all entities "Repository" interfaces

@@ -15,19 +15,19 @@ import (
 
 type driver struct {
     client *redis.Client
-    isInit bool
+    isConnected bool
 }
 
 func New() *driver {
     return new(driver)
 }
 
-func (d *driver) Init() {
-    if d.isInit {
-        panic("cache already initialized")
+func (d *driver) Connect() {
+    if d.isConnected {
+        panic("cache already established")
     }
 
-	log.Println("[ CACHE ] Initializng...")
+	log.Println("[ CACHE ] Connecting to DB...")
 
 	d.client = redis.NewClient(&redis.Options{
 		Addr:        config.Secret.CacheURI,
@@ -40,12 +40,30 @@ func (d *driver) Init() {
     defer cancel()
 
     if err := d.client.Ping(ctx).Err(); err != nil {
-        panic(fmt.Sprintf("[ ERROR ] Failed to connect to Redis:\n%v\n", err))
+        panic(fmt.Sprintf("[ ERROR ] Failed to connect to DB:\n%v\n", err))
     }
 
-	log.Println("[ CACHE ] Initializng: OK")
+	log.Println("[ CACHE ] Connecting to DB: OK")
 
-    d.isInit = true
+    d.isConnected = true
+}
+
+func (d *driver) Close() error {
+    if !d.isConnected {
+        return fmt.Errorf("connection not established")
+    }
+
+    log.Println("[ CACHE ] Disconnecting from DB...")
+
+    if err := d.client.Close(); err != nil {
+        return err
+    }
+
+    log.Println("[ CACHE ] Disconnecting from DB: OK")
+
+    d.isConnected = false
+
+    return nil
 }
 
 func defaultTimeoutContext() (context.Context, context.CancelFunc) {
