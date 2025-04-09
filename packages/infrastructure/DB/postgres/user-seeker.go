@@ -95,7 +95,7 @@ func (s *seeker) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
     )
 }
 
-func (s *seeker) IsLoginExists(login string) (bool, *Error.Status) {
+func (s *seeker) IsLoginAvailable(login string) (bool, *Error.Status) {
     if err := user.VerifyLogin(login); err != nil {
         return false, err
     }

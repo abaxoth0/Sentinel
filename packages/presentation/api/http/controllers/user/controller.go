@@ -244,7 +244,7 @@ func IsLoginAvailable(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    exists, e := DB.Database.IsLoginExists(login)
+    exists, e := DB.Database.IsLoginAvailable(login)
 
     if e != nil {
         return controller.ConvertErrorStatusToHTTP(e)
