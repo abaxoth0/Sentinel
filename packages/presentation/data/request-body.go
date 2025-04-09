@@ -33,16 +33,11 @@ type RequestValidator interface {
     Validate() error
 }
 
-type UidGetter interface {
-    GetUID() string
-}
-
 type PasswordGetter interface {
     GetPassword() string
 }
 
 type UpdateUserRequestBody interface {
-    UidGetter
     PasswordGetter
     RequestValidator
 }
@@ -144,15 +139,11 @@ func (b *UidLoginBody) Validate() error {
 }
 
 type ChangePasswordBody struct {
-    UidBody `json:",inline"`
     PasswordBody `json:",inline"`
     NewPassword string `json:"newPassword"`
 }
 
 func (b *ChangePasswordBody) Validate() error {
-    if err := b.UidBody.Validate(); err != nil {
-        return err
-    }
     if err := b.PasswordBody.Validate(); err != nil {
         return err
     }
@@ -166,15 +157,11 @@ func (b *ChangePasswordBody) Validate() error {
 }
 
 type ChangeLoginBody struct {
-    UidBody `json:",inline"`
     LoginBody `json:",inline"`
     PasswordBody `json:",inline"`
 }
 
 func (b *ChangeLoginBody) Validate() error {
-    if err := b.UidBody.Validate(); err != nil {
-        return err
-    }
     if err := b.LoginBody.Validate(); err != nil {
         return err
     }
@@ -185,15 +172,11 @@ func (b *ChangeLoginBody) Validate() error {
 }
 
 type ChangeRolesBody struct {
-    UidBody `json:",inline"`
     RolesBody `json:",inline"`
     PasswordBody `json:",inline"`
 }
 
 func (b *ChangeRolesBody) Validate() error {
-    if err := b.UidBody.Validate(); err != nil {
-        return err
-    }
     if err := b.RolesBody.Validate(); err != nil {
         return err
     }

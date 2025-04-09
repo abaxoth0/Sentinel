@@ -59,17 +59,17 @@ func Create() *echo.Echo {
     userGroup := router.Group("/user")
 
     userGroup.POST(rootPath, User.Create)
-    userGroup.DELETE(rootPath, User.SoftDelete)
-    userGroup.POST("/restore", User.Restore)
-    userGroup.DELETE("/drop", User.Drop)
-    userGroup.DELETE("/drop/all", User.DropAllDeleted)
-    userGroup.POST("/login/check", User.IsLoginExists)
+    userGroup.DELETE("/:uid", User.SoftDelete)
+    userGroup.POST("/:uid/restore", User.Restore)
+    userGroup.DELETE("/:uid/drop", User.Drop)
+    userGroup.DELETE("/all/drop", User.DropAllDeleted)
+    userGroup.POST("/login/available", User.IsLoginAvailable)
 
-    userGroup.PATCH("/login", User.ChangeLogin)
-    userGroup.PATCH("/password", User.ChangePassword)
-    userGroup.PATCH("/roles", User.ChangeRoles)
+    userGroup.PATCH("/:uid/login", User.ChangeLogin)
+    userGroup.PATCH("/:uid/password", User.ChangePassword)
+    userGroup.PATCH("/:uid/roles", User.ChangeRoles)
 
-    userGroup.GET("/roles/:uid", User.GetRoles)
+    userGroup.GET("/:uid/roles", User.GetRoles)
 
     activationGroup := router.Group("/activate")
 

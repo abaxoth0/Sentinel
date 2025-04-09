@@ -5,6 +5,7 @@ import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
@@ -16,6 +17,27 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 )
+
+func getUserIdFromPath(ctx echo.Context) (string, *echo.HTTPError) {
+    uid := ctx.Param("uid")
+
+    if err := validation.UUID(uid); err != nil {
+        if err == Error.NoValue {
+            return "", echo.NewHTTPError(
+                http.StatusBadRequest,
+                "User ID is missing",
+            )
+        }
+        if err == Error.InvalidValue {
+            return "", echo.NewHTTPError(
+                http.StatusBadRequest,
+                "User ID has an invalid format (expected: UUID)",
+            )
+        }
+    }
+
+    return uid, nil
+}
 
 func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
     authHeader := ctx.Request().Header.Get("Authorization")
@@ -49,19 +71,25 @@ func Create(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
-type stateUpdater = func (*UserDTO.Filter) *Error.Status
+type updater = func (*UserDTO.Filter) *Error.Status
 
 // Updates user's state (deletion status).
+// if omitUid is true, then uid will be set to empty string,
+// otherwise uid will be taken from path params (in this case uid must be a valid UUID).
 // If you want to change other user properties then use 'update' isntead.
-func handleUserStateUpdate(ctx echo.Context, upd stateUpdater) error {
-    var body datamodel.UidBody
+func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
+    var uid string
 
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
+    if !omitUid {
+        var e *echo.HTTPError
+
+        uid, e = getUserIdFromPath(ctx)
+        if e != nil {
+            return e
+        }
     }
 
-    filter, err := newUserFilter(ctx, body.UID)
-
+    filter, err := newUserFilter(ctx, uid)
     if err != nil {
         return err
     }
@@ -74,19 +102,19 @@ func handleUserStateUpdate(ctx echo.Context, upd stateUpdater) error {
 }
 
 func SoftDelete(ctx echo.Context) error {
-    return handleUserStateUpdate(ctx, DB.Database.SoftDelete)
+    return handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false)
 }
 
 func Restore(ctx echo.Context) error {
-    return handleUserStateUpdate(ctx, DB.Database.Restore)
+    return handleUserDeleteUpdate(ctx, DB.Database.Restore, false)
 }
 
 func Drop(ctx echo.Context) error {
-    return handleUserStateUpdate(ctx, DB.Database.Drop)
+    return handleUserDeleteUpdate(ctx, DB.Database.Drop, false)
 }
 
 func DropAllDeleted(ctx echo.Context) error {
-    return handleUserStateUpdate(ctx, DB.Database.DropAllSoftDeleted)
+    return handleUserDeleteUpdate(ctx, DB.Database.DropAllSoftDeleted, true)
 }
 
 func validateSelfUpdate(filter *UserDTO.Filter, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
@@ -130,20 +158,16 @@ func validateSelfUpdate(filter *UserDTO.Filter, body datamodel.UpdateUserRequest
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
-    // if err := controller.BindAndValidate(ctx, body); err != nil {
-    //     return err
-    // }
-
     if err := ctx.Bind(body); err != nil {
         return err
     }
 
-    if body.GetUID() == "" {
-        panic("fuck")
+    uid, er := getUserIdFromPath(ctx)
+    if er != nil {
+        return er
     }
 
-    filter, err := newUserFilter(ctx, body.GetUID())
-
+    filter, err := newUserFilter(ctx, uid)
     if err != nil {
         return err
     }
@@ -185,31 +209,17 @@ func ChangeRoles(ctx echo.Context) error {
 }
 
 func GetRoles(ctx echo.Context) error {
-    uid := ctx.Param("uid")
-
-    if err := validation.UUID(uid); err != nil {
-        if err == Error.NoValue {
-            return echo.NewHTTPError(
-                http.StatusBadRequest,
-                "User ID is missing",
-            )
-        }
-        if err == Error.InvalidValue {
-            return echo.NewHTTPError(
-                http.StatusBadRequest,
-                "The user ID has an invalid format (expected: UUID)",
-            )
-        }
+    uid, er := getUserIdFromPath(ctx)
+    if er != nil {
+        return er
     }
 
     filter, err := newUserFilter(ctx, uid)
-
     if err != nil {
         return err
     }
 
     roles, e := DB.Database.GetRoles(filter)
-
     if e != nil {
         return controller.ConvertErrorStatusToHTTP(e)
     }
@@ -220,14 +230,21 @@ func GetRoles(ctx echo.Context) error {
     )
 }
 
-func IsLoginExists(ctx echo.Context) error {
-    var body datamodel.LoginBody
+func IsLoginAvailable(ctx echo.Context) error {
+    login := ctx.QueryParam("login")
 
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
+    if login == "" {
+        return echo.NewHTTPError(
+            http.StatusBadRequest,
+            "query param 'login' isn't specified",
+        )
     }
 
-    exists, e := DB.Database.IsLoginExists(body.Login)
+    if err := user.VerifyLogin(login); err != nil {
+        return controller.ConvertErrorStatusToHTTP(err)
+    }
+
+    exists, e := DB.Database.IsLoginExists(login)
 
     if e != nil {
         return controller.ConvertErrorStatusToHTTP(e)
