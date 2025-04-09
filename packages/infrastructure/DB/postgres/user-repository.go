@@ -24,18 +24,17 @@ func (_ *repository) checkLogin(login string) *Error.Status {
 
     _, err := driver.FindAnyUserByLogin(login)
 
-    if err.Status() != http.StatusNotFound {
-        // if error is persist, but it's not an Error.StatusUserNotFound
-        if err != nil {
-            return err
+    if err != nil {
+        // user wasn't found, hence login is free to use
+        if err.Status() == http.StatusNotFound {
+            return nil
         }
 
-        // if there are no any error (which means that user with this login exists)
-        return loginAlreadyInUse
+        return err
     }
 
-    // login is free to use, there are no error
-    return nil
+    // if there are no any error (which means that user with this login exists)
+    return loginAlreadyInUse
 }
 
 func (r *repository) Create(login string, password string) (*Error.Status) {
