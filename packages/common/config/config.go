@@ -31,6 +31,7 @@ func (c * dbConfig) DefaultQueryTimeout() time.Duration {
 }
 
 type httpServerConfig struct {
+    Domain         string   `yaml:"domain" validate:"required"`
     Secured        bool     `yaml:"http-secured" validate:"exists"`
     Port           string   `yaml:"http-port" validate:"required"`
     AllowedOrigins []string `yaml:"http-allowed-origins" validate:"required,min=1"`
@@ -81,6 +82,11 @@ type appConfig struct {
     RawActivationTokenTTL string `yaml:"user-activation-token-ttl" validate:"required"`
 }
 
+type emailConfig struct {
+    SmtpHost    string `yaml:"smtp-host" validate:"required"`
+    SmtpPort    int    `yaml:"smtp-port" validate:"required"`
+}
+
 func (c *appConfig) ActivationTokenTTL() time.Duration {
     return parseDuration(c.RawActivationTokenTTL)
 }
@@ -93,6 +99,7 @@ type configs struct {
     cacheConfig `yaml:",inline"`
     debugConfig `yaml:",inline"`
     appConfig `yaml:",inline"`
+    emailConfig `yaml:",inline"`
 }
 
 var DB *dbConfig
@@ -102,6 +109,7 @@ var Authorization *authorizationConfig
 var Cache *cacheConfig
 var Debug *debugConfig
 var App *appConfig
+var Email *emailConfig
 
 var isInit bool = false
 
@@ -170,6 +178,7 @@ func Init() {
     Cache = &configs.cacheConfig
     Debug = &configs.debugConfig
     App = &configs.appConfig
+    Email = &configs.emailConfig
 
 	log.Println("[ CONFIG ] Initializing: OK")
 

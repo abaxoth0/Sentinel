@@ -1,4 +1,6 @@
 ### HTTP ###
+domain: localhost
+
 http-port: 8050
 
 http-secured: false
@@ -32,4 +34,10 @@ service-id: cb663674-803e-4b06-bfeb-87c5cc86383e
 is-login-email: true
 
 user-activation-token-ttl: 24h
+
+### EMAIL ###
+
+smtp-host: smtp.gmail.com
+
+smtp-port: 587
 

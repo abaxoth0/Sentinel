@@ -11,6 +11,7 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
+	"sentinel/packages/infrastructure/email"
 	"sentinel/packages/presentation/api/http/router"
 	"syscall"
 	"time"
@@ -26,6 +27,9 @@ func main() {
     authorization.Init()
     cache.Client.Connect()
 	DB.Database.Connect()
+    email.Init()
+
+    go email.MainMailer.Run()
 
 	log.Println("[ SERVER ] Initializng router...")
 
@@ -67,6 +71,10 @@ func main() {
 
     if err := cache.Client.Close(); err != nil {
         log.Printf("[ CACHE ] Failed to disconnect from DB: %s\n", err.Error())
+    }
+
+    if err := email.MainMailer.Stop(); err != nil {
+        log.Printf("[ EMAIL ] Failed to correctly stop main mailer: %s\n", err.Error())
     }
 
     log.Println("[ APP ] Shutted down")

@@ -2,13 +2,16 @@ package usercontroller
 
 import (
 	"errors"
+	"log"
 	"net/http"
+	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
+	"sentinel/packages/infrastructure/email"
 	UserMapper "sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
@@ -68,6 +71,27 @@ func Create(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
+    if config.App.IsLoginEmail {
+        activ, err := DB.Database.FindActivationByUserLogin(body.Login)
+        if err != nil {
+            return controller.ConvertErrorStatusToHTTP(err)
+        }
+
+        activationEmail, err := email.NewUserActivationEmail(body.Login, activ.Token)
+
+        if err != nil {
+            return controller.ConvertErrorStatusToHTTP(err)
+        }
+
+        if err := email.MainMailer.Push(activationEmail); err != nil {
+            log.Printf(
+                "[ ERROR ] Failed to send activation email for user '%s': %s\n",
+                activ.UserLogin,
+                err.Error(),
+            )
+            return Error.StatusInternalError
+        }
+    }
     return ctx.NoContent(http.StatusOK)
 }
 

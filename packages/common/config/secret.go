@@ -19,6 +19,8 @@ type secrets struct {
     CacheURI               string             `validate:"required"`
     CachePassword          string             `validate:"required"`
     CacheDB                int                `validate:"exists"`
+    MailerEmailPassword    string             `validate:"required"`
+    MailerEmail            string             `validate:"required"`
 }
 
 var Secret secrets
@@ -46,6 +48,8 @@ func loadSecrets() {
         "CACHE_URI",
         "CACHE_PASSWORD",
         "CACHE_DB",
+        "MAILER_EMAIL_PASSWORD",
+        "MAILER_EMAIL",
     }
 
     // Check is all required env variables exists
@@ -65,6 +69,8 @@ func loadSecrets() {
     Secret.CacheURI = getEnv("CACHE_URI")
     Secret.CachePassword = getEnv("CACHE_PASSWORD")
     Secret.CacheDB = int(cacheDB)
+    Secret.MailerEmailPassword = getEnv("MAILER_EMAIL_PASSWORD")
+    Secret.MailerEmail = getEnv("MAILER_EMAIL")
 
     Secret.DatabaseURI = getEnv("DB_URI")
 
