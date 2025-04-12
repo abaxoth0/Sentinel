@@ -27,9 +27,13 @@ func main() {
     authorization.Init()
     cache.Client.Connect()
 	DB.Database.Connect()
-    email.Init()
 
-    go email.MainMailer.Run()
+    // Currently email module used only to send activation emails,
+    // so there are no point to run/stop it if login isn't email.
+    // (cuz in this case activation emails not sends and all users are active by default)
+    if config.App.IsLoginEmail {
+        email.Run()
+    }
 
 	log.Println("[ SERVER ] Initializng router...")
 
@@ -73,8 +77,10 @@ func main() {
         log.Printf("[ CACHE ] Failed to disconnect from DB: %s\n", err.Error())
     }
 
-    if err := email.MainMailer.Stop(); err != nil {
-        log.Printf("[ EMAIL ] Failed to correctly stop main mailer: %s\n", err.Error())
+    if config.App.IsLoginEmail {
+        if err := email.Stop(); err != nil {
+            log.Printf("[ EMAIL ] Failed to stop correctly: %s\n", err.Error())
+        }
     }
 
     log.Println("[ APP ] Shutted down")

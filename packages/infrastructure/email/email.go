@@ -2,10 +2,12 @@ package email
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"slices"
+	"time"
 
 	"gopkg.in/gomail.v2"
 )
@@ -16,9 +18,14 @@ type Email interface {
 
 var MainMailer *Mailer
 var dialer *gomail.Dialer
+var isRunning = false
 
-func Init() {
-    createActivationEmailBody()
+func Run() {
+    if isRunning {
+        panic("email module is already running")
+    }
+
+    initActivationEmailBody()
 
     validSMTPPorts := []int{587, 25, 465, 2525}
 
@@ -34,5 +41,26 @@ func Init() {
     )
 
     MainMailer = NewMailer("main", context.Background())
+
+    go MainMailer.Run()
+
+    isRunning = true
+
+    // give some time for MainMailer to start
+    time.Sleep(time.Millisecond * 50)
+}
+
+func Stop() error {
+    if !isRunning {
+        return fmt.Errorf("email module isn't running, hence can't be stopped")
+    }
+
+    defer func(){ isRunning = false }()
+
+    if err := MainMailer.Stop(); err != nil {
+        return err
+    }
+
+    return nil
 }
 
