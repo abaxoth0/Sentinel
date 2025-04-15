@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
-	UserMapper "sentinel/packages/infrastructure/mappers"
+	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	controller "sentinel/packages/presentation/api/http/controllers"
 
 	"github.com/golang-jwt/jwt"

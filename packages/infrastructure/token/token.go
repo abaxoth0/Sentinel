@@ -7,7 +7,6 @@ import (
 	"sentinel/packages/common/config"
 	"sentinel/packages/common/util"
 	UserDTO "sentinel/packages/core/user/DTO"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -15,16 +14,6 @@ import (
 	Error "sentinel/packages/common/errors"
 )
 
-// TODO currently claims used in a wrong way, need to fix that
-//      (e.g. ISS must contain this service id instead of user login)
-const (
-    // UID
-    IdKey string = "jti"
-    // Login
-    IssuerKey string = "iss"
-    // Roles
-    SubjectKey string = "sub"
-)
 
 type SignedToken struct {
     value string
@@ -39,19 +28,41 @@ func (t *SignedToken) TTL() int64 {
     return t.ttl
 }
 
+const (
+    ServiceIdClaimsKey string = "iss"
+    UserIdClaimsKey string = "sub"
+    IssuedAtClaimsKey string = "iat"
+    ExpiresAtClaimsKey string = "exp"
+    UserRolesClaimsKey string = "roles"
+    UserLoginClaimsKey string = "login"
+)
+
+type Claims struct {
+    Roles []string `json:"roles"`
+    Login string `json:"login"`
+
+    jwt.StandardClaims
+}
+
 func newSignedToken(
     payload *UserDTO.Payload,
     ttl time.Duration,
     key ed25519.PrivateKey,
 ) (*SignedToken, *Error.Status) {
-    token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-        IssuedAt: time.Now().Unix(),
-        // For certain values see config
-        ExpiresAt: util.TimestampSinceNow(ttl),
-        Id:        payload.ID,
-        Issuer:    payload.Login,
-        Subject:   strings.Join(payload.Roles, ","),
-    })
+    now := time.Now().Unix()
+    claims := Claims{
+        Login: payload.ID,
+        Roles: payload.Roles,
+        StandardClaims: jwt.StandardClaims{
+            Issuer:    config.App.ServiceID,
+            IssuedAt:  now,
+            NotBefore: now,
+            ExpiresAt: util.TimestampSinceNow(ttl),
+            Subject:   payload.ID,
+        },
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 
     tokenStr, err := token.SignedString(key)
     if err != nil {

@@ -11,7 +11,7 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
 	"sentinel/packages/infrastructure/email"
-	UserMapper "sentinel/packages/infrastructure/mappers"
+	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 

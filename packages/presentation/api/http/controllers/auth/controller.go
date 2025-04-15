@@ -6,7 +6,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
-	UserMapper "sentinel/packages/infrastructure/mappers"
+	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"

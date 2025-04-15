@@ -13,18 +13,24 @@ var invalidTokenPayload = Error.NewStatusError(
 )
 
 func VerifyClaims(claims jwt.MapClaims) *Error.Status {
-	if claims[IdKey] == nil {
+	if claims[ServiceIdClaimsKey] == nil {
 		return invalidTokenPayload
     }
-
-	if claims[IssuerKey] == nil {
+	if claims[ExpiresAtClaimsKey] == nil {
 		return invalidTokenPayload
     }
-
-	if claims[SubjectKey] == nil {
+	if claims[IssuedAtClaimsKey] == nil {
 		return invalidTokenPayload
     }
-
+	if claims[UserIdClaimsKey] == nil {
+		return invalidTokenPayload
+    }
+	if claims[UserLoginClaimsKey] == nil {
+		return invalidTokenPayload
+    }
+	if claims[UserRolesClaimsKey] == nil {
+		return invalidTokenPayload
+    }
 	return nil
 }
 
