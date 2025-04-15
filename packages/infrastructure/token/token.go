@@ -1,11 +1,12 @@
 package token
 
 import (
+	"crypto/ed25519"
+	"fmt"
 	"log"
-	"net/http"
-	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/common/config"
 	"sentinel/packages/common/util"
+	UserDTO "sentinel/packages/core/user/DTO"
 	"strings"
 	"time"
 
@@ -14,130 +15,130 @@ import (
 	Error "sentinel/packages/common/errors"
 )
 
+// TODO currently claims used in a wrong way, need to fix that
+//      (e.g. ISS must contain this service id instead of user login)
+const (
+    // UID
+    IdKey string = "jti"
+    // Login
+    IssuerKey string = "iss"
+    // Roles
+    SubjectKey string = "sub"
+)
+
 type SignedToken struct {
-	Value string
-	TTL   int64
+    value string
+    ttl   int64
+}
+
+func (t *SignedToken) String() string {
+    return t.value
+}
+
+func (t *SignedToken) TTL() int64 {
+    return t.ttl
+}
+
+func newSignedToken(
+    payload *UserDTO.Payload,
+    ttl time.Duration,
+    key ed25519.PrivateKey,
+) (*SignedToken, *Error.Status) {
+    token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
+        IssuedAt: time.Now().Unix(),
+        // For certain values see config
+        ExpiresAt: util.TimestampSinceNow(ttl),
+        Id:        payload.ID,
+        Issuer:    payload.Login,
+        Subject:   strings.Join(payload.Roles, ","),
+    })
+
+    tokenStr, err := token.SignedString(key)
+    if err != nil {
+        log.Printf("[ JWT ] Failed to sign token: %s\n", err.Error())
+        return nil, Error.StatusInternalError
+    }
+
+    return &SignedToken{tokenStr, ttl.Milliseconds()}, nil
+}
+
+func NewAccessToken(payload *UserDTO.Payload) (*SignedToken, *Error.Status) {
+    return newSignedToken(
+        payload,
+        config.Auth.AccessTokenTTL(),
+        config.Secret.AccessTokenPrivateKey,
+    )
+}
+
+func NewRefreshToken(payload *UserDTO.Payload) (*SignedToken, *Error.Status) {
+    return newSignedToken(
+        payload,
+        config.Auth.RefreshTokenTTL(),
+        config.Secret.RefreshTokenPrivateKey,
+    )
 }
 
 type AccessToken = SignedToken
 type RefreshToken = SignedToken
 
-const RefreshTokenKey string = "refreshToken"
+// Both tokens types are aliases for token.SignedToken
+func NewAuthTokens(payload *UserDTO.Payload) (*AccessToken, *RefreshToken, *Error.Status) {
+    var (
+        atk *SignedToken
+        rtk *SignedToken
+        err *Error.Status
+    )
 
-// UID
-const IdKey string = "jti"
-
-// Login
-const IssuerKey string = "iss"
-
-// Roles
-const SubjectKey string = "sub"
-
-func newTokenBuilder(payload *UserDTO.Payload, TTL int64) *jwt.Token {
-    return jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.StandardClaims{
-        IssuedAt: time.Now().Unix(),
-        // For certain values see config
-        ExpiresAt: TTL,
-        Id:        payload.ID,
-        Issuer:    payload.Login,
-        Subject:   strings.Join(payload.Roles, ","),
-    })
-}
-
-// Generate access and refresh tokens.
-func Generate(payload *UserDTO.Payload) (*AccessToken, *RefreshToken) {
-	accessTokenBuilder := newTokenBuilder(payload, generateAccessTokenTtlTimestamp())
-	refreshTokenBuilder := newTokenBuilder(payload, generateRefreshTokenTtlTimestamp())
-
-	accessTokenStr, e := accessTokenBuilder.SignedString(config.Secret.AccessTokenPrivateKey)
-	refreshTokenStr, err := refreshTokenBuilder.SignedString(config.Secret.RefreshTokenPrivateKey)
-
-	if e != nil {
-		log.Fatalf("[ CRITICAL ERROR ] Failed to sign access token.\n%s", e)
-	}
-
-	if err != nil {
-		log.Fatalf("[ CRITICAL ERROR ] Failed to sign refresh token.\n%s", err)
-	}
-
-	accessToken := &SignedToken{
-		Value: accessTokenStr,
-		TTL:   config.JWT.AccessTokenTTL().Milliseconds(),
-	}
-
-	refreshToken := &SignedToken{
-		Value: refreshTokenStr,
-		TTL:   config.JWT.RefreshTokenTTL().Milliseconds(),
-	}
-
-	log.Println("[ JWT ] New pair of tokens has been generated")
-
-	return accessToken, refreshToken
-}
-
-// Retrieves and validates access token from authorization header.
-//
-// Returns token pointer and nil if valid and not expired token was found.
-// Otherwise returns empty token pointer and error.
-func GetAccessToken(authHeader string) (*jwt.Token, *Error.Status) {
-	if authHeader == "" {
-		return nil, unauthorized
-	}
-
-	accessTokenStr := strings.Split(authHeader, "Bearer ")[1]
-
-    if accessTokenStr == "null" {
-        return nil, invalidAccessToken
+    atk, err = NewAccessToken(payload)
+    if err != nil {
+        return nil, nil, err
     }
 
-	token, expired := parseAccessToken(accessTokenStr)
+    rtk, err = NewRefreshToken(payload)
+    if err != nil {
+        return nil, nil, err
+    }
 
-	if !token.Valid {
-		return nil, invalidAccessToken
-	}
+    return atk, rtk, nil
+}
 
-	if expired {
-		return nil, accessTokenExpired
-	}
+// Parses and validates given token
+func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Error.Status) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+        }
+		return key, nil
+	})
+    if err != nil {
+        ve, ok := err.(*jwt.ValidationError)
+        if !ok {
+            log.Printf("[ UNKNOWN ERROR ] Failed to parse signed token: %s\n", err.Error())
+            return nil, Error.StatusInternalError
+        }
+
+        switch {
+        case ve.Errors & jwt.ValidationErrorMalformed != 0:
+            return nil, TokenMalformed
+        case ve.Errors & jwt.ValidationErrorExpired != 0:
+            return nil, TokenExpired
+        case ve.Errors & jwt.ValidationErrorNotValidYet != 0:
+            // Will never trigger for our current tokens since we don't set NBF
+            return nil, TokenModified
+        case ve.Errors & jwt.ValidationErrorSignatureInvalid != 0:
+            // Check if someone tampered with the token
+            return nil, TokenModified
+        default:
+            log.Printf("[ UNKNOWN ERROR ] Failed to parse signed token: %s\n", err.Error())
+            return nil, InvalidToken
+        }
+    }
+
+    exp := !token.Claims.(jwt.MapClaims).VerifyExpiresAt(util.UnixTimeNow(), true)
+    if exp {
+        return nil, TokenExpired
+    }
 
 	return token, nil
-}
-
-// Retrieves and validates refresh token from auth cookie.
-//
-// Returns pointer to token and nil if valid and not expired token was found.
-// Otherwise returns empty pointer to token and *Error.Status.
-func GetRefreshToken(cookie *http.Cookie) (*jwt.Token, *Error.Status) {
-	token, expired := parseRefreshToken(cookie.Value)
-
-	if !token.Valid {
-		return nil, invalidRefreshToken
-	}
-
-	if expired {
-		return nil, refreshTokenExpired
-	}
-
-	return token, nil
-}
-
-func parseAccessToken(accessToken string) (*jwt.Token, bool) {
-	token, _ := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
-		return config.Secret.AccessTokenPublicKey, nil
-	})
-
-	exp := !token.Claims.(jwt.MapClaims).VerifyExpiresAt(util.UnixTimeNow(), true)
-
-	return token, exp
-}
-
-func parseRefreshToken(refreshToken string) (*jwt.Token, bool) {
-	token, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
-		return config.Secret.RefreshTokenPublicKey, nil
-	})
-
-	exp := !token.Claims.(jwt.MapClaims).VerifyExpiresAt(util.UnixTimeNow(), true)
-
-	return token, exp
 }
 

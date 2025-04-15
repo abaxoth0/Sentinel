@@ -29,7 +29,7 @@ func Init() {
 
     Host = h
 
-	s, err := Host.GetSchema(config.Authorization.ServiceID)
+	s, err := Host.GetSchema(config.App.ServiceID)
 
 	if err != nil {
 		panic(err)

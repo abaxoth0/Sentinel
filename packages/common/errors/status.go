@@ -72,3 +72,8 @@ var StatusTimeout = NewStatusError(
     http.StatusRequestTimeout,
 )
 
+var StatusUnauthorized = NewStatusError(
+    "Вы не авторизованы",
+    http.StatusUnauthorized,
+)
+

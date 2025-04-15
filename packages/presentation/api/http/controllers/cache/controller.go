@@ -5,7 +5,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers"
-	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 
 	"github.com/golang-jwt/jwt"
@@ -13,8 +12,7 @@ import (
 )
 
 func Drop(ctx echo.Context) error {
-    accessToken, err := token.GetAccessToken(ctx.Request().Header.Get("Authorization"))
-
+    accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }

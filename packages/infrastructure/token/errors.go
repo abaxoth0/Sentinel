@@ -5,35 +5,35 @@ import (
 	Error "sentinel/packages/common/errors"
 )
 
+// TODO handle all this errors
 
-var accessTokenExpired = Error.NewStatusError(
-    "Access Token expired",
+var TokenMalformed = Error.NewStatusError(
+    "Token is malformed or has invalid format",
+    // According to RFC 7235 (https://datatracker.ietf.org/doc/html/rfc7235#section-3.1)
+    // 401 response status code indicates that the request lacks VALID authentication credentials,
+    // no matter if token was invalid, missing or auth creditinals is invalid.
     http.StatusUnauthorized,
 )
 
-var invalidAccessToken = Error.NewStatusError(
-    "Invalid Access Token",
-    http.StatusBadRequest,
-)
-
-var unauthorized = Error.NewStatusError(
-    "Вы не авторизованы",
+var TokenExpired = Error.NewStatusError(
+    "Token expired",
     http.StatusUnauthorized,
 )
 
-var invalidRefreshToken = Error.NewStatusError(
-    "Invalid Refresh Token",
+var InvalidToken = Error.NewStatusError(
+    "Invalid Token",
     http.StatusBadRequest,
 )
 
-var refreshTokenExpired = Error.NewStatusError(
-    "Refresh Token Expired",
-    // Not sure that status 409 is OK for this case,
-    // currently this tells user that there are conflict with server and him,
-    // and reason of conflict in next: User assumes that he authorized but it's
-    // wrong, cuz refresh token expired.
-    // More likely will be better to use status 401 (unathorized) in this case,
-    // but once againg - i'm not sure.
-    http.StatusConflict,
+var TokenModified = Error.NewStatusError(
+    "Invalid Token (and you know that)",
+    http.StatusBadRequest,
 )
+
+func IsTokenError(err *Error.Status) bool {
+    return err == TokenMalformed ||
+           err == TokenExpired ||
+           err == TokenModified ||
+           err == InvalidToken
+}
 

@@ -12,7 +12,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authentication"
 	"sentinel/packages/infrastructure/email"
 	UserMapper "sentinel/packages/infrastructure/mappers"
-	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 
@@ -42,9 +41,7 @@ func getUserIdFromPath(ctx echo.Context) (string, *echo.HTTPError) {
 }
 
 func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
-    authHeader := ctx.Request().Header.Get("Authorization")
-    accessToken, err := token.GetAccessToken(authHeader)
-
+    accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
         return nil, controller.ConvertErrorStatusToHTTP(err)
     }

@@ -37,21 +37,17 @@ type httpServerConfig struct {
     AllowedOrigins []string `yaml:"http-allowed-origins" validate:"required,min=1"`
 }
 
-type jwtConfing struct {
+type authConfing struct {
     RawAccessTokenTTL  string `yaml:"access-token-ttl" validate:"required"`
     RawRefreshTokenTTL string `yaml:"refresh-token-ttl" validate:"required"`
 }
 
-func (c *jwtConfing) AccessTokenTTL() time.Duration {
+func (c *authConfing) AccessTokenTTL() time.Duration {
     return parseDuration(c.RawAccessTokenTTL)
 }
 
-func (c *jwtConfing) RefreshTokenTTL() time.Duration {
+func (c *authConfing) RefreshTokenTTL() time.Duration {
     return parseDuration(c.RawRefreshTokenTTL)
-}
-
-type authorizationConfig struct {
-    ServiceID string `yaml:"service-id" validate:"required"`
 }
 
 type cacheConfig struct {
@@ -78,6 +74,7 @@ type debugConfig struct {
 }
 
 type appConfig struct {
+    ServiceID string `yaml:"service-id" validate:"required"`
     IsLoginEmail bool `yaml:"is-login-email" validate:"exists"`
     RawActivationTokenTTL string `yaml:"user-activation-token-ttl" validate:"required"`
 }
@@ -94,8 +91,7 @@ func (c *appConfig) ActivationTokenTTL() time.Duration {
 type configs struct {
     dbConfig `yaml:",inline"`
     httpServerConfig `yaml:",inline"`
-    jwtConfing `yaml:",inline"`
-    authorizationConfig `yaml:",inline"`
+    authConfing `yaml:",inline"`
     cacheConfig `yaml:",inline"`
     debugConfig `yaml:",inline"`
     appConfig `yaml:",inline"`
@@ -104,8 +100,7 @@ type configs struct {
 
 var DB *dbConfig
 var HTTP *httpServerConfig
-var JWT *jwtConfing
-var Authorization *authorizationConfig
+var Auth *authConfing
 var Cache *cacheConfig
 var Debug *debugConfig
 var App *appConfig
@@ -173,8 +168,7 @@ func Init() {
 
     DB = &configs.dbConfig
     HTTP = &configs.httpServerConfig
-    JWT = &configs.jwtConfing
-    Authorization = &configs.authorizationConfig
+    Auth = &configs.authConfing
     Cache = &configs.cacheConfig
     Debug = &configs.debugConfig
     App = &configs.appConfig

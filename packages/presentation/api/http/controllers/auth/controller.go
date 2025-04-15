@@ -23,7 +23,6 @@ func Login(ctx echo.Context) error {
     }
 
     user, err := DB.Database.FindAnyUserByLogin(body.Login)
-
     if err != nil {
         if err.Side() == Error.ClientSide {
             return echo.NewHTTPError(
@@ -38,11 +37,16 @@ func Login(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    accessToken, refreshToken := token.Generate(&UserDTO.Payload{
+    payload := &UserDTO.Payload{
         ID: user.ID,
         Login: user.Login,
         Roles: user.Roles,
-    })
+    }
+
+    accessToken, refreshToken, err := token.NewAuthTokens(payload)
+    if err != nil {
+        return controller.ConvertErrorStatusToHTTP(err)
+    }
 
     ctx.SetCookie(newAuthCookie(refreshToken))
 
@@ -50,47 +54,49 @@ func Login(ctx echo.Context) error {
         http.StatusOK,
         datamodel.TokenResponseBody{
             Message: "Пользователь успешно авторизован",
-            AccessToken: accessToken.Value,
-            ExpiresIn: int(accessToken.TTL) / 1000,
+            AccessToken: accessToken.String(),
+            ExpiresIn: int(accessToken.TTL()) / 1000,
         },
     )
 }
 
 func Logout(ctx echo.Context) error {
-    authCookie, err := getAuthCookie(ctx)
-
+    authCookie, err := controller.GetAuthCookie(ctx)
     if err != nil {
         return err
     }
 
-    deleteCookie(ctx, authCookie)
+    controller.DeleteCookie(ctx, authCookie)
 
     return ctx.NoContent(http.StatusOK)
 }
 
 func Refresh(ctx echo.Context) error {
-    authCookie, err := getAuthCookie(ctx)
-
-    if err != nil {
-        return err
+    currentRefreshToken, e := controller.GetRefreshToken(ctx)
+    if e != nil {
+        if token.IsTokenError(e) {
+            authCookie, err := controller.GetAuthCookie(ctx)
+            if err != nil {
+                return err
+            }
+            controller.DeleteCookie(ctx, authCookie)
+        }
+        return echo.NewHTTPError(
+            http.StatusUnauthorized,
+            e.Error(),
+        )
     }
 
-    oldRefreshToken, e := token.GetRefreshToken(authCookie)
-
-    // if refresh token is either invalid or expired
+    payload, e := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(jwt.MapClaims))
     if e != nil {
-        deleteCookie(ctx, authCookie)
-
         return controller.ConvertErrorStatusToHTTP(e)
     }
 
-    payload, e := UserMapper.PayloadFromClaims(oldRefreshToken.Claims.(jwt.MapClaims))
-
+    accessToken, refreshToken, e := token.NewAuthTokens(payload)
     if e != nil {
         return controller.ConvertErrorStatusToHTTP(e)
     }
 
-    accessToken, refreshToken := token.Generate(payload)
 
     ctx.SetCookie(newAuthCookie(refreshToken))
 
@@ -98,23 +104,19 @@ func Refresh(ctx echo.Context) error {
         http.StatusOK,
         datamodel.TokenResponseBody{
             Message: "Токены успешно обновлены",
-            AccessToken: accessToken.Value,
-            ExpiresIn: int(accessToken.TTL) / 1000,
+            AccessToken: accessToken.String(),
+            ExpiresIn: int(accessToken.TTL()) / 1000,
         },
     )
 }
 
 func Verify(ctx echo.Context) error {
-    authHeader := ctx.Request().Header.Get("Authorization")
-
-    accessToken, err := token.GetAccessToken(authHeader)
-
+    accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
     payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
-
     if err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
