@@ -10,8 +10,8 @@ type MessageResponseBody struct {
 	Message string `json:"message"`
 }
 
-type LoginExistanceResponseBody struct {
-	Exists bool `json:"exists"`
+type IsLoginAvailableResponseBody struct {
+	Available bool `json:"available"`
 }
 
 type RolesResponseBody struct {

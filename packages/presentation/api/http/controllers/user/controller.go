@@ -254,7 +254,7 @@ func IsLoginAvailable(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    exists, e := DB.Database.IsLoginAvailable(login)
+    available, e := DB.Database.IsLoginAvailable(login)
 
     if e != nil {
         return controller.ConvertErrorStatusToHTTP(e)
@@ -262,8 +262,8 @@ func IsLoginAvailable(ctx echo.Context) error {
 
     return ctx.JSON(
         http.StatusOK,
-        datamodel.LoginExistanceResponseBody{
-            Exists: exists,
+        datamodel.IsLoginAvailableResponseBody{
+            Available: available,
         },
     )
 }
