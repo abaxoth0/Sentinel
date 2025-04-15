@@ -51,7 +51,7 @@ func newSignedToken(
 ) (*SignedToken, *Error.Status) {
     now := time.Now().Unix()
     claims := Claims{
-        Login: payload.ID,
+        Login: payload.Login,
         Roles: payload.Roles,
         StandardClaims: jwt.StandardClaims{
             Issuer:    config.App.ServiceID,
