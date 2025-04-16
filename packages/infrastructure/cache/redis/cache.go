@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/presentation/data/json"
@@ -48,15 +49,21 @@ func (d *driver) Connect() {
     d.isConnected = true
 }
 
-func (d *driver) Close() error {
+func (d *driver) Close() *Error.Status {
     if !d.isConnected {
-        return fmt.Errorf("connection not established")
+        return Error.NewStatusError(
+            "connection not established",
+            http.StatusInternalServerError,
+        )
     }
 
     log.Println("[ CACHE ] Disconnecting from DB...")
 
     if err := d.client.Close(); err != nil {
-        return err
+        return Error.NewStatusError(
+            err.Error(),
+            http.StatusInternalServerError,
+        )
     }
 
     log.Println("[ CACHE ] Disconnecting from DB: OK")
@@ -75,17 +82,21 @@ func longTimeoutContext() (context.Context, context.CancelFunc) {
     return context.WithTimeout(context.Background(), config.Cache.OperationTimeout() * 5)
 }
 
-func logged(action string, err error) error {
+// Logs given action and error.
+// Returns err converted to *Error.Status.
+func logAndConvert(action string, err error) *Error.Status {
 	if err != nil {
         if err == context.DeadlineExceeded {
             log.Println("[ CACHE ] TIMEOUT: " + action)
         } else {
             log.Printf("[ CACHE ] ERROR: Failed to '%s':\n%v\n", action, err)
         }
-	} else {
-		log.Println("[ CACHE ] " + action)
-    }
-    return err
+        return Error.StatusInternalError
+	}
+
+    log.Println("[ CACHE ] " + action)
+
+    return nil
 }
 
 func (d *driver) Get(key string) (string, bool) {
@@ -93,13 +104,12 @@ func (d *driver) Get(key string) (string, bool) {
     defer cancel()
 
 	cachedData, err := d.client.Get(ctx, key).Result()
-
     if err == redis.Nil {
         log.Println("[ CACHE ] Miss: " + key)
         return "", false
     }
 
-    return cachedData, logged("Get: " + key, err) == nil
+    return cachedData, logAndConvert("Get: " + key, err) == nil
 }
 
 // go-redis driver can handle only this types:
@@ -107,7 +117,7 @@ func (d *driver) Get(key string) (string, bool) {
 //
 // use EncodeAndSet in case if value doesn't belong to any of this types
 // (like structs, hashmaps, slices etc)
-func(d *driver) Set(key string, value any) error {
+func(d *driver) Set(key string, value any) *Error.Status {
     // Alas, generics can't be used in methods
     // (it can be passed to a struct, but thats kinda strange and
     //  even so i failed to make it works as i want, so using type switch instead)
@@ -115,7 +125,11 @@ func(d *driver) Set(key string, value any) error {
     case string, bool, []byte, int, int64, float64, time.Time:
         // Type allowed, do nothing and just go forward
     default:
-        return logged("Set: ", fmt.Errorf("invalid cache value type: %T", value))
+        err := Error.NewStatusError(
+            fmt.Sprintf("invalid cache value type: %T", value),
+            http.StatusInternalServerError,
+        )
+        return logAndConvert("Set: ", err)
     }
 
     ctx, cancel := defaultTimeoutContext()
@@ -123,14 +137,17 @@ func(d *driver) Set(key string, value any) error {
 
 	err := d.client.Set(ctx, key, value, config.Cache.TTL()).Err()
 
-   return logged("Set: " + key, err)
+   return logAndConvert("Set: " + key, err)
 }
 
-func (d *driver) EncodeAndSet(key string, value any) error {
+func (d *driver) EncodeAndSet(key string, value any) *Error.Status {
     encodedData, err := json.Encode(value)
-
     if err != nil {
-        return err
+        log.Println("[ ERROR ] JSON encoding failed: " + err.Error())
+        return Error.NewStatusError(
+            "JSON encoding failed",
+            http.StatusInternalServerError,
+        )
     }
 
     if err := d.Set(key, encodedData); err != nil {
@@ -140,27 +157,29 @@ func (d *driver) EncodeAndSet(key string, value any) error {
     return nil
 }
 
-func (d *driver) Delete(keys ...string) error {
+func (d *driver) Delete(keys ...string) *Error.Status {
     ctx, cancel := defaultTimeoutContext()
     defer cancel()
 
 	err := d.client.Unlink(ctx, keys...).Err()
 
-    return logged("Delete: " + strings.Join(keys, ","), err)
+    return logAndConvert("Delete: " + strings.Join(keys, ","), err)
 }
 
-func (d *driver) FlushAll() error {
+func (d *driver) FlushAll() *Error.Status {
     ctx, cancel := defaultTimeoutContext()
     defer cancel()
 
 	err := d.client.FlushAll(ctx).Err()
 
-    return logged("Flush All", err)
+    return logAndConvert("Flush All", err)
 }
 
 func (d *driver) DeleteOnError(err *Error.Status, keys ...string) *Error.Status {
     if err == nil {
-        d.Delete(keys...)
+        if e := d.Delete(keys...); e != nil {
+            return e
+        }
     }
 
     return err
@@ -168,7 +187,7 @@ func (d *driver) DeleteOnError(err *Error.Status, keys ...string) *Error.Status 
 
 var deletePatternAction = "Delete Pattern: "
 
-func (d *driver) DeletePattern(pattern string) error {
+func (d *driver) DeletePattern(pattern string) *Error.Status {
     // Initialize cursor for iteration
     var cursor uint64
     var keys []string
@@ -180,13 +199,17 @@ func (d *driver) DeletePattern(pattern string) error {
     // Use SCAN to find all keys matching the pattern
     for {
         if err := ctx.Err(); err != nil {
-            return logged(deletePatternAction, err)
+            return logAndConvert(deletePatternAction, err)
         }
 
         keys, cursor, err = d.client.Scan(ctx, cursor, pattern, 100).Result()
 
         if err != nil {
-            return logged(deletePatternAction, fmt.Errorf("error scanning keys: %w", err))
+            e := Error.NewStatusError(
+                fmt.Sprintf("error scanning keys: %s", err.Error()),
+                http.StatusInternalServerError,
+            )
+            return logAndConvert(deletePatternAction, e)
         }
 
         // Delete all found keys in a pipeline for efficiency
@@ -201,9 +224,13 @@ func (d *driver) DeletePattern(pattern string) error {
 
             if err != nil {
                 if ctxErr := ctx.Err(); ctxErr != nil {
-                    return logged(deletePatternAction, ctxErr)
+                    return logAndConvert(deletePatternAction, ctxErr)
                 }
-                return logged(deletePatternAction, fmt.Errorf("error deleting keys: %w", err))
+                e := Error.NewStatusError(
+                    fmt.Sprintf("error deleting keys: %s", err.Error()),
+                    http.StatusInternalServerError,
+                )
+                return logAndConvert(deletePatternAction, e)
             }
 
             log.Printf("[ CACHE ] Deleted %d keys with pattern: %s", len(keys), pattern)
@@ -211,14 +238,14 @@ func (d *driver) DeletePattern(pattern string) error {
 
         // Exit when cursor is 0 (no more keys to scan)
         if cursor == 0 {
-            return logged(deletePatternAction, nil)
+            return logAndConvert(deletePatternAction, nil)
         }
     }
 }
 
 var progressiveDeletePatternAction = "Progressive Delete Pattern"
 
-func (d *driver) ProgressiveDeletePattern(pattern string) error {
+func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
     const scanBatchSize = 500
     const unlinkBatchSize = 1000
     var cursor uint64
@@ -231,16 +258,20 @@ func (d *driver) ProgressiveDeletePattern(pattern string) error {
 
     for {
         if err := scanCtx.Err(); err != nil {
-            return logged(progressiveDeletePatternAction, err)
+            return logAndConvert(progressiveDeletePatternAction, err)
         }
 
         keys, nextCursor, err := d.client.Scan(scanCtx, cursor, pattern, scanBatchSize).Result()
 
         if err != nil {
             if ctxErr := scanCtx.Err(); ctxErr != nil {
-                return logged(progressiveDeletePatternAction, ctxErr)
+                return logAndConvert(progressiveDeletePatternAction, err)
             }
-            return logged(progressiveDeletePatternAction, fmt.Errorf("redis scan failed: %w", err))
+            e := Error.NewStatusError(
+                fmt.Sprintf("redis scan failed: %s", err.Error()),
+                http.StatusInternalServerError,
+            )
+            return logAndConvert(progressiveDeletePatternAction, e)
         }
 
         batch = append(batch, keys...)
@@ -253,9 +284,13 @@ func (d *driver) ProgressiveDeletePattern(pattern string) error {
 
             if _, err := d.client.Unlink(ctx, batch...).Result(); err != nil {
                 if ctxErr := ctx.Err(); ctxErr != nil {
-                    return logged(progressiveDeletePatternAction, ctxErr)
+                    return logAndConvert(progressiveDeletePatternAction, err)
                 }
-                return logged(progressiveDeletePatternAction, fmt.Errorf("batch unlink failed: %w", err))
+                e := Error.NewStatusError(
+                    fmt.Sprintf("batch unlink failed: %s", err.Error()),
+                    http.StatusInternalServerError,
+                )
+                return logAndConvert(progressiveDeletePatternAction, e)
             }
 
             keysDeleted += len(batch)

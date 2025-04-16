@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	UserDTO "sentinel/packages/core/user/DTO"
-	Error "sentinel/packages/common/errors"
-	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/common/config"
+	Error "sentinel/packages/common/errors"
+	UserDTO "sentinel/packages/core/user/DTO"
+	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/presentation/data/json"
 
 	"github.com/jackc/pgx/v5"
@@ -123,8 +123,10 @@ func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status)
 
         // if json decoding failed thats mean more likely it was invalid,
         // so deleting it from cache to prevent futher cache errors.
-        // if it keep repeating even after this, then smth really went wrong in json package.
-        cache.Client.Delete(cacheKey)
+        // if it keep repeating even after this, then smth really went wrong.
+        if e := cache.Client.Delete(cacheKey); e != nil {
+            return nil, e
+        }
     }
 
     scan, err := q.Row()
