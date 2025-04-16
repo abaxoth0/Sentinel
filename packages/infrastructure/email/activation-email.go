@@ -27,7 +27,7 @@ var activationEmailBody string
 
 func initActivationEmailBody() {
     values := activationEmailTemplateValues{
-        ActivationURL: api.GetBaseURL() + "/activate/" + activationTokenPlaceholder,
+        ActivationURL: api.GetBaseURL() + "/user/activation/" + activationTokenPlaceholder,
     }
 
     b, err := parseTemplate(activationEmailTemplate, values)
@@ -84,7 +84,7 @@ func (e *UserActivationEmail) Send() *Error.Status {
     email.SetHeader("To", e.To)
     email.SetHeader("Subject", "Account activation")
 
-    body := strings.ReplaceAll(activationEmailBody, activationTokenPlaceholder, e.Token)
+    body := strings.Replace(activationEmailBody, activationTokenPlaceholder, e.Token, 1)
 
     email.SetBody("text/html", body)
 

@@ -113,6 +113,17 @@ func NewAuthTokens(payload *UserDTO.Payload) (*AccessToken, *RefreshToken, *Erro
     return atk, rtk, nil
 }
 
+func NewActivationToken(uid string, login string, roles []string) (*SignedToken, *Error.Status) {
+    return newSignedToken(
+        &UserDTO.Payload{
+            ID: uid,
+            Roles: roles,
+        },
+        config.App.ActivationTokenTTL(),
+        config.Secret.ActivationTokenPrivateKey,
+    )
+}
+
 // Parses and validates given token
 func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Error.Status) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {

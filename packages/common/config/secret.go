@@ -11,16 +11,18 @@ import (
 )
 
 type secrets struct {
-    DatabaseURI            string             `validate:"required"`
-    AccessTokenPrivateKey  ed25519.PrivateKey `validate:"required"`
-    AccessTokenPublicKey   ed25519.PublicKey  `validate:"required"`
-    RefreshTokenPrivateKey ed25519.PrivateKey `validate:"required"`
-    RefreshTokenPublicKey  ed25519.PublicKey  `validate:"required"`
-    CacheURI               string             `validate:"required"`
-    CachePassword          string             `validate:"required"`
-    CacheDB                int                `validate:"exists"`
-    MailerEmailPassword    string             `validate:"required"`
-    MailerEmail            string             `validate:"required"`
+    DatabaseURI               string             `validate:"required"`
+    AccessTokenPrivateKey     ed25519.PrivateKey `validate:"required"`
+    AccessTokenPublicKey      ed25519.PublicKey  `validate:"required"`
+    RefreshTokenPrivateKey    ed25519.PrivateKey `validate:"required"`
+    RefreshTokenPublicKey     ed25519.PublicKey  `validate:"required"`
+    ActivationTokenPrivateKey ed25519.PrivateKey `validate:"required"`
+    ActivationTokenPublicKey  ed25519.PublicKey `validate:"required"`
+    CacheURI                  string             `validate:"required"`
+    CachePassword             string             `validate:"required"`
+    CacheDB                   int                `validate:"exists"`
+    MailerEmailPassword       string             `validate:"required"`
+    MailerEmail               string             `validate:"required"`
 }
 
 var Secret secrets
@@ -45,6 +47,7 @@ func loadSecrets() {
         "DB_URI",
         "ACCESS_TOKEN_SECRET",
         "REFRESH_TOKEN_SECRET",
+        "ACTIVATION_TOKEN_SECRET",
         "CACHE_URI",
         "CACHE_PASSWORD",
         "CACHE_DB",
@@ -74,25 +77,30 @@ func loadSecrets() {
 
     Secret.DatabaseURI = getEnv("DB_URI")
 
-    // Both must be 32 bytes long
+    // All must be 32 bytes long
     AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
     RefreshTokenSecret := []byte(getEnv("REFRESH_TOKEN_SECRET"))
+    ActivationTokenSecret := []byte(getEnv("ACTIVATION_TOKEN_SECRET"))
 
     if len(AccessTokenSecret) != 32 {
-        log.Fatalln("[ CONFIG ] Invalid length of access token secret (must be 32 bytes long)\n", err)
+        log.Fatalln("[ CONFIG ] Invalid length of access token secret (must be 32 bytes long)")
     }
-
     if len(RefreshTokenSecret) != 32 {
-        log.Fatalln("[ CONFIG ] Invalid length of refresh token secret (must be 32 bytes long)\n", err)
+        log.Fatalln("[ CONFIG ] Invalid length of refresh token secret (must be 32 bytes long)")
+    }
+    if len(ActivationTokenSecret) != 32 {
+        log.Fatalln("[ CONFIG ] Invalid length of activation token secret (must be 32 bytes long)")
     }
 
     Secret.AccessTokenPrivateKey = ed25519.NewKeyFromSeed(AccessTokenSecret)
     Secret.RefreshTokenPrivateKey = ed25519.NewKeyFromSeed(RefreshTokenSecret)
+    Secret.ActivationTokenPrivateKey = ed25519.NewKeyFromSeed(ActivationTokenSecret)
 
     // `priv.Public()` actually returns `ed25519.PublicKey` type, not `crypto.PublicKey`.
     // Tested via `reflect.TypeOf()`
     Secret.AccessTokenPublicKey = Secret.AccessTokenPrivateKey.Public().(ed25519.PublicKey)
     Secret.RefreshTokenPublicKey = Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
+    Secret.ActivationTokenPublicKey = Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
 
     log.Println("[ CONFIG ] Loading environment vairables: OK")
 

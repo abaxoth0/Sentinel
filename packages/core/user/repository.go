@@ -29,7 +29,8 @@ type seeker interface {
 
 // Responsible for CUD in CRUD
 type repository interface {
-	Create(login string, password string) *Error.Status
+    // Returns user id if error is nil, otherwise returns empty string and error
+	Create(login string, password string) (string, *Error.Status)
 
 	SoftDelete(filter *UserDTO.Filter) *Error.Status
 
@@ -44,5 +45,7 @@ type repository interface {
 	ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status
 
 	ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status
+
+    Activate(token string) *Error.Status
 }
 

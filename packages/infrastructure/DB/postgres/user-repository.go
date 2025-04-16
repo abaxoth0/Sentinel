@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"log"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -8,8 +9,11 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
+	UserMapper "sentinel/packages/infrastructure/mappers/user"
+	"sentinel/packages/infrastructure/token"
 	"slices"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
@@ -37,37 +41,35 @@ func (_ *repository) checkLogin(login string) *Error.Status {
     return loginAlreadyInUse
 }
 
-func (r *repository) Create(login string, password string) (*Error.Status) {
+func (r *repository) Create(login string, password string) (string, *Error.Status) {
     if err := r.checkLogin(login); err != nil {
-        return err
+        return "", err
     }
 
 	hashedPassword, err := hashPassword(password)
 
     if err != nil {
-        return nil
+        return "", nil
     }
 
-    var query executable
+    uid := uuid.New()
 
-    createUser := newQuery(
+    query := newQuery(
         `INSERT INTO "user" (id, login, password, roles, is_active) VALUES
-         ($1, $2, $3, $4, $5);`,
-        uuid.New(), login, hashedPassword, []string{authorization.Host.OriginRoleName}, !config.App.IsLoginEmail,
+        ($1, $2, $3, $4, $5);`,
+        uid, login, hashedPassword, []string{authorization.Host.OriginRoleName}, !config.App.IsLoginEmail,
     )
 
-    if config.App.IsLoginEmail {
-        query = newTransaction(createUser, newActivationQuery(login))
-    } else {
-        query = createUser
-    }
-
-    return cache.Client.DeleteOnError(
+    if err = cache.Client.DeleteOnError(
         query.Exec(),
         // TODO try to replace that everywhere with cache.client.DeletePattern
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
-    )
+    ); err != nil {
+        return "", err
+    }
+
+    return uid.String(), nil
 }
 
 func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
@@ -335,5 +337,60 @@ func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Err
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
+}
+
+func (_ *repository) Activate(tk string) *Error.Status {
+    t, err := token.ParseSingedToken(tk, config.Secret.ActivationTokenPublicKey)
+    if err != nil {
+        return err
+    }
+
+    payload, err := UserMapper.PayloadFromClaims(t.Claims.(jwt.MapClaims))
+    if err != nil {
+        return err
+    }
+
+    user, err := driver.FindUserByID(payload.ID)
+    if err != nil {
+        return err
+    }
+    if user.IsActive {
+        return Error.NewStatusError(
+            "User already active",
+            http.StatusConflict,
+        )
+    }
+
+    filter :=  &UserDTO.Filter{
+        TargetUID: user.ID,
+        RequesterUID: user.ID,
+        RequesterRoles: user.Roles,
+    }
+
+    audit := newAudit(updatedOperation, filter, user)
+
+    tx := newTransaction(
+        newQuery(
+            `UPDATE "user" SET is_active = true
+             WHERE login = $1 AND is_active = false;`,
+             user.Login,
+        ),
+        newAuditQuery(&audit),
+    )
+    if err := tx.Exec(); err != nil {
+        return err
+    }
+
+    if err := cache.Client.Delete(
+        cache.KeyBase[cache.UserById] + filter.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserByLogin] + user.Login,
+        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
+    ); err != nil {
+        log.Printf("[ ERROR ] Failed to delete cache: %s\n", err.Error())
+        return Error.StatusInternalError
+    }
+
+    return nil
 }
 

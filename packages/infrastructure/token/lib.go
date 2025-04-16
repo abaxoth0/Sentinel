@@ -8,7 +8,7 @@ import (
 )
 
 var invalidTokenPayload = Error.NewStatusError(
-    "Ошибка авторизации (invalid token payload)",
+    "Invalid token payload",
     http.StatusBadRequest,
 )
 

@@ -10,8 +10,10 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
+	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/email"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
+	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 
@@ -63,21 +65,27 @@ func Create(ctx echo.Context) error {
         return err
     }
 
-    if err := DB.Database.Create(body.Login, body.Password); err != nil {
+    uid, err := DB.Database.Create(body.Login, body.Password)
+    if err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if config.App.IsLoginEmail {
-        activ, err := DB.Database.FindActivationByUserLogin(body.Login)
+        tk, err := token.NewActivationToken(
+            uid,
+            body.Login,
+            []string{authorization.Host.OriginRoleName},
+        )
         if err != nil {
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
-        err = email.CreateAndEnqueueActivationEmail(body.Login, activ.Token)
+        err = email.CreateAndEnqueueActivationEmail(body.Login, tk.String())
         if err != nil {
             return controller.ConvertErrorStatusToHTTP(err)
         }
     }
+
     return ctx.NoContent(http.StatusOK)
 }
 

@@ -58,6 +58,8 @@ func FilterDTOFromClaims(targetUID string, claims jwt.MapClaims) (*UserDTO.Filte
     })
 }
 
+// TODO receive jwt.Claims instead of MapClaims (for all of that funcs)
+
 // IMPORTANT: Use this function only if token is valid.
 func PayloadFromClaims(claims jwt.MapClaims) (*UserDTO.Payload, *Error.Status) {
 	return mapFromClaims(claims, func(claims jwt.MapClaims, roles []string) *UserDTO.Payload{

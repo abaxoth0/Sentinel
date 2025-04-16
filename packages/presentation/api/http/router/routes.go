@@ -64,17 +64,12 @@ func Create() *echo.Echo {
     userGroup.DELETE("/:uid/drop", User.Drop)
     userGroup.DELETE("/all/drop", User.DropAllDeleted)
     userGroup.POST("/login/available", User.IsLoginAvailable)
-
+    userGroup.GET("/:uid/roles", User.GetRoles)
     userGroup.PATCH("/:uid/login", User.ChangeLogin)
     userGroup.PATCH("/:uid/password", User.ChangePassword)
     userGroup.PATCH("/:uid/roles", User.ChangeRoles)
-
-    userGroup.GET("/:uid/roles", User.GetRoles)
-
-    activationGroup := router.Group("/activate")
-
-    activationGroup.GET("/:token", Activation.Activate)
-    activationGroup.PUT("/renew", Activation.Reactivate)
+    userGroup.GET("/activation/:token", Activation.Activate)
+    userGroup.PUT("/activation/resend", Activation.Resend)
 
     rolesGroup := router.Group("/roles")
 
