@@ -1,6 +1,9 @@
 package userdto
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 type Any interface {
     IsDeleted() bool
@@ -12,11 +15,14 @@ type Basic struct {
 	Password     string    `json:"password"`
 	Roles        []string  `json:"roles"`
 	DeletedAt    time.Time `json:"deletedAt"`
-    IsActive     bool      `json:"isActive"`
 }
 
 func (dto *Basic) IsDeleted() bool {
     return !dto.DeletedAt.IsZero()
+}
+
+func (dto *Basic) IsActive() bool {
+    return !slices.Contains(dto.Roles, "unconfirmed_user")
 }
 
 type Extended struct {
@@ -26,7 +32,6 @@ type Extended struct {
 	Roles        []string  `json:"roles"`
 	DeletedAt    time.Time `json:"deletedAt"`
     CreatedAt    time.Time `json:"createdAt"`
-    IsActive     bool      `json:"isActive"`
 }
 
 func (dto *Extended) IsDeleted() bool {
@@ -53,7 +58,6 @@ type Audit struct {
 	Roles            []string  `json:"roles"`
 	DeletedAt        time.Time `json:"deletedAt"`
     ChangedAt        time.Time `json:"changedAt"`
-    IsActive         bool      `json:"isActive"`
 }
 
 func (dto *Audit) IsDeleted() bool {

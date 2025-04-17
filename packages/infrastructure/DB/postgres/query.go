@@ -145,7 +145,6 @@ func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status)
         &dto.Password,
         &dto.Roles,
         &deletedAt,
-        &dto.IsActive,
     )
 
     if err != nil {

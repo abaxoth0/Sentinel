@@ -43,7 +43,7 @@ func Resend(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    if user.IsActive {
+    if user.IsActive() {
         return echo.NewHTTPError(
             http.StatusConflict,
             "User already active",

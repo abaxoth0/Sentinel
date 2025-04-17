@@ -27,7 +27,7 @@ func (s *seeker) findUserBy(
     cacheKey string,
 ) (*UserDTO.Basic, *Error.Status) {
     query := newQuery(
-        `SELECT id, login, password, roles, deleted_at, is_active
+        `SELECT id, login, password, roles, deleted_at
         FROM "user"
         WHERE ` + string(conditionProperty) + ` = $1;`,
         conditionValue,

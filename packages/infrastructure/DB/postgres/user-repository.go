@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"log"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -55,9 +54,9 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     uid := uuid.New()
 
     query := newQuery(
-        `INSERT INTO "user" (id, login, password, roles, is_active) VALUES
-        ($1, $2, $3, $4, $5);`,
-        uid, login, hashedPassword, []string{authorization.Host.OriginRoleName}, !config.App.IsLoginEmail,
+        `INSERT INTO "user" (id, login, password, roles) VALUES
+        ($1, $2, $3, $4);`,
+        uid, login, hashedPassword, []string{authorization.Host.OriginRoleName},
     )
 
     if err = cache.Client.DeleteOnError(
@@ -354,7 +353,7 @@ func (_ *repository) Activate(tk string) *Error.Status {
     if err != nil {
         return err
     }
-    if user.IsActive {
+    if user.IsActive() {
         return Error.NewStatusError(
             "User already active",
             http.StatusConflict,
@@ -369,11 +368,18 @@ func (_ *repository) Activate(tk string) *Error.Status {
 
     audit := newAudit(updatedOperation, filter, user)
 
+    for i, role := range user.Roles {
+        if role == "unconfirmed_user" {
+            user.Roles[i] = "user"
+            break
+        }
+    }
+
     tx := newTransaction(
         newQuery(
-            `UPDATE "user" SET is_active = true
-             WHERE login = $1 AND is_active = false;`,
-             user.Login,
+            `UPDATE "user" SET roles = $1
+             WHERE login = $2;`,
+             user.Roles, user.Login,
         ),
         newAuditQuery(&audit),
     )
@@ -387,7 +393,6 @@ func (_ *repository) Activate(tk string) *Error.Status {
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     ); err != nil {
-        log.Printf("[ ERROR ] Failed to delete cache: %s\n", err.Error())
         return Error.StatusInternalError
     }
 

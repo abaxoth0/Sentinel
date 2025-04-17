@@ -162,8 +162,7 @@ func (c *connector) postConnection() error {
             password CHAR(60) NOT NULL,
             roles VARCHAR(32)[] NOT NULL,
             deleted_at TIMESTAMP,
-            changed_at TIMESTAMP NOT NULL,
-            is_active BOOLEAN NOT NULL DEFAULT false
+            changed_at TIMESTAMP NOT NULL
         );`,
     ); err != nil {
         return err
@@ -186,9 +185,8 @@ func (c *connector) initializeTable(tableName string, query string) error {
     log.Printf("[ DATABASE ] Verifying that table '%s' exists...\n", tableName)
 
     if _, e := con.Exec(c.ctx, query); e != nil {
-        return fmt.Errorf("[ DATABASE ] Failed to verify that table '%s' exists:\n%v\n", tableName, err)
+        return fmt.Errorf("[ DATABASE ] Failed to verify that table '%s' exists:\n%v\n", tableName, e)
     }
-
 
     log.Printf("[ DATABASE ] Verifying that table '%s' exists: OK\n", tableName)
 

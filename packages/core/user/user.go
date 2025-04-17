@@ -17,7 +17,6 @@ const (
     RolesProperty Property = "roles"
     PasswordProperty Property = "password"
     DeletedAtProperty Property = "deletedAt"
-    IsActiveProperty Property = "is_active"
 )
 
 // Represents user deletion state, might be:

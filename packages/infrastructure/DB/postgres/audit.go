@@ -28,7 +28,6 @@ func newAudit(operation string, filter *UserDTO.Filter, user *UserDTO.Basic) Use
         Roles: user.Roles,
         DeletedAt: user.DeletedAt,
         ChangedAt: time.Now(),
-        IsActive: user.IsActive,
     }
 }
 
@@ -37,9 +36,9 @@ func newAuditQuery(dto *UserDTO.Audit) *query {
 
     return newQuery(
         `INSERT INTO "audit_user"
-        (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at, is_active)
+        (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at)
         VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        ($1, $2, $3, $4, $5, $6, $7, $8)`,
         dto.ChangedUserID,
         dto.ChangedByUserID,
         dto.Operation,
@@ -48,7 +47,6 @@ func newAuditQuery(dto *UserDTO.Audit) *query {
         dto.Roles,
         deletedAt,
         dto.ChangedAt,
-        dto.IsActive,
     )
 }
 
