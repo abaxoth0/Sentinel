@@ -135,7 +135,8 @@ func DropAllDeleted(ctx echo.Context) error {
     return handleUserDeleteUpdate(ctx, DB.Database.DropAllSoftDeleted, true)
 }
 
-func validateSelfUpdate(filter *UserDTO.Filter, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
+func validateUpdateRequestBody(filter *UserDTO.Filter, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
+    // if user tries to update himself
     if filter.RequesterUID == filter.TargetUID {
         if err := body.Validate(); err != nil {
             return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -154,13 +155,9 @@ func validateSelfUpdate(filter *UserDTO.Filter, body datamodel.UpdateUserRequest
         return nil
     }
 
+    // if user tries to update another user
     if err := body.Validate(); err != nil {
-        switch body.(type){
-        case *datamodel.ChangePasswordBody:
-            if err == datamodel.MissingNewPassword || err == datamodel.InvalidNewPassword {
-                return nil
-            }
-        default:
+        if _, ok := body.(*datamodel.ChangePasswordBody); ok {
             if err == datamodel.MissingPassword || err == datamodel.InvalidPassword {
                 return nil
             }
@@ -190,7 +187,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
         return err
     }
 
-    if err := validateSelfUpdate(filter, body); err != nil {
+    if err := validateUpdateRequestBody(filter, body); err != nil {
         return err
     }
 

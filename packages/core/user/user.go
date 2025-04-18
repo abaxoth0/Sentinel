@@ -29,8 +29,16 @@ const (
     AnyState State = 2
 )
 
-var invalidPasswordLength = Error.NewStatusError(
+var ErrInvalidPasswordLength = Error.NewStatusError(
     "Пароль должен находится в диапозоне от 8 до 64 символов.",
+    http.StatusBadRequest,
+)
+var ErrInvalidLoginLength = Error.NewStatusError(
+    "Логин должен находиться в диапозоне от 5 до 72 символов.",
+    http.StatusBadRequest,
+)
+var ErrInvalidEmailFormat = Error.NewStatusError(
+    "Неверный логин: неподустимый формат E-Mail'а",
     http.StatusBadRequest,
 )
 
@@ -39,7 +47,7 @@ func VerifyPassword(password string) *Error.Status {
 
 	// bcrypt can handle password with maximum size of 72 bytes
 	if passwordSize < 8 || passwordSize > 64 {
-		return invalidPasswordLength
+		return ErrInvalidPasswordLength
     }
 
 	return nil
@@ -49,20 +57,14 @@ func VerifyLogin(login string) *Error.Status {
     length := len(strings.ReplaceAll(login, " ", ""))
 
     if length < 5 || length > 72 {
-        return Error.NewStatusError(
-            "Логин должен находиться в диапозоне от 5 до 72 символов.",
-            http.StatusBadRequest,
-        )
+        return ErrInvalidLoginLength
     }
 
     if config.App.IsLoginEmail {
         if err := validation.Email(login); err != nil {
             // If err is not nil then it maybe only Error.InvalidValie,
             // cuz login was already checked for zero or whitespaces value
-            return Error.NewStatusError(
-                "Неверный логин: неподустимый формат E-Mail'а",
-                http.StatusBadRequest,
-            )
+            return ErrInvalidEmailFormat
         }
     }
 

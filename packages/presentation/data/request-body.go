@@ -2,16 +2,25 @@ package datamodel
 
 import (
 	"fmt"
+	"net/http"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	"sentinel/packages/core/user"
 	"strings"
 )
 
-func missingRequestBodyFieldValue(field string) error {
-    return fmt.Errorf("Invalid request body: field '%s' has no value", field)
+func missingRequestBodyFieldValue(field string) *Error.Status {
+    return Error.NewStatusError(
+        fmt.Sprintf("Invalid request body: field '%s' has no value", field),
+        http.StatusBadRequest,
+    )
 }
 
-func invalidRequestBodyFieldValue(field string) error {
-    return fmt.Errorf("Invalid request body: field '%s' has invalid value", field)
+func invalidRequestBodyFieldValue(field string) *Error.Status {
+    return Error.NewStatusError(
+        fmt.Sprintf("Invalid request body: field '%s' has invalid value", field),
+        http.StatusBadRequest,
+    )
 }
 
 var MissingUID = missingRequestBodyFieldValue("uid")
@@ -30,7 +39,7 @@ var MissingRoles = missingRequestBodyFieldValue("roles")
 var InvalidRoles = invalidRequestBodyFieldValue("roles")
 
 type RequestValidator interface {
-    Validate() error
+    Validate() *Error.Status
 }
 
 type PasswordGetter interface {
@@ -46,7 +55,7 @@ type UidBody struct {
 	UID string `json:"uid"`
 }
 
-func (b *UidBody) Validate() error {
+func (b *UidBody) Validate() *Error.Status {
     if b.UID == "" {
         return MissingUID
     }
@@ -68,11 +77,11 @@ func (b *PasswordBody) GetPassword() string {
     return b.Password
 }
 
-func (b *PasswordBody) Validate() error {
-    if b.Password == "" {
+func (b *PasswordBody) Validate() *Error.Status {
+    if strings.ReplaceAll(b.Password, " ", "") == "" {
         return MissingPassword
     }
-    if strings.ReplaceAll(b.Password, " ", "") == "" {
+    if err := user.VerifyPassword(b.Password); err != nil {
         return InvalidPassword
     }
     return nil
@@ -82,12 +91,9 @@ type LoginBody struct {
 	Login string `json:"login"`
 }
 
-func (b *LoginBody) Validate() error {
-    if b.Login == "" {
-        return MissingLogin
-    }
-    if strings.ReplaceAll(b.Login, " ", "") == "" {
-        return InvalidLogin
+func (b *LoginBody) Validate() *Error.Status {
+    if err := user.VerifyLogin(b.Login); err != nil {
+        return err
     }
     return nil
 }
@@ -96,7 +102,7 @@ type RolesBody struct {
     Roles []string `json:"roles"`
 }
 
-func (b *RolesBody) Validate() error {
+func (b *RolesBody) Validate() *Error.Status {
     if len(b.Roles) == 0 {
         return MissingRoles
     }
@@ -113,7 +119,7 @@ type LoginPasswordBody struct {
     PasswordBody `json:",inline"`
 }
 
-func (b *LoginPasswordBody) Validate() error {
+func (b *LoginPasswordBody) Validate() *Error.Status {
     if err := b.LoginBody.Validate(); err != nil {
         return err
     }
@@ -128,7 +134,7 @@ type UidLoginBody struct {
     LoginBody `json:",inline"`
 }
 
-func (b *UidLoginBody) Validate() error {
+func (b *UidLoginBody) Validate() *Error.Status {
     if err := b.UidBody.Validate(); err != nil {
         return err
     }
@@ -143,15 +149,15 @@ type ChangePasswordBody struct {
     NewPassword string `json:"newPassword"`
 }
 
-func (b *ChangePasswordBody) Validate() error {
-    if err := b.PasswordBody.Validate(); err != nil {
-        return err
-    }
-    if b.NewPassword == "" {
+func (b *ChangePasswordBody) Validate() *Error.Status {
+    if strings.ReplaceAll(b.NewPassword, " ", "") == "" {
         return MissingNewPassword
     }
-    if strings.ReplaceAll(b.NewPassword, " ", "") == "" {
+    if err := user.VerifyPassword(b.NewPassword); err != nil {
         return InvalidNewPassword
+    }
+    if err := b.PasswordBody.Validate(); err != nil {
+        return err
     }
     return nil
 }
@@ -161,7 +167,7 @@ type ChangeLoginBody struct {
     PasswordBody `json:",inline"`
 }
 
-func (b *ChangeLoginBody) Validate() error {
+func (b *ChangeLoginBody) Validate() *Error.Status {
     if err := b.LoginBody.Validate(); err != nil {
         return err
     }
@@ -176,7 +182,7 @@ type ChangeRolesBody struct {
     PasswordBody `json:",inline"`
 }
 
-func (b *ChangeRolesBody) Validate() error {
+func (b *ChangeRolesBody) Validate() *Error.Status {
     if err := b.RolesBody.Validate(); err != nil {
         return err
     }
