@@ -12,7 +12,7 @@ import (
 	"sentinel/packages/infrastructure/token"
 	"slices"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 

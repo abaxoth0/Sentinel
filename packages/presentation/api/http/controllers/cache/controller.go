@@ -7,7 +7,7 @@ import (
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	controller "sentinel/packages/presentation/api/http/controllers"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 

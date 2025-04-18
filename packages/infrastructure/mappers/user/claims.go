@@ -9,7 +9,7 @@ import (
 
 	Error "sentinel/packages/common/errors"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func convertToStrSlice(input []any) ([]string, error) {

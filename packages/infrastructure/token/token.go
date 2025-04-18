@@ -2,14 +2,14 @@ package token
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 	"log"
 	"sentinel/packages/common/config"
-	"sentinel/packages/common/util"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 
 	Error "sentinel/packages/common/errors"
 )
@@ -41,7 +41,7 @@ type Claims struct {
     Roles []string `json:"roles"`
     Login string `json:"login"`
 
-    jwt.StandardClaims
+    jwt.RegisteredClaims
 }
 
 func newSignedToken(
@@ -49,15 +49,15 @@ func newSignedToken(
     ttl time.Duration,
     key ed25519.PrivateKey,
 ) (*SignedToken, *Error.Status) {
-    now := time.Now().Unix()
+    now := jwt.NewNumericDate(time.Now())
     claims := Claims{
         Login: payload.Login,
         Roles: payload.Roles,
-        StandardClaims: jwt.StandardClaims{
+        RegisteredClaims: jwt.RegisteredClaims{
             Issuer:    config.App.ServiceID,
             IssuedAt:  now,
             NotBefore: now,
-            ExpiresAt: util.TimestampSinceNow(ttl),
+            ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl).UTC()),
             Subject:   payload.ID,
         },
     }
@@ -133,32 +133,21 @@ func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Erro
 		return key, nil
 	})
     if err != nil {
-        ve, ok := err.(*jwt.ValidationError)
-        if !ok {
-            log.Printf("[ UNKNOWN ERROR ] Failed to parse signed token: %s\n", err.Error())
-            return nil, Error.StatusInternalError
-        }
-
         switch {
-        case ve.Errors & jwt.ValidationErrorMalformed != 0:
+        case errors.Is(err, jwt.ErrTokenMalformed):
             return nil, TokenMalformed
-        case ve.Errors & jwt.ValidationErrorExpired != 0:
+        case errors.Is(err, jwt.ErrTokenExpired):
             return nil, TokenExpired
-        case ve.Errors & jwt.ValidationErrorNotValidYet != 0:
+        case errors.Is(err, jwt.ErrTokenNotValidYet):
             // Will never trigger for our current tokens since we don't set NBF
             return nil, TokenModified
-        case ve.Errors & jwt.ValidationErrorSignatureInvalid != 0:
+        case errors.Is(err, jwt.ErrTokenSignatureInvalid):
             // Check if someone tampered with the token
             return nil, TokenModified
         default:
             log.Printf("[ UNKNOWN ERROR ] Failed to parse signed token: %s\n", err.Error())
-            return nil, InvalidToken
+            return nil, Error.StatusInternalError
         }
-    }
-
-    exp := !token.Claims.(jwt.MapClaims).VerifyExpiresAt(util.UnixTimeNow(), true)
-    if exp {
-        return nil, TokenExpired
     }
 
 	return token, nil

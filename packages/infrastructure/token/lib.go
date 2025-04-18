@@ -4,7 +4,7 @@ import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var invalidTokenPayload = Error.NewStatusError(
