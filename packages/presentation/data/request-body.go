@@ -33,9 +33,6 @@ func invalidRequestBodyFieldValue(field string) *Error.Status {
     )
 }
 
-var MissingUID = missingRequestBodyFieldValue("uid")
-var InvalidUID = invalidRequestBodyFieldValue("uid")
-
 var MissingLogin = missingRequestBodyFieldValue("login")
 var InvalidLogin = invalidRequestBodyFieldValue("login")
 
@@ -49,7 +46,6 @@ var MissingRoles = missingRequestBodyFieldValue("roles")
 var InvalidRoles = invalidRequestBodyFieldValue("roles")
 
 var invalidField map[string]*Error.Status = map[string]*Error.Status{
-    "uid": InvalidUID,
     "login": InvalidLogin,
     "password": InvalidPassword,
     "newPassword": InvalidNewPassword,
@@ -57,7 +53,6 @@ var invalidField map[string]*Error.Status = map[string]*Error.Status{
 }
 
 var missingField map[string]*Error.Status = map[string]*Error.Status{
-    "uid": MissingUID,
     "login": MissingLogin,
     "password": MissingPassword,
     "newPassword": MissingNewPassword,
@@ -85,18 +80,6 @@ type PasswordGetter interface {
 type UpdateUserRequestBody interface {
     PasswordGetter
     RequestValidator
-}
-
-type UidBody struct {
-	UID string `json:"uid"`
-}
-
-func (b *UidBody) Validate() *Error.Status {
-    return validateStr("uid", b.UID)
-}
-
-func (body *UidBody) GetUID() string {
-    return body.UID
 }
 
 type PasswordBody struct {
@@ -145,21 +128,6 @@ func (b *LoginPasswordBody) Validate() *Error.Status {
         return err
     }
     if err := b.PasswordBody.Validate(); err != nil {
-        return err
-    }
-    return nil
-}
-
-type UidLoginBody struct {
-    UidBody `json:",inline"`
-    LoginBody `json:",inline"`
-}
-
-func (b *UidLoginBody) Validate() *Error.Status {
-    if err := b.UidBody.Validate(); err != nil {
-        return err
-    }
-    if err := b.LoginBody.Validate(); err != nil {
         return err
     }
     return nil
