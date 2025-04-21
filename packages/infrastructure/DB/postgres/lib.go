@@ -3,7 +3,6 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"sentinel/packages/core/user"
 	Error "sentinel/packages/common/errors"
 	"time"
 
@@ -11,12 +10,7 @@ import (
 )
 
 func hashPassword(password string) ([]byte, *Error.Status) {
-	if err := user.VerifyPassword(password); err != nil {
-		return nil, err
-	}
-
 	hashedPassword, e := bcrypt.GenerateFromPassword([]byte(password), 12)
-
 	if e != nil {
         fmt.Printf("[ ERROR ] Failed to generate hashed password: \n%v\n", e)
 

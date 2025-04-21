@@ -4,10 +4,20 @@ import (
 	"fmt"
 	"net/http"
 	Error "sentinel/packages/common/errors"
-	"sentinel/packages/common/validation"
-	"sentinel/packages/core/user"
 	"strings"
 )
+
+/*
+    IMPORTANT
+    All kind of validation done in methods inside of this module is
+    related to transport layer, which means:
+    1) Validation checks only if value persist and it's not empty, cuz
+       all what transport layer should do - is just be intermediary between
+       user and business logic.
+    2) All other kind of validation must be done on business logic layer
+       e.g. - check if password or login doesn't include some unacceptable symbols
+       or if user ID has correct format.
+*/
 
 func missingRequestBodyFieldValue(field string) *Error.Status {
     return Error.NewStatusError(
@@ -38,6 +48,32 @@ var InvalidNewPassword = invalidRequestBodyFieldValue("newPassword")
 var MissingRoles = missingRequestBodyFieldValue("roles")
 var InvalidRoles = invalidRequestBodyFieldValue("roles")
 
+var invalidField map[string]*Error.Status = map[string]*Error.Status{
+    "uid": InvalidUID,
+    "login": InvalidLogin,
+    "password": InvalidPassword,
+    "newPassword": InvalidNewPassword,
+    "roles": InvalidRoles,
+}
+
+var missingField map[string]*Error.Status = map[string]*Error.Status{
+    "uid": MissingUID,
+    "login": MissingLogin,
+    "password": MissingPassword,
+    "newPassword": MissingNewPassword,
+    "roles": MissingRoles,
+}
+
+func validateStr(field string, value string) *Error.Status {
+    if value == "" {
+        return missingField[field]
+    }
+    if strings.ReplaceAll(value, " ", "") == ""{
+        return invalidField[field]
+    }
+    return nil
+}
+
 type RequestValidator interface {
     Validate() *Error.Status
 }
@@ -56,13 +92,7 @@ type UidBody struct {
 }
 
 func (b *UidBody) Validate() *Error.Status {
-    if b.UID == "" {
-        return MissingUID
-    }
-    if err := validation.UUID(b.UID); err != nil {
-        return InvalidUID
-    }
-    return nil
+    return validateStr("uid", b.UID)
 }
 
 func (body *UidBody) GetUID() string {
@@ -78,13 +108,7 @@ func (b *PasswordBody) GetPassword() string {
 }
 
 func (b *PasswordBody) Validate() *Error.Status {
-    if strings.ReplaceAll(b.Password, " ", "") == "" {
-        return MissingPassword
-    }
-    if err := user.VerifyPassword(b.Password); err != nil {
-        return InvalidPassword
-    }
-    return nil
+    return validateStr("password", b.Password)
 }
 
 type LoginBody struct {
@@ -92,10 +116,7 @@ type LoginBody struct {
 }
 
 func (b *LoginBody) Validate() *Error.Status {
-    if err := user.VerifyLogin(b.Login); err != nil {
-        return err
-    }
-    return nil
+    return validateStr("login", b.Login)
 }
 
 type RolesBody struct {
@@ -150,11 +171,8 @@ type ChangePasswordBody struct {
 }
 
 func (b *ChangePasswordBody) Validate() *Error.Status {
-    if strings.ReplaceAll(b.NewPassword, " ", "") == "" {
-        return MissingNewPassword
-    }
-    if err := user.VerifyPassword(b.NewPassword); err != nil {
-        return InvalidNewPassword
+    if err := validateStr("newPassword", b.NewPassword); err != nil {
+        return err
     }
     if err := b.PasswordBody.Validate(); err != nil {
         return err

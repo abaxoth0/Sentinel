@@ -214,6 +214,10 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
 }
 
 func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status {
+    if err := user.VerifyLogin(newLogin); err != nil {
+        return err
+    }
+
     if err := authorization.Authorize(
         authorization.Action.ChangeLogin,
         authorization.Resource.User,
@@ -257,6 +261,10 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
 }
 
 func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status {
+    if err := user.VerifyPassword(newPassword); err != nil {
+        return err
+    }
+
     if filter.RequesterUID != filter.TargetUID {
         if err := authorization.Authorize(
             authorization.Action.ChangePassword,
@@ -268,13 +276,11 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
     }
 
     user, err := driver.FindUserByID(filter.TargetUID)
-
     if err != nil {
         return err
     }
 
 	hashedPassword, e := hashPassword(newPassword)
-
     if e != nil {
         return e
     }
