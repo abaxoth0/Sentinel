@@ -21,7 +21,7 @@ type repository struct {
 }
 
 func (_ *repository) checkLogin(login string) *Error.Status {
-    if err := user.VerifyLogin(login); err != nil {
+    if err := user.ValidateLogin(login); err != nil {
         return err
     }
 
@@ -72,6 +72,10 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
 }
 
 func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
+    if err := filter.ValidateUIDs(); err != nil {
+        return err
+    }
+
     // TODO add possibility to config what kind of users can delete themselves
     // all users can delete themselves, except admins (TEMP)
     if filter.TargetUID != filter.RequesterUID {
@@ -119,6 +123,10 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
 }
 
 func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
+    if err := filter.ValidateUIDs(); err != nil {
+        return err
+    }
+
     if err := authorization.Authorize(
         authorization.Action.Restore,
         authorization.Resource.User,
@@ -154,6 +162,10 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 
 // TODO add audit (there are some problem with foreign keys)
 func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
+    if err := filter.ValidateUIDs(); err != nil {
+        return err
+    }
+
     if err := authorization.Authorize(
         authorization.Action.Drop,
         authorization.Resource.User,
@@ -193,6 +205,10 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
 
 // TODO add audit (this method really cause a lot of problems)
 func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
+    if err := filter.ValidateRequesterUID(); err != nil {
+        return err
+    }
+
     if err := authorization.Authorize(
         authorization.Action.DropAllSoftDeleted,
         authorization.Resource.User,
@@ -201,12 +217,28 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
         return err
     }
 
+    user, err := driver.FindUserByID(filter.RequesterUID)
+    if err != nil {
+        return err
+    }
+
+    // it's not necessary, but may it be here.
+    // Some additional security checks won't be a problem.
+    for _, role := range user.Roles {
+        if !slices.Contains(filter.RequesterRoles, role) {
+            return Error.NewStatusError(
+                "Your roles differs on server, try to re-logging in",
+                http.StatusConflict,
+            )
+        }
+    }
+
     query := newQuery(
         `DELETE FROM "user"
         WHERE deleted_at IS NOT NULL;`,
     )
 
-    err := query.Exec()
+    err = query.Exec()
 
     cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
 
@@ -214,7 +246,11 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
 }
 
 func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status {
-    if err := user.VerifyLogin(newLogin); err != nil {
+    if err := filter.ValidateUIDs(); err != nil {
+        return err
+    }
+
+    if err := user.ValidateLogin(newLogin); err != nil {
         return err
     }
 
@@ -261,7 +297,11 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
 }
 
 func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status {
-    if err := user.VerifyPassword(newPassword); err != nil {
+    if err := filter.ValidateUIDs(); err != nil {
+        return err
+    }
+
+    if err := user.ValidatePassword(newPassword); err != nil {
         return err
     }
 
@@ -303,6 +343,10 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
 }
 
 func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status {
+    if err := filter.ValidateUIDs(); err != nil {
+        return err
+    }
+
     if filter.TargetUID == filter.RequesterUID &&
        slices.Contains(filter.RequesterRoles, "admin") &&
        !slices.Contains(newRoles, "admin") {

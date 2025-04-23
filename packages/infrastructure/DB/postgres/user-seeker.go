@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"net/http"
+	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authorization"
@@ -26,6 +28,23 @@ func (s *seeker) findUserBy(
     state user.State,
     cacheKey string,
 ) (*UserDTO.Basic, *Error.Status) {
+    if conditionProperty == user.IdProperty {
+        if err := validation.UUID(conditionValue); err != nil {
+            return nil, err.ToStatus(
+                "user id isn't specified",
+                "user id has invalid value",
+            )
+        }
+    }
+    if conditionProperty == user.LoginProperty && config.App.IsLoginEmail {
+        if err := validation.Email(conditionValue); err != nil {
+            return nil, err.ToStatus(
+                "User login isn't specified",
+                "User login has invalid value",
+            )
+        }
+    }
+
     query := newQuery(
         `SELECT id, login, password, roles, deleted_at
         FROM "user"
@@ -96,7 +115,7 @@ func (s *seeker) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
 }
 
 func (s *seeker) IsLoginAvailable(login string) (bool, *Error.Status) {
-    if err := user.VerifyLogin(login); err != nil {
+    if err := user.ValidateLogin(login); err != nil {
         return false, err
     }
 
@@ -117,6 +136,10 @@ func (s *seeker) IsLoginAvailable(login string) (bool, *Error.Status) {
 }
 
 func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
+    if err := filter.ValidateTargetUID(); err != nil {
+        return nil, err
+    }
+
     if err := authorization.Authorize(
         authorization.Action.GetRoles,
         authorization.Resource.User,

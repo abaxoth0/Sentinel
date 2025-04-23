@@ -1,6 +1,8 @@
 package userdto
 
 import (
+	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	"slices"
 	"time"
 )
@@ -74,5 +76,35 @@ type Filter struct {
 	TargetUID      string
 	RequesterUID   string
 	RequesterRoles []string
+}
+
+func (f *Filter) ValidateTargetUID() *Error.Status {
+    if err := validation.UUID(f.TargetUID); err != nil {
+        return err.ToStatus(
+            "Target user ID is not specified",
+            "Invalid target user ID",
+        )
+    }
+    return nil
+}
+
+func (f *Filter) ValidateRequesterUID() *Error.Status {
+    if err := validation.UUID(f.RequesterUID); err != nil {
+        return err.ToStatus(
+            "Requester user ID is not specified",
+            "Invalid requester user ID",
+        )
+    }
+    return nil
+}
+
+func (f *Filter) ValidateUIDs() *Error.Status {
+    if err := f.ValidateTargetUID(); err != nil {
+        return err
+    }
+    if err := f.ValidateRequesterUID(); err != nil {
+        return err
+    }
+    return nil
 }
 

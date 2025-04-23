@@ -38,11 +38,11 @@ var ErrInvalidLoginLength = Error.NewStatusError(
     http.StatusBadRequest,
 )
 var ErrInvalidEmailFormat = Error.NewStatusError(
-    "Неверный логин: неподустимый формат E-Mail'а",
+    "Неверный логин: недопустимый формат E-Mail'а",
     http.StatusBadRequest,
 )
 
-func VerifyPassword(password string) *Error.Status {
+func ValidatePassword(password string) *Error.Status {
 	passwordSize := len(strings.ReplaceAll(password, " ", ""))
 
 	// bcrypt can handle password with maximum size of 72 bytes
@@ -53,7 +53,7 @@ func VerifyPassword(password string) *Error.Status {
 	return nil
 }
 
-func VerifyLogin(login string) *Error.Status {
+func ValidateLogin(login string) *Error.Status {
     length := len(strings.ReplaceAll(login, " ", ""))
 
     if length < 5 || length > 72 {

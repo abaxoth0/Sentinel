@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
-	"sentinel/packages/common/validation"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
@@ -20,27 +19,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
-
-func getUserIdFromPath(ctx echo.Context) (string, *echo.HTTPError) {
-    uid := ctx.Param("uid")
-
-    if err := validation.UUID(uid); err != nil {
-        if err == Error.NoValue {
-            return "", echo.NewHTTPError(
-                http.StatusBadRequest,
-                "User ID is missing",
-            )
-        }
-        if err == Error.InvalidValue {
-            return "", echo.NewHTTPError(
-                http.StatusBadRequest,
-                "User ID has an invalid format (expected: UUID)",
-            )
-        }
-    }
-
-    return uid, nil
-}
 
 func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
     accessToken, err := controller.GetAccessToken(ctx)
@@ -99,12 +77,7 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
     var uid string
 
     if !omitUid {
-        var e *echo.HTTPError
-
-        uid, e = getUserIdFromPath(ctx)
-        if e != nil {
-            return e
-        }
+        uid = ctx.Param("uid")
     }
 
     filter, err := newUserFilter(ctx, uid)
@@ -177,10 +150,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
         return err
     }
 
-    uid, er := getUserIdFromPath(ctx)
-    if er != nil {
-        return er
-    }
+    uid := ctx.Param("uid")
 
     filter, err := newUserFilter(ctx, uid)
     if err != nil {
@@ -224,10 +194,7 @@ func ChangeRoles(ctx echo.Context) error {
 }
 
 func GetRoles(ctx echo.Context) error {
-    uid, er := getUserIdFromPath(ctx)
-    if er != nil {
-        return er
-    }
+    uid := ctx.Param("uid")
 
     filter, err := newUserFilter(ctx, uid)
     if err != nil {
@@ -255,7 +222,7 @@ func IsLoginAvailable(ctx echo.Context) error {
         )
     }
 
-    if err := user.VerifyLogin(login); err != nil {
+    if err := user.ValidateLogin(login); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
