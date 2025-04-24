@@ -14,7 +14,7 @@ import (
 func Drop(ctx echo.Context) error {
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return controller.HandleTokenError(ctx, err)
     }
 
     filter, err := UserMapper.FilterDTOFromClaims(UserMapper.NoTarget, accessToken.Claims.(jwt.MapClaims))

@@ -23,7 +23,7 @@ import (
 func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
-        return nil, controller.ConvertErrorStatusToHTTP(err)
+        return nil, controller.HandleTokenError(ctx, err)
     }
 
     // we can trust claims if token is valid

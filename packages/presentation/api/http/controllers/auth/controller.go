@@ -74,17 +74,7 @@ func Logout(ctx echo.Context) error {
 func Refresh(ctx echo.Context) error {
     currentRefreshToken, e := controller.GetRefreshToken(ctx)
     if e != nil {
-        if token.IsTokenError(e) {
-            authCookie, err := controller.GetAuthCookie(ctx)
-            if err != nil {
-                return err
-            }
-            controller.DeleteCookie(ctx, authCookie)
-        }
-        return echo.NewHTTPError(
-            http.StatusUnauthorized,
-            e.Error(),
-        )
+        return controller.HandleTokenError(ctx, e)
     }
 
     payload, e := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(jwt.MapClaims))
@@ -113,7 +103,7 @@ func Refresh(ctx echo.Context) error {
 func Verify(ctx echo.Context) error {
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return controller.HandleTokenError(ctx, err)
     }
 
     payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))

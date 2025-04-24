@@ -14,7 +14,7 @@ import (
 
 var invalidAuthorizationHeaderFormat = Error.NewStatusError(
     "Invalid Authorization header. Expected format: 'Bearer <token>'",
-    http.StatusBadRequest,
+    http.StatusUnauthorized,
 )
 
 // Retrieves and validates access token.
