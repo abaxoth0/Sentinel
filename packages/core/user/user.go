@@ -2,6 +2,7 @@ package user
 
 import (
 	"net/http"
+	"regexp"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
@@ -29,10 +30,16 @@ const (
     AnyState State = 2
 )
 
+const allowedSymbolsMsg = "Разрешённые символы: латинксие буквы, цифры от 0 до 9, спецсимволы '_', '-', '.', '@', '$', '!', '#'"
+
 var ErrInvalidPasswordLength = Error.NewStatusError(
     "Пароль должен находится в диапозоне от 8 до 64 символов.",
     http.StatusBadRequest,
 )
+var ErrPasswordsContainsUnacceptableSymbols = Error.NewStatusError(
+    "Пароль содержит недопустимые символы. " + allowedSymbolsMsg,
+    http.StatusBadRequest,
+    )
 var ErrInvalidLoginLength = Error.NewStatusError(
     "Логин должен находиться в диапозоне от 5 до 72 символов.",
     http.StatusBadRequest,
@@ -41,6 +48,12 @@ var ErrInvalidEmailFormat = Error.NewStatusError(
     "Неверный логин: недопустимый формат E-Mail'а",
     http.StatusBadRequest,
 )
+var ErrLoginContainsUnacceptableSymbols = Error.NewStatusError(
+    "Логин содержит недопустимые символы. " + allowedSymbolsMsg,
+    http.StatusBadRequest,
+)
+
+var allowedSymbolsRegexp = regexp.MustCompile(`^[a-zA-Z0-9_\-\.@$!#]+$`)
 
 func ValidatePassword(password string) *Error.Status {
 	passwordSize := len(strings.ReplaceAll(password, " ", ""))
@@ -48,6 +61,10 @@ func ValidatePassword(password string) *Error.Status {
 	// bcrypt can handle password with maximum size of 72 bytes
 	if passwordSize < 8 || passwordSize > 64 {
 		return ErrInvalidPasswordLength
+    }
+
+    if !allowedSymbolsRegexp.MatchString(password) {
+        return ErrPasswordsContainsUnacceptableSymbols
     }
 
 	return nil
@@ -65,6 +82,10 @@ func ValidateLogin(login string) *Error.Status {
             // If err is not nil then it maybe only Error.InvalidValie,
             // cuz login was already checked for zero or whitespaces value
             return ErrInvalidEmailFormat
+        }
+    } else {
+        if !allowedSymbolsRegexp.MatchString(login) {
+            return ErrLoginContainsUnacceptableSymbols
         }
     }
 
