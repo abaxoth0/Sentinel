@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
-	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authentication"
 	"sentinel/packages/infrastructure/auth/authorization"
@@ -20,20 +20,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func newUserFilter(ctx echo.Context, uid string) (*UserDTO.Filter, error) {
+func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, error) {
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
         return nil, controller.HandleTokenError(ctx, err)
     }
 
     // we can trust claims if token is valid
-    filter, err := UserMapper.FilterDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
+    act, err := UserMapper.TargetedActionDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
 
     if err != nil {
         return nil, controller.ConvertErrorStatusToHTTP(err)
     }
 
-    return filter, nil
+    return act, nil
 }
 
 func Create(ctx echo.Context) error {
@@ -67,7 +67,7 @@ func Create(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
-type updater = func (*UserDTO.Filter) *Error.Status
+type updater= func (*ActionDTO.Targeted) *Error.Status
 
 // Updates user's state (deletion status).
 // if omitUid is true, then uid will be set to empty string,
@@ -80,12 +80,12 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
         uid = ctx.Param("uid")
     }
 
-    filter, err := newUserFilter(ctx, uid)
+    act, err := newTargetedActionDTO(ctx, uid)
     if err != nil {
         return err
     }
 
-    if err := upd(filter); err != nil {
+    if err := upd(act); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
@@ -105,10 +105,19 @@ func Drop(ctx echo.Context) error {
 }
 
 func DropAllDeleted(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.DropAllSoftDeleted, true)
+    act, err := newTargetedActionDTO(ctx, "")
+    if err != nil {
+        return err
+    }
+
+    if err := DB.Database.DropAllSoftDeleted(&act.Basic); err != nil {
+        return controller.ConvertErrorStatusToHTTP(err)
+    }
+
+    return ctx.NoContent(http.StatusOK)
 }
 
-func validateUpdateRequestBody(filter *UserDTO.Filter, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
+func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
     // if user tries to update himself
     if filter.RequesterUID == filter.TargetUID {
         if err := body.Validate(); err != nil {
@@ -152,7 +161,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
 
     uid := ctx.Param("uid")
 
-    filter, err := newUserFilter(ctx, uid)
+    filter, err := newTargetedActionDTO(ctx, uid)
     if err != nil {
         return err
     }
@@ -196,7 +205,7 @@ func ChangeRoles(ctx echo.Context) error {
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
 
-    filter, err := newUserFilter(ctx, uid)
+    filter, err := newTargetedActionDTO(ctx, uid)
     if err != nil {
         return err
     }

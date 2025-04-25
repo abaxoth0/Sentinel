@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
-	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
@@ -75,7 +75,7 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     return uid.String(), nil
 }
 
-func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
+func (_ *repository) SoftDelete(filter *ActionDTO.Targeted) *Error.Status {
     if err := filter.ValidateUIDs(); err != nil {
         return err
     }
@@ -126,7 +126,7 @@ func (_ *repository) SoftDelete(filter *UserDTO.Filter) *Error.Status {
     )
 }
 
-func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
+func (_ *repository) Restore(filter *ActionDTO.Targeted) *Error.Status {
     if err := filter.ValidateUIDs(); err != nil {
         return err
     }
@@ -165,7 +165,7 @@ func (_ *repository) Restore(filter *UserDTO.Filter) *Error.Status {
 }
 
 // TODO add audit (there are some problem with foreign keys)
-func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
+func (_ *repository) Drop(filter *ActionDTO.Targeted) *Error.Status {
     if err := filter.ValidateUIDs(); err != nil {
         return err
     }
@@ -208,7 +208,7 @@ func (_ *repository) Drop(filter *UserDTO.Filter) *Error.Status {
 }
 
 // TODO add audit (this method really cause a lot of problems)
-func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
+func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
     if err := filter.ValidateRequesterUID(); err != nil {
         return err
     }
@@ -249,7 +249,7 @@ func (_ *repository) DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status {
     return err
 }
 
-func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status {
+func (r *repository) ChangeLogin(filter *ActionDTO.Targeted, newLogin string) *Error.Status {
     if err := filter.ValidateUIDs(); err != nil {
         return err
     }
@@ -300,7 +300,7 @@ func (r *repository) ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error
     )
 }
 
-func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status {
+func (_ *repository) ChangePassword(filter *ActionDTO.Targeted, newPassword string) *Error.Status {
     if err := filter.ValidateUIDs(); err != nil {
         return err
     }
@@ -346,7 +346,7 @@ func (_ *repository) ChangePassword(filter *UserDTO.Filter, newPassword string) 
     )
 }
 
-func (_ *repository) ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status {
+func (_ *repository) ChangeRoles(filter *ActionDTO.Targeted, newRoles []string) *Error.Status {
     if err := filter.ValidateUIDs(); err != nil {
         return err
     }
@@ -414,11 +414,7 @@ func (_ *repository) Activate(tk string) *Error.Status {
         )
     }
 
-    filter :=  &UserDTO.Filter{
-        TargetUID: user.ID,
-        RequesterUID: user.ID,
-        RequesterRoles: user.Roles,
-    }
+    filter := ActionDTO.NewTargeted(user.ID, user.ID, user.Roles)
 
     audit := newAudit(updatedOperation, filter, user)
 

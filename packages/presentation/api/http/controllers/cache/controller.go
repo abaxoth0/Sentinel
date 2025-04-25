@@ -17,7 +17,7 @@ func Drop(ctx echo.Context) error {
         return controller.HandleTokenError(ctx, err)
     }
 
-    filter, err := UserMapper.FilterDTOFromClaims(UserMapper.NoTarget, accessToken.Claims.(jwt.MapClaims))
+    filter, err := UserMapper.BasicActionDTOFromClaims(accessToken.Claims.(jwt.MapClaims))
 
     if err != nil {
         return controller.ConvertErrorStatusToHTTP(err)

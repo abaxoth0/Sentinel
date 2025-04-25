@@ -5,6 +5,7 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	actiondto "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authorization"
@@ -135,27 +136,27 @@ func (s *seeker) IsLoginAvailable(login string) (bool, *Error.Status) {
     return true, nil
 }
 
-func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
-    if err := filter.ValidateTargetUID(); err != nil {
+func (_ *seeker) GetRoles(act *actiondto.Targeted) ([]string, *Error.Status) {
+    if err := act.ValidateTargetUID(); err != nil {
         return nil, err
     }
 
     if err := authorization.Authorize(
         authorization.Action.GetRoles,
         authorization.Resource.User,
-        filter.RequesterRoles,
+        act.RequesterRoles,
     ); err != nil {
         return nil, err
     }
 
-    if rawRoles, hit := cache.Client.Get(cache.KeyBase[cache.UserRolesById] + filter.TargetUID); hit {
+    if rawRoles, hit := cache.Client.Get(cache.KeyBase[cache.UserRolesById] + act.TargetUID); hit {
         return strings.Split(rawRoles, ","), nil
     }
 
     // TODO is there a point doing that? why just not use DB.Database.FindUserByID()?
     query := newQuery(
         `SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`,
-        filter.TargetUID,
+        act.TargetUID,
     )
 
     scan, err := query.Row()
@@ -173,7 +174,7 @@ func (_ *seeker) GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status) {
         return nil, e
     }
 
-    cache.Client.Set(cache.KeyBase[cache.UserRolesById] + filter.TargetUID, strings.Join(roles, ","))
+    cache.Client.Set(cache.KeyBase[cache.UserRolesById] + act.TargetUID, strings.Join(roles, ","))
 
     return roles, nil
 }

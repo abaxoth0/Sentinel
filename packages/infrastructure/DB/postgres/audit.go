@@ -1,27 +1,28 @@
 package postgres
 
 import (
-	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/util"
+	ActionDTO "sentinel/packages/core/action/DTO"
+	UserDTO "sentinel/packages/core/user/DTO"
 	"time"
 )
 
 /*
-    Audit is using for storing users modifications histories.
-    It works pretty simple, - before any user modification in DB
-    row, that will be modified should be stored into audit_user with
-    new property: changed_at
+   Audit is using for storing users modifications histories.
+   It works pretty simple, - before any user modification in DB
+   row, that will be modified should be stored into audit_user with
+   new property: changed_at
 */
 
 var deleteOperation = "D"
 var updatedOperation = "U"
 var restoreOperation = "R"
 
-func newAudit(operation string, filter *UserDTO.Filter, user *UserDTO.Basic) UserDTO.Audit {
+func newAudit(operation string, act *ActionDTO.Targeted, user *UserDTO.Basic) UserDTO.Audit {
     return UserDTO.Audit{
-        ChangedUserID: filter.TargetUID,
-        ChangedByUserID: filter.RequesterUID,
+        ChangedUserID: act.TargetUID,
+        ChangedByUserID: act.RequesterUID,
         Operation: operation,
         Login: user.Login,
         Password: user.Password,

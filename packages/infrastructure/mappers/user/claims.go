@@ -3,7 +3,7 @@ package usermapper
 import (
 	"fmt"
 	"log"
-	"sentinel/packages/common/util"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/token"
 
@@ -29,7 +29,7 @@ func convertToStrSlice(input []any) ([]string, error) {
 
 type claimsMapper[T any] func(claims jwt.MapClaims, roles []string) *T
 
-func mapFromClaims[T UserDTO.Filter | UserDTO.Payload](
+func mapFromClaims[T ActionDTO.Targeted | ActionDTO.Basic | UserDTO.Payload](
     claims jwt.MapClaims,
     mapper claimsMapper[T],
 ) (*T, *Error.Status) {
@@ -46,15 +46,23 @@ func mapFromClaims[T UserDTO.Filter | UserDTO.Payload](
     return mapper(claims, roles), nil
 }
 
-const NoTarget string = "no-targeted-user"
+func TargetedActionDTOFromClaims(targetUID string, claims jwt.MapClaims) (*ActionDTO.Targeted, *Error.Status) {
+	return mapFromClaims(claims, func(claims jwt.MapClaims, roles []string) *ActionDTO.Targeted{
+        return ActionDTO.NewTargeted(
+            targetUID,
+            claims[token.UserIdClaimsKey].(string),
+            roles,
+        )
+    })
+}
 
-func FilterDTOFromClaims(targetUID string, claims jwt.MapClaims) (*UserDTO.Filter, *Error.Status) {
-	return mapFromClaims(claims, func(claims jwt.MapClaims, roles []string) *UserDTO.Filter{
-        return &UserDTO.Filter{
-            TargetUID:      util.Ternary(targetUID == NoTarget, NoTarget, targetUID),
-            RequesterUID:   claims[token.UserIdClaimsKey].(string),
-            RequesterRoles: roles,
-        }
+
+func BasicActionDTOFromClaims(claims jwt.MapClaims) (*ActionDTO.Basic, *Error.Status) {
+	return mapFromClaims(claims, func(claims jwt.MapClaims, roles []string) *ActionDTO.Basic{
+        return ActionDTO.NewBasic(
+            claims[token.UserIdClaimsKey].(string),
+            roles,
+        )
     })
 }
 

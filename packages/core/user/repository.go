@@ -1,8 +1,9 @@
 package user
 
 import (
-	UserDTO "sentinel/packages/core/user/DTO"
 	Error "sentinel/packages/common/errors"
+	ActionDTO "sentinel/packages/core/action/DTO"
+	UserDTO "sentinel/packages/core/user/DTO"
 )
 
 type Repository interface {
@@ -24,7 +25,7 @@ type seeker interface {
 
 	IsLoginAvailable(login string) (bool, *Error.Status)
 
-    GetRoles(filter *UserDTO.Filter) ([]string, *Error.Status)
+    GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status)
 }
 
 // Responsible for CUD in CRUD
@@ -32,19 +33,19 @@ type repository interface {
     // Returns user id if error is nil, otherwise returns empty string and error
 	Create(login string, password string) (string, *Error.Status)
 
-	SoftDelete(filter *UserDTO.Filter) *Error.Status
+	SoftDelete(act *ActionDTO.Targeted) *Error.Status
 
-	Restore(filter *UserDTO.Filter) *Error.Status
+	Restore(act *ActionDTO.Targeted) *Error.Status
 
-	Drop(filter *UserDTO.Filter) *Error.Status
+	Drop(act *ActionDTO.Targeted) *Error.Status
 
-	DropAllSoftDeleted(filter *UserDTO.Filter) *Error.Status
+	DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status
 
-	ChangeLogin(filter *UserDTO.Filter, newLogin string) *Error.Status
+	ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.Status
 
-	ChangePassword(filter *UserDTO.Filter, newPassword string) *Error.Status
+	ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status
 
-	ChangeRoles(filter *UserDTO.Filter, newRoles []string) *Error.Status
+	ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status
 
     Activate(token string) *Error.Status
 }
