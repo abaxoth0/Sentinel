@@ -1,7 +1,7 @@
 ### HTTP ###
-domain: localhost
+domain: 0.0.0.0
 
-http-port: 8050
+http-port: 8080
 
 http-secured: false
 
@@ -11,7 +11,7 @@ http-allowed-origins:
 ### DATABASE ###
 db-default-queuery-timeout: 5s
 
-### AUTHENTICATION ###
+### AUTH ###
 access-token-ttl: 10m
 
 refresh-token-ttl: 336h # 14 days

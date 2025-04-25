@@ -11,7 +11,11 @@ import (
 )
 
 type secrets struct {
-    DatabaseURI               string             `validate:"required"`
+    DatabaseHost              string             `validate:"required"`
+    DatabasePort              string             `validate:"required"`
+    DatabaseName              string             `validate:"required"`
+    DatabaseUser              string             `validate:"required"`
+    DatabasePassword          string             `validate:"required"`
     AccessTokenPrivateKey     ed25519.PrivateKey `validate:"required"`
     AccessTokenPublicKey      ed25519.PublicKey  `validate:"required"`
     RefreshTokenPrivateKey    ed25519.PrivateKey `validate:"required"`
@@ -44,7 +48,11 @@ func loadSecrets() {
     }
 
     requiredEnvVars := []string{
-        "DB_URI",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
         "ACCESS_TOKEN_SECRET",
         "REFRESH_TOKEN_SECRET",
         "ACTIVATION_TOKEN_SECRET",
@@ -75,7 +83,11 @@ func loadSecrets() {
     Secret.MailerEmailPassword = getEnv("MAILER_EMAIL_PASSWORD")
     Secret.MailerEmail = getEnv("MAILER_EMAIL")
 
-    Secret.DatabaseURI = getEnv("DB_URI")
+    Secret.DatabaseHost = getEnv("DB_HOST")
+    Secret.DatabasePort = getEnv("DB_PORT")
+    Secret.DatabaseName = getEnv("DB_NAME")
+    Secret.DatabaseUser = getEnv("DB_USER")
+    Secret.DatabasePassword = getEnv("DB_PASSWORD")
 
     // All must be 32 bytes long
     AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))

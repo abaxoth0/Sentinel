@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"time"
 
@@ -30,8 +31,15 @@ func (c *connector) Connect() {
 
     log.Println("[ DATABASE ] Creating connection pool...")
 
-    // TODO move it to a env variable
-    config, err := pgxpool.ParseConfig("postgres://postgres:1234@localhost:5432/sentinel")
+
+    config, err := pgxpool.ParseConfig(fmt.Sprintf(
+        "postgres://%s:%s@%s:%s/%s",
+        config.Secret.DatabaseUser,
+        config.Secret.DatabasePassword,
+        config.Secret.DatabaseHost,
+        config.Secret.DatabasePort,
+        config.Secret.DatabaseName,
+    ))
 
     config.MinConns = 10
     config.MaxConns = 50
