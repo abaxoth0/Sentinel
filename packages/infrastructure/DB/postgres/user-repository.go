@@ -45,6 +45,10 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
         return "", err
     }
 
+    if err := user.ValidatePassword(password); err != nil {
+        return "", err
+    }
+
 	hashedPassword, err := hashPassword(password)
 
     if err != nil {
