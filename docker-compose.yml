@@ -1,6 +1,9 @@
 services:
   sentinel:
     build: .
+    env_file:
+      - ./cmd/.env
+    container_name: sentinel
     ports:
       - "0.0.0.0:8080:8080" # make sure that container port is the same in config
     depends_on:
@@ -14,9 +17,15 @@ services:
       - DB_PORT=${DB_PORT}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    volumes:
+      - ./cmd/.env:/sentinel/.env
+      - ./cmd/sentinel.config.yaml:/sentinel/sentinel.config.yaml
+      - ./cmd/RBAC.json:/sentinel/RBAC.json
 
   postgres:
     image: postgres:17.2
+    env_file:
+      - ./cmd/.env
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -26,7 +35,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d sentinel"]
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
