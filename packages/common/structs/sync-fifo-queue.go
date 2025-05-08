@@ -226,3 +226,18 @@ func (q *SyncFifoQueue[T]) Unwrap() []T {
     return r
 }
 
+// Same as Unwrap, but also deletes all elements in queue
+func (q *SyncFifoQueue[T]) UnwrapAndFlush() []T {
+    q.mut.Lock()
+
+    r := make([]T, len(q.elems))
+
+    copy(r, q.elems)
+
+    q.elems = []T{}
+
+    q.mut.Unlock()
+
+    return r
+}
+
