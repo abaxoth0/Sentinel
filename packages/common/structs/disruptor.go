@@ -10,7 +10,7 @@ const (
 	BufferIndexMask = BufferSize - 1
 )
 
-var yieldWaiter = yieldWait{}
+var yieldWaiter = yieldSeqWait{}
 
 type sequence struct {
     Value atomic.Int64
@@ -18,13 +18,13 @@ type sequence struct {
     _padding [56]byte
 }
 
-type waiter interface {
+type seqWaiter interface {
     WaitFor(seq int64, cursor *sequence, done <-chan struct{})
 }
 
-type yieldWait struct{}
+type yieldSeqWait struct{}
 
-func (w yieldWait) WaitFor(seq int64, cursor *sequence, done <-chan struct{}) {
+func (w yieldSeqWait) WaitFor(seq int64, cursor *sequence, done <-chan struct{}) {
     for cursor.Value.Load() < seq {
         select {
         case <-done:
@@ -39,7 +39,7 @@ type Disruptor[T any] struct {
 	buffer  [BufferSize]T
 	writer  sequence // write position (starts at -1)
 	reader  sequence // read position (starts at -1)
-	waiter  waiter
+	waiter  seqWaiter
 	done    chan struct{}
 }
 
