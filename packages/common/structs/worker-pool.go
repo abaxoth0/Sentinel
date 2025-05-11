@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -12,19 +13,17 @@ type Task interface {
 }
 
 type WorkerPool struct {
-    canceled  bool
+    canceled  atomic.Bool
     queue     *SyncFifoQueue[Task]
     waiter    Waiter
     ctx       context.Context
     cancel    context.CancelFunc
-    m         *sync.Mutex
     wg        *sync.WaitGroup
     done      chan struct{}
 }
 
 // Creates new worker pool with specified waiter and parent context.
 func NewWorkerPool(ctx context.Context, waiter Waiter) *WorkerPool {
-    mut := new(sync.Mutex)
     ctx, cancel := context.WithCancel(ctx)
 
     return &WorkerPool{
@@ -32,7 +31,6 @@ func NewWorkerPool(ctx context.Context, waiter Waiter) *WorkerPool {
         waiter: waiter,
         ctx: ctx,
         cancel: cancel,
-        m: mut,
         wg: new(sync.WaitGroup),
         done: make(chan struct{}),
     }
@@ -41,14 +39,9 @@ func NewWorkerPool(ctx context.Context, waiter Waiter) *WorkerPool {
 // Starts worker pool.
 // Will process tasks in batches if 'batch' is true
 func (wp *WorkerPool) Start(batch bool) error {
-    wp.m.Lock()
-
-    if wp.canceled {
-        wp.m.Unlock()
+    if wp.canceled.Load() {
         return fmt.Errorf("worker pool is canceled")
     }
-
-    wp.m.Unlock()
 
     var process func()
     if batch {
@@ -81,15 +74,25 @@ func (wp *WorkerPool) Start(batch bool) error {
 const batchSize int = 500
 
 func (wp *WorkerPool) processBatch() {
+    var once sync.Once
+
     done := make(chan struct{})
+    closeDone := func () {
+        close(done)
+    }
 
     go func() {
         for {
-            if wp.queue.Size() >= batchSize {
-                close(done)
+            select {
+            case <-done:
                 return
+            default:
+                if wp.queue.Size() >= batchSize {
+                    once.Do(closeDone)
+                    return
+                }
+                wp.waiter.Wait()
             }
-            wp.waiter.Wait()
         }
     }()
 
@@ -98,6 +101,8 @@ func (wp *WorkerPool) processBatch() {
     select {
     case<-done:
     case<-time.After(time.Millisecond * 50):
+        once.Do(closeDone) // terminate waiting goroutine
+
         if wp.queue.Size() == 0 {
             return
         }
@@ -140,15 +145,12 @@ func (wp *WorkerPool) processOne() {
 // Worker pool will finish all its tasks before stopping.
 // Once canceled, worker pool can't be started again.
 func (wp *WorkerPool) Cancel() error {
-    wp.m.Lock()
-    defer wp.m.Unlock()
-
-    if wp.canceled {
+    if wp.canceled.Load() {
         return fmt.Errorf("worker pool already canceled")
     }
 
     wp.cancel()
-    wp.canceled = true
+    wp.canceled.Store(true)
     wp.waiter.Wake()
 
     <-wp.done
@@ -157,14 +159,9 @@ func (wp *WorkerPool) Cancel() error {
 }
 
 func (wp *WorkerPool) Push(t Task) error {
-    wp.m.Lock()
-
-    if wp.canceled {
-        wp.m.Unlock()
+    if wp.canceled.Load() {
         return fmt.Errorf("can't push in canceled worker pool")
     }
-
-    wp.m.Unlock()
 
     wp.queue.Push(t)
     wp.waiter.Wake() // notify waiters that there are a new task in queue
