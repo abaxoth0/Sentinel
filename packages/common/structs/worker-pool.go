@@ -158,6 +158,10 @@ func (wp *WorkerPool) Cancel() error {
     return nil
 }
 
+func (wp *WorkerPool) IsCanceled() bool {
+    return wp.canceled.Load()
+}
+
 func (wp *WorkerPool) Push(t Task) error {
     if wp.canceled.Load() {
         return fmt.Errorf("can't push in canceled worker pool")
