@@ -1,3 +1,14 @@
+networks:
+  default:
+    driver: bridge
+    enable_ipv6: false
+
+volumes:
+  postgres_data:
+  redis_data:
+  loki-data: {}
+  grafana-data: {}
+
 services:
   sentinel:
     build: .
@@ -53,13 +64,33 @@ services:
       interval: 1s
       timeout: 3s
       retries: 5
+  loki:
+    image: grafana/loki:3.5.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./cmd/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
 
-networks:
-  default:
-    driver: bridge
-    enable_ipv6: false
+  promtail:
+    image: grafana/promtail:3.5.0
+    volumes:
+      - /var/log:/var/log
+      - ./cmd/promtail-config.yaml:/etc/promtail/config.yaml
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    restart: unless-stopped
 
-volumes:
-  postgres_data:
-  redis_data:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+    restart: unless-stopped
 
