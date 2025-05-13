@@ -8,6 +8,7 @@ volumes:
   redis_data:
   loki-data: {}
   grafana-data: {}
+  sentinel-logs: {}
 
 services:
   sentinel:
@@ -32,6 +33,7 @@ services:
       - ./cmd/.env:/sentinel/.env
       - ./cmd/sentinel.config.yaml:/sentinel/sentinel.config.yaml
       - ./cmd/RBAC.json:/sentinel/RBAC.json
+      - sentinel-logs:/var/log/sentinel
 
   postgres:
     image: postgres:17.2
@@ -77,7 +79,7 @@ services:
   promtail:
     image: grafana/promtail:3.5.0
     volumes:
-      - /var/log:/var/log
+      - sentinel-logs:/var/log/sentinel
       - ./cmd/promtail-config.yaml:/etc/promtail/config.yaml
     command: -config.file=/etc/promtail/config.yaml
     depends_on:

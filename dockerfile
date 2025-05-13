@@ -14,5 +14,7 @@ WORKDIR /sentinel
 
 COPY --from=builder /sentinel/main .
 
+RUN mkdir -p /var/log/sentinel
+
 CMD ["./main"]
 
