@@ -162,6 +162,8 @@ func (wp *WorkerPool) IsCanceled() bool {
     return wp.canceled.Load()
 }
 
+// Pushes a new task into a worker pool.
+// Returns error on trying to push into a canceled worker pool
 func (wp *WorkerPool) Push(t Task) error {
     if wp.canceled.Load() {
         return fmt.Errorf("can't push in canceled worker pool")
