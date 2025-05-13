@@ -75,15 +75,6 @@ func main() {
 
     printAppInfo()
 
-    go func() {
-        counter := 1
-        for {
-            appLogger.Info(fmt.Sprintf("test log#%d", counter))
-            counter++
-            time.Sleep(time.Second)
-        }
-    }()
-
     sig := <-stop
 
     println()
