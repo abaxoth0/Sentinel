@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"runtime"
 	"sentinel/packages/common/config"
+	"sentinel/packages/common/logger"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authorization"
 	"sentinel/packages/infrastructure/cache"
@@ -17,11 +18,32 @@ import (
 	"time"
 )
 
+var appLogger = logger.NewSource("APP", logger.Default)
+
 func main() {
 	// Program wasn't tested on OS other than Linux.
 	if runtime.GOOS != "linux" {
 		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
 	}
+
+    // Make logs also appear in terminal
+    if err := logger.Default.NewTransmission(logger.Stdout); err != nil {
+        panic(err.Error())
+    }
+
+    go func () {
+        if err := logger.Default.Start(); err != nil {
+            panic(err.Error())
+        }
+    }()
+    defer func() {
+        if err := logger.Default.Stop(); err != nil {
+            panic(err.Error())
+        }
+    }()
+
+    // Reserve some time for logger to start up
+    time.Sleep(time.Millisecond * 50)
 
     config.Init()
     authorization.Init()
@@ -35,11 +57,11 @@ func main() {
         email.Run()
     }
 
-	log.Println("[ SERVER ] Initializng router...")
+	appLogger.Info("Initializng router...")
 
 	Router := router.Create()
 
-	log.Println("[ SERVER ] Initializng router: OK")
+	appLogger.Info("Initializng router: OK")
 
     stop := make(chan os.Signal, 1)
 
@@ -48,42 +70,51 @@ func main() {
     go func(){
         err := Router.Start(":" + config.HTTP.Port)
 
-        log.Printf("[ SERVER ] Stopped: %s\n", err.Error())
+        appLogger.Info("Stopped: " + err.Error())
     }()
 
     printAppInfo()
 
+    go func() {
+        counter := 1
+        for {
+            appLogger.Info(fmt.Sprintf("test log#%d", counter))
+            counter++
+            time.Sleep(time.Second)
+        }
+    }()
+
     sig := <-stop
 
     println()
-    log.Printf("[ APP ] '%s' signal received, shutting down...\n", sig.String())
+    appLogger.Info(sig.String() + " signal received, shutting down...\n")
 
-    log.Println("[ SERVER ] Stopping...")
+    appLogger.Info("Stopping...")
 
     ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
     defer cancel()
 
     if err := Router.Shutdown(ctx); err != nil {
-        log.Printf("[ SERVER ] Failed to stop server: %v\n", err)
+        appLogger.Error("Failed to stop server", err.Error())
     } else {
-        log.Println("[ SERVER ] Stopping: OK")
+        appLogger.Info("Stopping: OK")
     }
 
     if err := DB.Database.Disconnect(); err != nil {
-        log.Printf("[ DATABASE ] Failed to disconnect from DB: %s\n", err.Error())
+        appLogger.Error("Failed to disconnect from DB", err.Error())
     }
 
     if err := cache.Client.Close(); err != nil {
-        log.Printf("[ CACHE ] Failed to disconnect from DB: %s\n", err.Error())
+        appLogger.Error("Failed to disconnect from DB", err.Error())
     }
 
     if config.App.IsLoginEmail {
         if err := email.Stop(); err != nil {
-            log.Printf("[ EMAIL ] Failed to stop correctly: %s\n", err.Error())
+            appLogger.Error("Failed to stop correctly", err.Error())
         }
     }
 
-    log.Println("[ APP ] Shutted down")
+    appLogger.Info("Shutted down")
 }
 
 func printAppInfo() {
@@ -105,7 +136,8 @@ func printAppInfo() {
     fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
     if config.Debug.Enabled {
-        fmt.Printf("[ WARNING ] Debug mode enabled.\n\n")
+        appLogger.Warning("Debug mode enabled.")
+        print("\n\n")
     }
 }
 
