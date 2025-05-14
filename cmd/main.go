@@ -16,11 +16,19 @@ import (
 	"sentinel/packages/presentation/api/http/router"
 	"syscall"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
+
+func main() {
+    Router := initialize()
+
+    start(Router)
+}
 
 var appLogger = logger.NewSource("APP", logger.Default)
 
-func main() {
+func initialize() *echo.Echo {
 	// Program wasn't tested on OS other than Linux.
 	if runtime.GOOS != "linux" {
 		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
@@ -28,19 +36,8 @@ func main() {
 
     // Make logs also appear in terminal
     if err := logger.Default.NewTransmission(logger.Stdout); err != nil {
-        panic(err.Error())
+        log.Fatalln(err.Error())
     }
-
-    go func () {
-        if err := logger.Default.Start(); err != nil {
-            panic(err.Error())
-        }
-    }()
-    defer func() {
-        if err := logger.Default.Stop(); err != nil {
-            panic(err.Error())
-        }
-    }()
 
     // Reserve some time for logger to start up
     time.Sleep(time.Millisecond * 50)
@@ -50,6 +47,40 @@ func main() {
     cache.Client.Connect()
 	DB.Database.Connect()
 
+	appLogger.Info("Initializng router...")
+
+	Router := router.Create()
+
+	appLogger.Info("Initializng router: OK")
+
+    return Router
+}
+
+func start(Router *echo.Echo) {
+    stop := make(chan os.Signal, 1)
+
+    signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+    go func () {
+        if err := logger.Default.Start(); err != nil {
+            panic(err.Error())
+        }
+    }()
+    defer func() {
+        if err := logger.Default.Stop(); err != nil {
+            entry := logger.NewLogEntry(
+                logger.ErrorLogLevel,
+                "APP",
+                "Failed to stop logger",
+                err.Error(),
+                )
+            logger.Stderr.Log(&entry)
+        }
+    }()
+
+    // Reserve some time for logger to start up
+    time.Sleep(time.Millisecond * 50)
+
     // Currently email module used only to send activation emails,
     // so there are no point to run/stop it if login isn't email.
     // (cuz in this case activation emails not sends and all users are active by default)
@@ -57,20 +88,10 @@ func main() {
         email.Run()
     }
 
-	appLogger.Info("Initializng router...")
-
-	Router := router.Create()
-
-	appLogger.Info("Initializng router: OK")
-
-    stop := make(chan os.Signal, 1)
-
-    signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-
     go func(){
         err := Router.Start(":" + config.HTTP.Port)
 
-        appLogger.Info("Stopped: " + err.Error())
+        appLogger.Info(err.Error())
     }()
 
     printAppInfo()
@@ -78,7 +99,7 @@ func main() {
     sig := <-stop
 
     println()
-    appLogger.Info(sig.String() + " signal received, shutting down...\n")
+    appLogger.Info(sig.String() + " signal received, shutting down...")
 
     appLogger.Info("Stopping...")
 
@@ -86,9 +107,9 @@ func main() {
     defer cancel()
 
     if err := Router.Shutdown(ctx); err != nil {
-        appLogger.Error("Failed to stop server", err.Error())
+        appLogger.Error("Failed to stop HTTP server", err.Error())
     } else {
-        appLogger.Info("Stopping: OK")
+        appLogger.Info("HTTP server stopped")
     }
 
     if err := DB.Database.Disconnect(); err != nil {
@@ -101,7 +122,7 @@ func main() {
 
     if config.App.IsLoginEmail {
         if err := email.Stop(); err != nil {
-            appLogger.Error("Failed to stop correctly", err.Error())
+            appLogger.Error("Failed to stop mailer", err.Error())
         }
     }
 
