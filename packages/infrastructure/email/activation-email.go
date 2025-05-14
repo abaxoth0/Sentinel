@@ -2,7 +2,6 @@ package email
 
 import (
 	_ "embed"
-	"log"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -51,7 +50,7 @@ func CreateAndEnqueueActivationEmail(to string, token string) *Error.Status {
     }
 
     if err := MainMailer.Push(email); err != nil {
-        log.Printf("[ ERROR ] Failed to push email in queue: %s\n", err.Error())
+        emailLogger.Error("Failed to push email in queue", err.Error())
         return Error.StatusInternalError
     }
 

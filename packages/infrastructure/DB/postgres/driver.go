@@ -1,6 +1,8 @@
 package postgres
 
-// TODO add logs
+import "sentinel/packages/common/logger"
+
+var dbLogger = logger.NewSource("DB", logger.Default)
 
 type postgers struct {
     connector

@@ -2,11 +2,13 @@ package json
 
 import (
 	"io"
-	"log"
+	"sentinel/packages/common/logger"
 	"strings"
 
-    json "github.com/json-iterator/go"
+	json "github.com/json-iterator/go"
 )
+
+var jsonLogger = logger.NewSource("JSON", logger.Default)
 
 type Encoder struct {
     //
@@ -14,11 +16,11 @@ type Encoder struct {
 
 // Decode given json.
 // Returns decoded json and true if there are no errors, false otherwise.
-func Decode[T interface{}](input io.Reader) (T, error) {
+func Decode[T any](input io.Reader) (T, error) {
 	var result T
 
 	if err := json.NewDecoder(input).Decode(&result); err != nil {
-        log.Printf("\n[ ERROR ] Failed to decode JSON:\n%v\n", err)
+        jsonLogger.Error("Decoding failed", err.Error())
 
 		return result, err
 	}
@@ -26,17 +28,17 @@ func Decode[T interface{}](input io.Reader) (T, error) {
 	return result, nil
 }
 
-func DecodeString[T interface{}](input string) (T, error) {
+func DecodeString[T any](input string) (T, error) {
 	return Decode[T](strings.NewReader(input))
 }
 
 // Returns `target` argument in json format ([]byte), and true if no errors occured, false otherwise.
 // Encode passed `target` argument into json.
-func Encode(target interface{}) ([]byte, error) {
+func Encode(target any) ([]byte, error) {
 	result, err := json.Marshal(target)
 
 	if err != nil {
-        log.Printf("\n[ ERROR ] Failed to marshal json:\n%v\n", err)
+        jsonLogger.Error("Encoding failed", err.Error())
 
 		return nil, err
 	}

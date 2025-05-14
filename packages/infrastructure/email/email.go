@@ -2,15 +2,17 @@ package email
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/logger"
 	"slices"
 	"time"
 
 	"gopkg.in/gomail.v2"
 )
+
+var emailLogger = logger.NewSource("EMAIL", logger.Default)
 
 type Email interface {
     Send() *Error.Status
@@ -22,7 +24,7 @@ var isRunning = false
 
 func Run() {
     if isRunning {
-        panic("email module is already running")
+        emailLogger.Fatal("Failed to start mailer", "Mailer already running")
     }
 
     initActivationEmailBody()
@@ -30,7 +32,7 @@ func Run() {
     validSMTPPorts := []int{587, 25, 465, 2525}
 
     if !slices.Contains(validSMTPPorts, config.Email.SmtpPort) {
-        log.Fatalln("[ EMAIL ] Fatal error: invlid SMTP port")
+        emailLogger.Fatal("Failed to start mailer", "Invlid SMTP port")
     }
 
     dialer = gomail.NewDialer(
@@ -52,7 +54,7 @@ func Run() {
 
 func Stop() error {
     if !isRunning {
-        return fmt.Errorf("email module isn't running, hence can't be stopped")
+        return errors.New("email module isn't running, hence can't be stopped")
     }
 
     defer func(){ isRunning = false }()

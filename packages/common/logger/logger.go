@@ -26,6 +26,8 @@ type TransmittingLogger interface {
 // TODO replace "default" with service id
 var Default = NewFileLogger("default")
 
+var Undefined = NewSource("UNDEFINED", Default)
+
 var Stdout = newStdoutLogger()
 
 var Stderr = newStderrLogger()

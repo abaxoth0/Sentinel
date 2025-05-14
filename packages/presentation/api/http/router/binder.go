@@ -19,7 +19,6 @@ func (b *binder) Bind(i interface{}, ctx echo.Context) error {
         return response.FailedToReadRequestBody
     }
 
-
     if err := jsoniter.Unmarshal(body, i); err != nil {
         return response.FailedToDecodeRequestBody
     }

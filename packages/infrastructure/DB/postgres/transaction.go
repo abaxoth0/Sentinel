@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"fmt"
 	Error "sentinel/packages/common/errors"
 )
 
@@ -20,7 +19,7 @@ func (t *transaction) Exec() *Error.Status {
     tx, err := driver.pool.Begin(ctx)
 
     if err != nil {
-        fmt.Printf("[ DATABASE ] ERROR: Failed to begin transaction:\n%v\n", err)
+        dbLogger.Error("Failed to begin transaction", err.Error())
         return Error.StatusInternalError
     }
 
@@ -33,7 +32,7 @@ func (t *transaction) Exec() *Error.Status {
     }
 
     if err := tx.Commit(ctx); err != nil {
-        fmt.Printf("[ DATABASE ] ERROR: Failed to commit transaction:\n%v\n", err)
+        dbLogger.Error("Failed to commit transaction", err.Error())
         return Error.StatusInternalError
     }
 

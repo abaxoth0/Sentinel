@@ -3,16 +3,19 @@ package redis
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/logger"
 	"sentinel/packages/presentation/data/json"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
+
+var cacheLogger = logger.NewSource("CACHE", logger.Default)
 
 type driver struct {
     client *redis.Client
@@ -25,10 +28,10 @@ func New() *driver {
 
 func (d *driver) Connect() {
     if d.isConnected {
-        panic("cache already established")
+        cacheLogger.Panic("DB connection failed", "Connection already established")
     }
 
-	log.Println("[ CACHE ] Connecting to DB...")
+	cacheLogger.Info("Connecting to DB...")
 
 	d.client = redis.NewClient(&redis.Options{
 		Addr:        config.Secret.CacheURI,
@@ -41,10 +44,10 @@ func (d *driver) Connect() {
     defer cancel()
 
     if err := d.client.Ping(ctx).Err(); err != nil {
-        panic(fmt.Sprintf("[ ERROR ] Failed to connect to DB:\n%v\n", err))
+        cacheLogger.Panic("DB connection failed", err.Error())
     }
 
-	log.Println("[ CACHE ] Connecting to DB: OK")
+	cacheLogger.Info("Connecting to DB: OK")
 
     d.isConnected = true
 }
@@ -57,7 +60,7 @@ func (d *driver) Close() *Error.Status {
         )
     }
 
-    log.Println("[ CACHE ] Disconnecting from DB...")
+    cacheLogger.Info("Disconnecting from DB...")
 
     if err := d.client.Close(); err != nil {
         return Error.NewStatusError(
@@ -66,7 +69,7 @@ func (d *driver) Close() *Error.Status {
         )
     }
 
-    log.Println("[ CACHE ] Disconnecting from DB: OK")
+    cacheLogger.Info("Disconnecting from DB: OK")
 
     d.isConnected = false
 
@@ -87,14 +90,20 @@ func longTimeoutContext() (context.Context, context.CancelFunc) {
 func logAndConvert(action string, err error) *Error.Status {
 	if err != nil {
         if err == context.DeadlineExceeded {
-            log.Println("[ CACHE ] TIMEOUT: " + action)
+            cacheLogger.Error(
+                "Request failed",
+                "TIMEOUT: " + action,
+            )
         } else {
-            log.Printf("[ CACHE ] ERROR: Failed to '%s':\n%v\n", action, err)
+            cacheLogger.Error(
+                "Request failed",
+                "Failed to "+action+": "+err.Error(),
+            )
         }
         return Error.StatusInternalError
 	}
 
-    log.Println("[ CACHE ] " + action)
+    cacheLogger.Info(action)
 
     return nil
 }
@@ -105,7 +114,7 @@ func (d *driver) Get(key string) (string, bool) {
 
 	cachedData, err := d.client.Get(ctx, key).Result()
     if err == redis.Nil {
-        log.Println("[ CACHE ] Miss: " + key)
+        cacheLogger.Info("Miss: " + key)
         return "", false
     }
 
@@ -143,7 +152,7 @@ func(d *driver) Set(key string, value any) *Error.Status {
 func (d *driver) EncodeAndSet(key string, value any) *Error.Status {
     encodedData, err := json.Encode(value)
     if err != nil {
-        log.Println("[ ERROR ] JSON encoding failed: " + err.Error())
+        cacheLogger.Error("JSON encoding failed ", err.Error())
         return Error.NewStatusError(
             "JSON encoding failed",
             http.StatusInternalServerError,
@@ -233,7 +242,9 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
                 return logAndConvert(deletePatternAction, e)
             }
 
-            log.Printf("[ CACHE ] Deleted %d keys with pattern: %s", len(keys), pattern)
+            deleted := strconv.FormatInt(int64(len(keys)), 64)
+
+            cacheLogger.Info("Deleted "+deleted+"keys with pattern: "+pattern)
         }
 
         // Exit when cursor is 0 (no more keys to scan)
@@ -298,7 +309,9 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
         }
 
         if nextCursor == 0 {
-            log.Printf("[CACHE] Deleted %d keys matching '%s'", keysDeleted, pattern)
+            deleted := strconv.FormatInt(int64(keysDeleted), 64)
+
+            cacheLogger.Info("Deleted "+deleted+" keys matching "+pattern)
             break
         }
 

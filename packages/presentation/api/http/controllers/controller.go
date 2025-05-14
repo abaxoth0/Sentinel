@@ -3,12 +3,15 @@ package controller
 import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/logger"
 	"sentinel/packages/common/util"
 	"sentinel/packages/infrastructure/token"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/labstack/echo/v4"
 )
+
+var Logger = logger.NewSource("CONTROLLER", logger.Default)
 
 func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
     if err := ctx.Bind(&dest); err != nil {

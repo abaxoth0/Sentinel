@@ -4,8 +4,8 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
-	"log"
 	"sentinel/packages/common/config"
+	"sentinel/packages/common/logger"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"time"
 
@@ -14,6 +14,7 @@ import (
 	Error "sentinel/packages/common/errors"
 )
 
+var tokenLogger = logger.NewSource("TOKEN", logger.Default)
 
 type SignedToken struct {
     value string
@@ -66,7 +67,7 @@ func newSignedToken(
 
     tokenStr, err := token.SignedString(key)
     if err != nil {
-        log.Printf("[ JWT ] Failed to sign token: %s\n", err.Error())
+        tokenLogger.Error("Failed to sign token", err.Error())
         return nil, Error.StatusInternalError
     }
 
@@ -145,7 +146,7 @@ func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Erro
             // Check if someone tampered with the token
             return nil, TokenModified
         default:
-            log.Printf("[ UNKNOWN ERROR ] Failed to parse signed token: %s\n", err.Error())
+            tokenLogger.Error("Failed to parse signed token", err.Error())
             return nil, Error.StatusInternalError
         }
     }

@@ -2,12 +2,13 @@ package router
 
 import (
 	"net/http"
+	controller "sentinel/packages/presentation/api/http/controllers"
 
 	"github.com/labstack/echo/v4"
 )
 
 func handleHttpError(err error, ctx echo.Context) {
-    ctx.Logger().Error(err)
+    controller.Logger.Error("", err.Error())
 
     if ctx.Response().Committed {
         return

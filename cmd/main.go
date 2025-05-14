@@ -62,7 +62,7 @@ func start(Router *echo.Echo) {
     signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
     go func () {
-        if err := logger.Default.Start(); err != nil {
+        if err := logger.Default.Start(config.Debug.Enabled); err != nil {
             panic(err.Error())
         }
     }()

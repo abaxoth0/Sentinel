@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -58,7 +57,7 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
             return nil, Error.StatusUnauthorized
         }
 
-        log.Printf("[ ERROR ] Failed to get auth cookie: %s\n", err.Error())
+        Logger.Error("Failed to get auth cookie", err.Error())
         return nil, Error.StatusInternalError
     }
 

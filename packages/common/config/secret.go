@@ -2,7 +2,6 @@ package config
 
 import (
 	"crypto/ed25519"
-	"log"
 	"os"
 	"strconv"
 
@@ -34,17 +33,16 @@ var Secret secrets
 func getEnv(key string) string {
     env, _ := os.LookupEnv(key)
 
-    log.Println("[ ENV ] Loaded: " + key)
+    configLogger.Info("Loaded: " + key)
 
     return env
 }
 
 func loadSecrets() {
-	log.Println("[ CONFIG ] Loading environment vairables...")
+	configLogger.Info("Loading environment vairables...")
 
     if err := godotenv.Load(); err != nil {
-        log.Printf("[ CONFIG ] Failed to load environment vairables: %v\n", err)
-        os.Exit(1)
+        configLogger.Fatal("Failed to load environment vairables", err.Error())
     }
 
     requiredEnvVars := []string{
@@ -66,15 +64,17 @@ func loadSecrets() {
     // Check is all required env variables exists
     for _, variable := range requiredEnvVars {
         if _, exists := os.LookupEnv(variable); !exists {
-            log.Fatalln("[ CRITICAL ERROR ] Missing required env variable: " + variable)
+            configLogger.Fatal(
+                "Failed to load environment variables",
+                "Missing required env variable" + variable,
+            )
         }
     }
 
     cacheDB, err := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
 
     if err != nil {
-        log.Printf("[ CONFIG ] Failed to parse CACHE_DB env variable: %v\n", err)
-        os.Exit(1)
+        configLogger.Fatal("Failed to parse CACHE_DB env variable", err.Error())
     }
 
     Secret.CacheURI = getEnv("CACHE_URI")
@@ -95,13 +95,22 @@ func loadSecrets() {
     ActivationTokenSecret := []byte(getEnv("ACTIVATION_TOKEN_SECRET"))
 
     if len(AccessTokenSecret) != 32 {
-        log.Fatalln("[ CONFIG ] Invalid length of access token secret (must be 32 bytes long)")
+        configLogger.Fatal(
+            "Invalid environment variable value",
+            "Invalid length of access token secret (must be 32 bytes long)",
+        )
     }
     if len(RefreshTokenSecret) != 32 {
-        log.Fatalln("[ CONFIG ] Invalid length of refresh token secret (must be 32 bytes long)")
+        configLogger.Fatal(
+            "Invalid environment variable value",
+            "Invalid length of refresh token secret (must be 32 bytes long)",
+        )
     }
     if len(ActivationTokenSecret) != 32 {
-        log.Fatalln("[ CONFIG ] Invalid length of activation token secret (must be 32 bytes long)")
+        configLogger.Fatal(
+            "Invalid environment variable value",
+            "Invalid length of activation token secret (must be 32 bytes long)",
+        )
     }
 
     Secret.AccessTokenPrivateKey = ed25519.NewKeyFromSeed(AccessTokenSecret)
@@ -114,10 +123,9 @@ func loadSecrets() {
     Secret.RefreshTokenPublicKey = Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
     Secret.ActivationTokenPublicKey = Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
 
-    log.Println("[ CONFIG ] Loading environment vairables: OK")
+    configLogger.Info("Loading environment vairables: OK")
 
-    log.Println("[ CONFIG ] Validating secrets...")
-
+    configLogger.Info("Validating secrets...")
 
     validate := validator.New()
 
@@ -126,10 +134,9 @@ func loadSecrets() {
     })
 
     if err := validate.Struct(Secret); err != nil {
-        log.Printf("[ CONFIG ] Secrets validation failed: %v\n", err)
-        os.Exit(1)
+        configLogger.Fatal("Secrets validation failed", err.Error())
     }
 
-    log.Println("[ CONFIG ] Validating secrets: OK")
+    configLogger.Info("Validating secrets: OK")
 }
 

@@ -12,7 +12,7 @@ type stdoutLogger struct {
 
 func newStdoutLogger() stdoutLogger {
     return stdoutLogger{
-        logger: log.New(os.Stdout, "INFO: ", log.Ldate | log.Ltime),
+        logger: log.New(os.Stdout, "", log.Ldate | log.Ltime),
     }
 }
 

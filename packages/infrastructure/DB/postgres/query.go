@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"reflect"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -29,12 +28,14 @@ func newQuery(sql string, args ...any) *query {
 }
 
 func (q *query) toStatusError(err error) *Error.Status {
+    defer dbLogger.Debug("Failed query: " + q.sql)
+
     if err == context.DeadlineExceeded {
-        fmt.Printf("[ ERROR ] Query timeout:\n%s\n", q.sql)
+        dbLogger.Error("Query failed", "Query timeout")
         return Error.StatusTimeout
     }
 
-    fmt.Printf("[ ERROR ] Failed to execute query `%s`: \n%v\n", q.sql, err.Error())
+    dbLogger.Error("Query failed", err.Error())
     return Error.StatusInternalError
 }
 
@@ -86,8 +87,10 @@ func (q *query) Row() (scanRow, *Error.Status) {
                 typeof := reflect.TypeOf(dest)
 
                 if typeof.Kind() != reflect.Ptr {
-                    fmt.Printf("[ ERROR ] Destination for scanning must be a pointer, got: %s\n", typeof.String())
-                    return Error.StatusInternalError
+                    dbLogger.Panic(
+                        "Query scan failed",
+                        "Destination for scanning must be a pointer, but got '"+typeof.String()+"'",
+                    )
                 }
             }
         }

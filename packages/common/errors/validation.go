@@ -1,7 +1,6 @@
 package errs
 
 import (
-	"log"
 	"net/http"
 )
 
@@ -26,8 +25,7 @@ func (e *Validation) ToStatus(noValueMsg string, invalidValueMsg string) *Status
     if e == InvalidValue {
         return NewStatusError(invalidValueMsg, http.StatusBadRequest)
     }
-    log.Printf("[ UNKNOWN ERROR ] %s\n", e.Error())
-    return StatusInternalError
+    panic("Invalid validation error: Expected NoValue or InvalidValue")
 }
 
 func NewValidationError(message string) *Validation {

@@ -2,7 +2,7 @@ package email
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"html/template"
 )
 
@@ -21,7 +21,7 @@ func parseTemplate(rawTemplate string, v any) (string, error) {
 
     r := buf.String()
     if r == "<nil>" {
-        return "", fmt.Errorf("failed to read buffer")
+        return "", errors.New("failed to read buffer")
     }
 
     return string(r), nil

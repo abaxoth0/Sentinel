@@ -1,11 +1,12 @@
 package usermapper
 
 import (
-	"fmt"
-	"log"
+	"errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
+	"sentinel/packages/infrastructure/mappers"
 	"sentinel/packages/infrastructure/token"
+	"strconv"
 
 	Error "sentinel/packages/common/errors"
 
@@ -18,7 +19,8 @@ func convertToStrSlice(input []any) ([]string, error) {
     for i,v := range input {
         str, ok := v.(string)
         if !ok {
-            return nil, fmt.Errorf("element %d isn't a string", i)
+            idx := strconv.FormatInt(int64(i), 64)
+            return nil, errors.New("Type error: element "+idx+" isn't a string")
         }
 
         out[i] = str
@@ -39,7 +41,10 @@ func mapFromClaims[T ActionDTO.Targeted | ActionDTO.Basic | UserDTO.Payload](
 
     roles, err := convertToStrSlice(claims[token.UserRolesClaimsKey].([]any))
     if err != nil {
-        log.Printf("[ ERROR ] Failed to create user filter from claims: %s\n", err.Error())
+        mappers.Logger.Error(
+            "Failed to create user filter from claims",
+            err.Error(),
+        )
         return nil, Error.StatusInternalError
     }
 

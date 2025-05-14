@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"os"
-	"sentinel/packages/common/config"
 	"sentinel/packages/common/structs"
 	"slices"
 	"sync"
@@ -19,6 +18,7 @@ var errLogger = NewSource("LOG", Stderr)
 
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
+    debug         bool
     logger        *log.Logger
     logFile       *os.File
     isRunning     atomic.Bool
@@ -63,10 +63,12 @@ func NewFileLogger(name string) *FileLogger {
     }
 }
 
-func (l *FileLogger) Start() error {
+func (l *FileLogger) Start(debug bool) error {
     if l.isRunning.Load() {
         return errors.New("logger already started")
     }
+
+    l.debug = debug
 
     // canceled WorkerPool can't be started
     if l.fallback.IsCanceled() {
@@ -144,7 +146,7 @@ func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-    if entry.rawLevel == DebugLogLevel && !config.Debug.Enabled {
+    if entry.rawLevel == DebugLogLevel && l.debug {
         return
     }
 

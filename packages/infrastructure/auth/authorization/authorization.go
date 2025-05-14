@@ -1,14 +1,15 @@
 package authorization
 
 import (
-	"log"
 	"net/http"
-	"os"
-	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/config"
+	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/logger"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 )
+
+var authzLogger = logger.NewSource("AUTHORIZATION", logger.Default)
 
 type resource struct {
 	User  *rbac.Resource
@@ -23,8 +24,7 @@ func Init() {
 	h, e := rbac.LoadHost("RBAC.json")
 
 	if e != nil {
-		log.Println(e)
-		os.Exit(1)
+        authzLogger.Fatal("Failed to load RBAC schema", e.Error())
 	}
 
     Host = h
@@ -32,7 +32,7 @@ func Init() {
 	s, err := Host.GetSchema(config.App.ServiceID)
 
 	if err != nil {
-		panic(err)
+		authzLogger.Fatal("Failed to get RBAC schema", err.Error())
 	}
 
     schema = s

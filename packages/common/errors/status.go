@@ -39,14 +39,14 @@ func (e *Status) Side() errorSide {
     if e.status > 500 && e.status < 600{
         return ServerSide
     }
-    panic(fmt.Sprintf("invalid error status range: must be between 100 and 599, but got - %d", e.status))
+    panic(fmt.Sprintf("Error status range must be between 100 and 599, but got - %d", e.status))
 }
 
 // Creates new status error.
 // Status must be between 100 and 599 - any other value will cause panic.
 func NewStatusError(message string, status int) *Status {
     if status < 100 || status > 599 {
-        panic(fmt.Sprintf("invalid error status range: must be between 100 and 599, but got - %d", status))
+        panic(fmt.Sprintf("Error status range must be between 100 and 599, but got - %d", status))
     }
     return &Status{status, message}
 }

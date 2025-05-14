@@ -2,14 +2,16 @@ package config
 
 import (
 	"io"
-	"log"
 	"os"
+	"sentinel/packages/common/logger"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"gopkg.in/yaml.v3"
 )
+
+var configLogger = logger.NewSource("CONFIG",logger.Default)
 
 // Wrapper for time.ParseDuration. Panics on error.
 func parseDuration(raw string) time.Duration {
@@ -109,34 +111,31 @@ var Email *emailConfig
 var isInit bool = false
 
 func loadConfig(path string, dest *configs) {
-	log.Println("[ CONFIG ] Reading config file...")
+	configLogger.Info("Reading config file...")
 
     file, err := os.Open(path)
 
     if err != nil {
-        log.Printf("[ CONFIG ] Failed to open config file: %v\n", err)
-        os.Exit(1)
+        configLogger.Fatal("Failed to open config file", err.Error())
     }
 
     rawConfig, err := io.ReadAll(file)
 
     if err != nil {
-        log.Printf("[ CONFIG ] Failed to read config file: %v\n", err)
-        os.Exit(1)
+        configLogger.Fatal("Failed to read config file", err.Error())
     }
 
-    log.Println("[ CONFIG ] Reading config file: OK")
+    configLogger.Info("Reading config file: OK")
 
-    log.Println("[ CONFIG ] Parsing config file...")
+    configLogger.Info("Parsing config file...")
 
     if err := yaml.Unmarshal(rawConfig, dest); err != nil {
-        log.Printf("[ CONFIG ] Failed to parse config file: %v\n", err)
-        os.Exit(1)
+        configLogger.Fatal("Failed to parse config file", err.Error())
     }
 
-    log.Println("[ CONFIG ] Parsing config file: OK")
+    configLogger.Info("Parsing config file: OK")
 
-    log.Println("[ CONFIG ] Validating config...")
+    configLogger.Info("Validating config...")
 
     validate := validator.New()
 
@@ -145,19 +144,19 @@ func loadConfig(path string, dest *configs) {
     })
 
     if err := validate.Struct(dest); err != nil {
-        log.Printf("[ CONFIG ] Failed to validate config: %v\n", err)
+        configLogger.Fatal("Failed to validate config", err.Error())
         os.Exit(1)
     }
 
-    log.Println("[ CONFIG ] Validating config: OK")
+    configLogger.Info("Validating config: OK")
 }
 
 func Init() {
     if isInit {
-        log.Fatalln("[ CONFIG ] Fatal error: already initialized")
+        configLogger.Fatal("Failed to initialize config", "Config already initialized")
     }
 
-	log.Println("[ CONFIG ] Initializing...")
+	configLogger.Info("Initializing...")
 
     configs := new(configs)
 
@@ -174,7 +173,7 @@ func Init() {
     App = &configs.appConfig
     Email = &configs.emailConfig
 
-	log.Println("[ CONFIG ] Initializing: OK")
+	configLogger.Info("Initializing: OK")
 
     isInit = true
 }
