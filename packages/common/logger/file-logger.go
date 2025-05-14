@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"sentinel/packages/common/config"
 	"sentinel/packages/common/structs"
 	"slices"
 	"sync"
@@ -143,12 +144,28 @@ func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
+    if entry.rawLevel == DebugLogLevel && !config.Debug.Enabled {
+        return
+    }
+
     if len(l.transmissions) != 0 {
         defer func() {
             for _, transmission := range l.transmissions {
                 transmission.Log(entry)
             }
         }()
+    }
+
+    // Immediatly handle panic or fatal log
+    if entry.rawLevel >= FatalLogLevel {
+        newLogEntryHandlerProducer(l.logger)(entry)
+
+        if entry.rawLevel == PanicLogLevel {
+            panic(entry.Message + "\n" + entry.Error)
+        }
+
+        // Fatal
+        os.Exit(1)
     }
 
     // if ok is false, that means disruptor's buffer is overflowed
