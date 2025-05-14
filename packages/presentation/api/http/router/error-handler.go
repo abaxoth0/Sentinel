@@ -8,11 +8,10 @@ import (
 )
 
 func handleHttpError(err error, ctx echo.Context) {
-    controller.Logger.Error("", err.Error())
-
     if ctx.Response().Committed {
         return
     }
+
     // TODO check this out
     // ctx.Response().Before()
     // ctx.Response().After()
@@ -24,8 +23,12 @@ func handleHttpError(err error, ctx echo.Context) {
         message = e.Message.(string)
     }
 
+    status := http.StatusText(code)
+
+    controller.Logger.Error(message, status)
+
     ctx.JSON(code, map[string]string{
-        "error": http.StatusText(code),
+        "error": status,
         "message": message,
     })
 }
