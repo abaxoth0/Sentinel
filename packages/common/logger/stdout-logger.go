@@ -16,7 +16,15 @@ func newStdoutLogger() stdoutLogger {
     }
 }
 
-func (l stdoutLogger) Log(entry *LogEntry) {
+func (l stdoutLogger) log(entry *LogEntry) {
     l.logger.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message)
+}
+
+func (l stdoutLogger) Log(entry *LogEntry) {
+    if ok := logPreprocessing(Debug.Load(), entry, nil, l.log); !ok {
+        return
+    }
+
+    l.log(entry)
 }
 

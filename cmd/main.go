@@ -34,15 +34,15 @@ func initialize() *echo.Echo {
 		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
 	}
 
-    // Make logs also appear in terminal
+    // All init logs will be shown anyway
     if err := logger.Default.NewTransmission(logger.Stdout); err != nil {
-        log.Fatalln(err.Error())
+        panic(err.Error())
     }
 
-    // Reserve some time for logger to start up
-    time.Sleep(time.Millisecond * 50)
-
     config.Init()
+
+    logger.Debug.Store(config.Debug.Enabled)
+
     authorization.Init()
     cache.Client.Connect()
 	DB.Database.Connect()
@@ -52,6 +52,12 @@ func initialize() *echo.Echo {
 	Router := router.Create()
 
 	appLogger.Info("Initializng router: OK")
+
+    if !config.App.ShowLogs {
+        if err := logger.Default.RemoveTransmission(logger.Stdout); err != nil {
+            panic(err.Error())
+        }
+    }
 
     return Router
 }

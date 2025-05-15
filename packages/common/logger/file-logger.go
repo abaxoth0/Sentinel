@@ -18,15 +18,19 @@ var errLogger = NewSource("LOG", Stderr)
 
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
-    debug         bool
-    logger        *log.Logger
-    logFile       *os.File
-    isRunning     atomic.Bool
-    transmissions []Logger
-    disruptor     *structs.Disruptor[*LogEntry]
-    fallback      *structs.WorkerPool
-    taskProducer  func(entry *LogEntry) *logTask
-    done          chan struct{}
+    done                 chan struct{}
+    isRunning            atomic.Bool
+    disruptor            *structs.Disruptor[*LogEntry]
+    fallback             *structs.WorkerPool
+    logger               *log.Logger
+    logFile              *os.File
+    transmissions        []Logger
+    taskProducer         func(entry *LogEntry) *logTask
+    // Function which will immediately handle entry with panic or fatal level.
+    // (so this function will be called only once)
+    // Placing it here will lead to no need in calling newLogEntryHandlerProducer() on each call of Log().
+    // (and all instances of FileLogger will have their own handler)
+    preprocessingHandler logHandler
 }
 
 func NewFileLogger(name string) *FileLogger {
@@ -50,16 +54,17 @@ func NewFileLogger(name string) *FileLogger {
     )
 
     return &FileLogger{
-        logger: logger,
-        logFile: f,
-        transmissions: []Logger{},
+        done: make(chan struct{}),
         disruptor: structs.NewDisruptor[*LogEntry](),
         fallback: structs.NewWorkerPool(
             context.Background(),
             structs.NewCondWaiter(new(sync.Mutex)),
-        ),
+            ),
+        logger: logger,
+        logFile: f,
+        transmissions: []Logger{},
+        preprocessingHandler: newLogEntryHandlerProducer(logger),
         taskProducer: newTaskProducer(logger),
-        done: make(chan struct{}),
     }
 }
 
@@ -67,8 +72,6 @@ func (l *FileLogger) Start(debug bool) error {
     if l.isRunning.Load() {
         return errors.New("logger already started")
     }
-
-    l.debug = debug
 
     // canceled WorkerPool can't be started
     if l.fallback.IsCanceled() {
@@ -145,31 +148,7 @@ func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
     }
 }
 
-func (l *FileLogger) Log(entry *LogEntry) {
-    if entry.rawLevel == DebugLogLevel && l.debug {
-        return
-    }
-
-    if len(l.transmissions) != 0 {
-        defer func() {
-            for _, transmission := range l.transmissions {
-                transmission.Log(entry)
-            }
-        }()
-    }
-
-    // Immediatly handle panic or fatal log
-    if entry.rawLevel >= FatalLogLevel {
-        newLogEntryHandlerProducer(l.logger)(entry)
-
-        if entry.rawLevel == PanicLogLevel {
-            panic(entry.Message + "\n" + entry.Error)
-        }
-
-        // Fatal
-        os.Exit(1)
-    }
-
+func (l *FileLogger) log(entry *LogEntry) {
     // if ok is false, that means disruptor's buffer is overflowed
     if ok := l.disruptor.Publish(entry); ok {
         return
@@ -178,15 +157,22 @@ func (l *FileLogger) Log(entry *LogEntry) {
     l.fallback.Push(l.taskProducer(entry))
 }
 
+func (l *FileLogger) Log(entry *LogEntry) {
+    ok := logPreprocessing(Debug.Load(), entry, l.transmissions, l.preprocessingHandler)
+    if !ok {
+        return
+    }
+
+    l.log(entry)
+}
+
 func (l *FileLogger) NewTransmission(logger Logger) error {
     if logger == nil {
         return errors.New("received nil instead of logger")
     }
 
-    if logger, ok := logger.(*FileLogger); ok {
-        if l == logger {
-            return errors.New("can't create transmission for self")
-        }
+    if l == logger {
+        return errors.New("can't create transmission for self")
     }
 
     if slices.Contains(l.transmissions, logger) {
@@ -196,5 +182,20 @@ func (l *FileLogger) NewTransmission(logger Logger) error {
     l.transmissions = append(l.transmissions, logger)
 
     return nil
+}
+
+func (l *FileLogger) RemoveTransmission(logger Logger) error {
+    if logger == nil {
+        return errors.New("received nil instead of logger")
+    }
+
+    for idx, transmission := range l.transmissions {
+        if transmission == logger {
+            l.transmissions = slices.Delete(l.transmissions, idx, idx+1)
+            return nil
+        }
+    }
+
+    return errors.New("transmission now found")
 }
 

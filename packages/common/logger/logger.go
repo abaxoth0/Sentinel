@@ -1,7 +1,18 @@
 package logger
 
+import (
+	"os"
+	"sync/atomic"
+)
+
+var Debug atomic.Bool
+
 type Logger interface {
     Log(entry *LogEntry)
+    // Just logs entry, ignoring its content.
+    // This method is mostly required for TransmittingLogger.
+    // (e.g. entry with panic level won't cause panic)
+    log(entry *LogEntry)
 }
 
 type ConcurrentLogger interface {
@@ -21,11 +32,55 @@ type TransmittingLogger interface {
     //
     // Can't bind to self. Can't bind to one logger more then once.
     NewTransmission(logger Logger) error
+
+    // Removes existing transition.
+    // Will return error if transmission to specified logger isn't exist.
+    RemoveTransmission(logger Logger) error
+}
+
+type logHandler = func (*LogEntry)
+
+func logPreprocessing(
+    debug bool,
+    entry *LogEntry,
+    transmissions []Logger,
+    handler logHandler,
+) bool {
+    if entry.rawLevel == DebugLogLevel && debug {
+        return false
+    }
+
+    if transmissions != nil && len(transmissions) != 0 {
+        defer func() {
+            for _, transmission := range transmissions {
+                // Must call log() not Log(), since log() just doing logging
+                // without any additional side effects.
+                // Also log() won't cause recursive transmissions.
+                // (cuz transmissions handled at Log())
+                transmission.log(entry)
+            }
+        }()
+    }
+
+    // Immediatly handle panic or fatal log
+    if entry.rawLevel >= FatalLogLevel {
+        handler(entry)
+
+        if entry.rawLevel == PanicLogLevel {
+            panic(entry.Message + "\n" + entry.Error)
+        }
+
+        // Fatal
+        os.Exit(1)
+    }
+
+    return true
 }
 
 // TODO replace "default" with service id
 var Default = NewFileLogger("default")
 
+// Refers logger.Default
 var Undefined = NewSource("UNDEFINED", Default)
 
 var Stdout = newStdoutLogger()

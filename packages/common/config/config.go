@@ -76,8 +76,9 @@ type debugConfig struct {
 }
 
 type appConfig struct {
-    ServiceID string `yaml:"service-id" validate:"required"`
-    IsLoginEmail bool `yaml:"is-login-email" validate:"exists"`
+    ShowLogs              bool   `yaml:"show-logs" validate:"exists"`
+    ServiceID             string `yaml:"service-id" validate:"required"`
+    IsLoginEmail          bool   `yaml:"is-login-email" validate:"exists"`
     RawActivationTokenTTL string `yaml:"user-activation-token-ttl" validate:"required"`
 }
 
@@ -91,13 +92,13 @@ func (c *appConfig) ActivationTokenTTL() time.Duration {
 }
 
 type configs struct {
-    dbConfig `yaml:",inline"`
+    dbConfig         `yaml:",inline"`
     httpServerConfig `yaml:",inline"`
-    authConfing `yaml:",inline"`
-    cacheConfig `yaml:",inline"`
-    debugConfig `yaml:",inline"`
-    appConfig `yaml:",inline"`
-    emailConfig `yaml:",inline"`
+    authConfing      `yaml:",inline"`
+    cacheConfig      `yaml:",inline"`
+    debugConfig      `yaml:",inline"`
+    appConfig        `yaml:",inline"`
+    emailConfig      `yaml:",inline"`
 }
 
 var DB *dbConfig
