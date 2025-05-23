@@ -27,7 +27,7 @@ func Init() {
         authzLogger.Fatal("Failed to load RBAC schema", e.Error())
 	}
 
-    Host = h
+    Host = &h
 
 	s, err := Host.GetSchema(config.App.ServiceID)
 
@@ -40,19 +40,19 @@ func Init() {
     Resource = resource{
         User: rbac.NewResource("user", schema.Roles),
 
-        Cache: rbac.NewResource("cache", (func() []*rbac.Role {
-            r := []*rbac.Role{}
+        Cache: rbac.NewResource("cache", (func() []rbac.Role {
+            roles := make([]rbac.Role, len(schema.Roles))
 
-            for _, role := range schema.Roles {
+            for i, role := range schema.Roles {
                 // Only admins can interact with cache
                 if role.Name == "admin" {
-                    r = append(r, role)
+                    roles[i] = role
                 } else {
-                    r = append(r, rbac.NewRole(role.Name, new(rbac.Permissions)))
+                    roles[i] = rbac.NewRole(role.Name, 0)
                 }
             }
 
-            return r
+            return roles
         })()),
     }
 }
@@ -70,7 +70,7 @@ var insufficientPermissions = Error.NewStatusError(
 // This method authorize operations only in THIS service!
 // Operations on other services must be authorized by themselves!
 func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) *Error.Status {
-	err := rbac.Authorize(action, resource, userRoles)
+	err := resource.Authorize(action, userRoles)
 
     if err != nil {
         if err == rbac.InsufficientPermissions {

@@ -12,6 +12,7 @@ import (
 	"sentinel/packages/infrastructure/token"
 	"slices"
 
+	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -60,7 +61,7 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     query := newQuery(
         `INSERT INTO "user" (id, login, password, roles) VALUES
         ($1, $2, $3, $4);`,
-        uid, login, hashedPassword, []string{authorization.Host.OriginRoleName},
+        uid, login, hashedPassword, rbac.GetRolesNames(authorization.Host.DefaultRoles),
     )
 
     if err = cache.Client.DeleteOnError(

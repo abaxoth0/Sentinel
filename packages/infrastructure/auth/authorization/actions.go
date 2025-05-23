@@ -15,37 +15,70 @@ type action struct {
 	GetRoles           rbac.Action
 }
 
-var Action = &action{
-	SoftDelete: user.NewAction("soft_delete", &rbac.Permissions{
-		Delete: true,
-	}),
+func registerAction(
+    entity rbac.Entity,
+    action string,
+    permissions rbac.Permissions,
+) rbac.Action{
+    act, err := entity.NewAction(action, permissions)
+    if err != nil {
+        panic(err)
+    }
 
-	Restore: user.NewAction("restore", &rbac.Permissions{
-		Delete: true,
-		Update: true,
-	}),
-
-	Drop: user.NewAction("drop", &rbac.Permissions{
-		Delete: true,
-	}),
-
-	DropAllSoftDeleted: user.NewAction("drop_all_deleted", &rbac.Permissions{
-		Delete: true,
-	}),
-
-	ChangeLogin: user.NewAction("change_login", &rbac.Permissions{
-		Update: true,
-	}),
-
-	ChangePassword: user.NewAction("change_password", &rbac.Permissions{
-		Update: true,
-	}),
-
-	ChangeRoles: user.NewAction("change_role", &rbac.Permissions{
-		Update: true,
-	}),
-
-	GetRoles: user.NewAction("get_roles", &rbac.Permissions{
-		Read: true,
-	}),
+    return act
 }
+
+var Action = func() *action{
+    act := new(action)
+
+    act.SoftDelete = registerAction(
+        user,
+        "soft_delete",
+        rbac.DeletePermission,
+    )
+
+    act.Restore = registerAction(
+        user,
+        "restore",
+        rbac.DeletePermission|rbac.UpdatePermission,
+    )
+
+    act.Drop = registerAction(
+        user,
+        "drop",
+        rbac.DeletePermission,
+    )
+
+    act.DropAllSoftDeleted = registerAction(
+        user,
+        "drop_all_deleted",
+        rbac.DeletePermission,
+    )
+
+    act.ChangeLogin = registerAction(
+        user,
+        "change_login",
+        rbac.UpdatePermission,
+    )
+
+    act.ChangePassword = registerAction(
+        user,
+        "change_password",
+        rbac.UpdatePermission,
+    )
+
+    act.ChangeRoles = registerAction(
+        user,
+        "change_role",
+        rbac.UpdatePermission,
+    )
+
+    act.GetRoles = registerAction(
+        user,
+        "get_roles",
+        rbac.ReadPermission,
+    )
+
+    return act
+}()
+

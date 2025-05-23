@@ -1,6 +1,8 @@
 {
-    "origing-role": "unconfirmed_user",
     "default-roles": [
+        "unconfirmed_user"
+    ],
+    "roles": [
         {
             "name": "unconfirmed_user",
             "permissions": {

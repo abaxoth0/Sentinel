@@ -16,6 +16,7 @@ import (
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
 
+	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -52,7 +53,7 @@ func Create(ctx echo.Context) error {
         tk, err := token.NewActivationToken(
             uid,
             body.Login,
-            []string{authorization.Host.OriginRoleName},
+            rbac.GetRolesNames(authorization.Host.DefaultRoles),
         )
         if err != nil {
             return controller.ConvertErrorStatusToHTTP(err)
