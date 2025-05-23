@@ -2,7 +2,7 @@ package rolescontroller
 
 import (
 	"net/http"
-	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/auth/authz"
 	datamodel "sentinel/packages/presentation/data"
 	"strings"
 
@@ -21,7 +21,7 @@ func GetAll(ctx echo.Context) error {
         return serviceIsMissing
     }
 
-    schema, e := authorization.Host.GetSchema(serviceID)
+    schema, e := authz.Host.GetSchema(serviceID)
 
     if e != nil {
         return echo.NewHTTPError(http.StatusBadRequest, e.Message)

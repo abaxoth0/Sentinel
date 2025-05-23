@@ -8,7 +8,7 @@ import (
 	actiondto "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
-	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	"strings"
 )
@@ -141,9 +141,9 @@ func (_ *seeker) GetRoles(act *actiondto.Targeted) ([]string, *Error.Status) {
         return nil, err
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.GetRoles,
-        authorization.Resource.User,
+    if err := authz.Authorize(
+        authz.Action.GetRoles,
+        authz.Resource.User,
         act.RequesterRoles,
     ); err != nil {
         return nil, err

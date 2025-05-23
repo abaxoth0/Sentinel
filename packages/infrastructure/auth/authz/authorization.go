@@ -1,4 +1,4 @@
-package authorization
+package authz
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 )
 
-var authzLogger = logger.NewSource("AUTHORIZATION", logger.Default)
+var authzLogger = logger.NewSource("AUTHZ", logger.Default)
 
 type resource struct {
 	User  *rbac.Resource

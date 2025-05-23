@@ -6,7 +6,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
-	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
@@ -61,7 +61,7 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     query := newQuery(
         `INSERT INTO "user" (id, login, password, roles) VALUES
         ($1, $2, $3, $4);`,
-        uid, login, hashedPassword, rbac.GetRolesNames(authorization.Host.DefaultRoles),
+        uid, login, hashedPassword, rbac.GetRolesNames(authz.Host.DefaultRoles),
     )
 
     if err = cache.Client.DeleteOnError(
@@ -84,9 +84,9 @@ func (_ *repository) SoftDelete(filter *ActionDTO.Targeted) *Error.Status {
     // TODO add possibility to config what kind of users can delete themselves
     // all users can delete themselves, except admins (TEMP)
     if filter.TargetUID != filter.RequesterUID {
-        if err := authorization.Authorize(
-            authorization.Action.SoftDelete,
-            authorization.Resource.User,
+        if err := authz.Authorize(
+            authz.Action.SoftDelete,
+            authz.Resource.User,
             filter.RequesterRoles,
         ); err != nil {
             return err
@@ -132,9 +132,9 @@ func (_ *repository) Restore(filter *ActionDTO.Targeted) *Error.Status {
         return err
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.Restore,
-        authorization.Resource.User,
+    if err := authz.Authorize(
+        authz.Action.Restore,
+        authz.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
         return err
@@ -171,9 +171,9 @@ func (_ *repository) Drop(filter *ActionDTO.Targeted) *Error.Status {
         return err
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.Drop,
-        authorization.Resource.User,
+    if err := authz.Authorize(
+        authz.Action.Drop,
+        authz.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
         return err
@@ -214,9 +214,9 @@ func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
         return err
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.DropAllSoftDeleted,
-        authorization.Resource.User,
+    if err := authz.Authorize(
+        authz.Action.DropAllSoftDeleted,
+        authz.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
         return err
@@ -259,9 +259,9 @@ func (r *repository) ChangeLogin(filter *ActionDTO.Targeted, newLogin string) *E
         return err
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.ChangeLogin,
-        authorization.Resource.User,
+    if err := authz.Authorize(
+        authz.Action.ChangeLogin,
+        authz.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
         return err
@@ -311,9 +311,9 @@ func (_ *repository) ChangePassword(filter *ActionDTO.Targeted, newPassword stri
     }
 
     if filter.RequesterUID != filter.TargetUID {
-        if err := authorization.Authorize(
-            authorization.Action.ChangePassword,
-            authorization.Resource.User,
+        if err := authz.Authorize(
+            authz.Action.ChangePassword,
+            authz.Resource.User,
             filter.RequesterRoles,
         ); err != nil {
             return err
@@ -367,9 +367,9 @@ func (_ *repository) ChangeRoles(filter *ActionDTO.Targeted, newRoles []string) 
         return err
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.ChangeRoles,
-        authorization.Resource.User,
+    if err := authz.Authorize(
+        authz.Action.ChangeRoles,
+        authz.Resource.User,
         filter.RequesterRoles,
     ); err != nil {
         return err

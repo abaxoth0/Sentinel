@@ -10,7 +10,7 @@ import (
 	"sentinel/packages/common/config"
 	"sentinel/packages/common/logger"
 	"sentinel/packages/infrastructure/DB"
-	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/infrastructure/email"
 	"sentinel/packages/presentation/api/http/router"
@@ -43,7 +43,7 @@ func initialize() *echo.Echo {
 
     logger.Debug.Store(config.Debug.Enabled)
 
-    authorization.Init()
+    authz.Init()
     cache.Client.Connect()
 	DB.Database.Connect()
 

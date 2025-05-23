@@ -8,8 +8,8 @@ import (
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
 	"sentinel/packages/infrastructure/DB"
-	"sentinel/packages/infrastructure/auth/authentication"
-	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/auth/authn"
+	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/email"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
@@ -53,7 +53,7 @@ func Create(ctx echo.Context) error {
         tk, err := token.NewActivationToken(
             uid,
             body.Login,
-            rbac.GetRolesNames(authorization.Host.DefaultRoles),
+            rbac.GetRolesNames(authz.Host.DefaultRoles),
         )
         if err != nil {
             return controller.ConvertErrorStatusToHTTP(err)
@@ -131,7 +131,7 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
-        if err := authentication.CompareHashAndPassword(user.Password, body.GetPassword()); err != nil {
+        if err := authn.CompareHashAndPassword(user.Password, body.GetPassword()); err != nil {
             return echo.NewHTTPError(err.Status(), "Неверный пароль")
         }
 

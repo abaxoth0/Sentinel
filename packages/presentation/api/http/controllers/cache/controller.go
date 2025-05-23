@@ -2,7 +2,7 @@ package cachecontroller
 
 import (
 	"net/http"
-	"sentinel/packages/infrastructure/auth/authorization"
+	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	controller "sentinel/packages/presentation/api/http/controllers"
@@ -23,9 +23,9 @@ func Drop(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    if err := authorization.Authorize(
-        authorization.Action.Drop,
-        authorization.Resource.Cache,
+    if err := authz.Authorize(
+        authz.Action.Drop,
+        authz.Resource.Cache,
         filter.RequesterRoles,
     ); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)

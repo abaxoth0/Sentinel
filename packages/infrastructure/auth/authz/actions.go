@@ -1,4 +1,4 @@
-package authorization
+package authz
 
 import (
 	rbac "github.com/StepanAnanin/SentinelRBAC"

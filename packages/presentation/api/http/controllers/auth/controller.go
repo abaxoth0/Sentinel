@@ -5,7 +5,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
-	"sentinel/packages/infrastructure/auth/authentication"
+	"sentinel/packages/infrastructure/auth/authn"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
@@ -26,14 +26,14 @@ func Login(ctx echo.Context) error {
     if err != nil {
         if err.Side() == Error.ClientSide {
             return echo.NewHTTPError(
-                authentication.InvalidAuthCreditinals.Status(),
-                authentication.InvalidAuthCreditinals.Error(),
+                authn.InvalidAuthCreditinals.Status(),
+                authn.InvalidAuthCreditinals.Error(),
             )
         }
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    if err := authentication.CompareHashAndPassword(user.Password, body.Password); err != nil {
+    if err := authn.CompareHashAndPassword(user.Password, body.Password); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
