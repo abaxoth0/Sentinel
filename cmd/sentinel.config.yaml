@@ -35,7 +35,7 @@ is-login-email: true
 
 user-activation-token-ttl: 24h
 
-show-logs: false
+show-logs: true
 
 ### EMAIL ###
 
