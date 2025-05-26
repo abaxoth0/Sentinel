@@ -12,14 +12,19 @@ import (
 )
 
 func Drop(ctx echo.Context) error {
+	reqInfo := controller.RequestInfo(ctx)
+
+	controller.Logger.Info("Crealing cache..." + reqInfo)
+
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
+		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
         return controller.HandleTokenError(ctx, err)
     }
 
     filter, err := UserMapper.BasicActionDTOFromClaims(accessToken.Claims.(jwt.MapClaims))
-
     if err != nil {
+		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
@@ -28,12 +33,15 @@ func Drop(ctx echo.Context) error {
         authz.Resource.Cache,
         filter.RequesterRoles,
     ); err != nil {
+		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
         return controller.ConvertErrorStatusToHTTP(err)
     }
-
     if err := cache.Client.FlushAll(); err != nil {
+		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
         return err
     }
+
+	controller.Logger.Info("Crealing cache: OK" + reqInfo)
 
     return ctx.NoContent(http.StatusOK)
 }
