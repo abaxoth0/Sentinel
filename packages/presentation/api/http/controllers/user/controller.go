@@ -6,7 +6,6 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
-	"sentinel/packages/core/user"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -15,6 +14,7 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	datamodel "sentinel/packages/presentation/data"
+	"strconv"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"github.com/golang-jwt/jwt/v5"
@@ -22,17 +22,27 @@ import (
 )
 
 func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, error) {
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Retrieving access token from the request..." + reqInfo)
+
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
+        controller.Logger.Error("Failed to retrieve access token from the request" + reqInfo, err.Error())
         return nil, controller.HandleTokenError(ctx, err)
     }
 
-    // we can trust claims if token is valid
-    act, err := UserMapper.TargetedActionDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
+    controller.Logger.Info("Retrieving access token from the request: OK" + reqInfo)
+    controller.Logger.Info("Creating action DTO from token claims..." + reqInfo)
 
+    // claims can be trusted if token is valid
+    act, err := UserMapper.TargetedActionDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
     if err != nil {
+        controller.Logger.Error("Failed to create action DTO from token claims" + reqInfo, err.Error())
         return nil, controller.ConvertErrorStatusToHTTP(err)
     }
+
+    controller.Logger.Info("Creating action DTO from token claims: OK" + reqInfo)
 
     return act, nil
 }
@@ -44,26 +54,42 @@ func Create(ctx echo.Context) error {
         return err
     }
 
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Creating new user..." + reqInfo)
+
     uid, err := DB.Database.Create(body.Login, body.Password)
     if err != nil {
+        controller.Logger.Error("Failed to create new user" + reqInfo, err.Error())
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if config.App.IsLoginEmail {
+        controller.Logger.Info("Creating activation token..." + reqInfo)
+
         tk, err := token.NewActivationToken(
             uid,
             body.Login,
             rbac.GetRolesNames(authz.Host.DefaultRoles),
         )
         if err != nil {
+            controller.Logger.Error("Failed to create new activation token" + reqInfo, err.Error())
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
+        controller.Logger.Info("Creating activation token: OK" + reqInfo)
+        controller.Logger.Info("Creating and equeueing activation email..." + reqInfo)
+
         err = email.CreateAndEnqueueActivationEmail(body.Login, tk.String())
         if err != nil {
+            controller.Logger.Error("Failed to create and enqueue activation email" + reqInfo, err.Error())
             return controller.ConvertErrorStatusToHTTP(err)
         }
+
+        controller.Logger.Info("Creating and equeueing activation email: OK" + reqInfo)
     }
+
+    controller.Logger.Info("Creating new user: OK" + reqInfo)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -94,26 +120,67 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
 }
 
 func SoftDelete(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false)
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Soft deleting user..." + reqInfo)
+
+    if err := handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false); err != nil {
+        controller.Logger.Error("Failed to soft delete user" + reqInfo, err.Error())
+        return err
+    }
+
+    controller.Logger.Info("Soft deleting user: OK" + reqInfo)
+
+    return nil
 }
 
 func Restore(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.Restore, false)
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Restoring user..." + reqInfo)
+
+    if err := handleUserDeleteUpdate(ctx, DB.Database.Restore, false); err != nil {
+        controller.Logger.Error("Failed to restore user" + reqInfo, err.Error())
+        return err
+    }
+
+    controller.Logger.Info("Restoring user: OK" + reqInfo)
+
+    return nil
 }
 
 func Drop(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.Drop, false)
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Dropping user..." + reqInfo)
+
+    if err := handleUserDeleteUpdate(ctx, DB.Database.Drop, false); err != nil {
+        controller.Logger.Error("Failed to drop user" + reqInfo, err.Error())
+        return err
+    }
+
+    controller.Logger.Info("Dropping user: OK" + reqInfo)
+
+    return nil
 }
 
 func DropAllDeleted(ctx echo.Context) error {
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Dropping all soft deleted user..." + reqInfo)
+
     act, err := newTargetedActionDTO(ctx, "")
     if err != nil {
         return err
     }
 
     if err := DB.Database.DropAllSoftDeleted(&act.Basic); err != nil {
+        controller.Logger.Error("Failed to drop all soft deleted user" + reqInfo, err.Error())
+
         return controller.ConvertErrorStatusToHTTP(err)
     }
+
+    controller.Logger.Info("Dropping all soft deleted user: Ok" + reqInfo)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -156,9 +223,16 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Binding request..." + reqInfo)
+
     if err := ctx.Bind(body); err != nil {
+        controller.Logger.Error("Failed to bind request" + reqInfo, err.Error())
         return err
     }
+
+    controller.Logger.Info("Binding request: OK" + reqInfo)
 
     uid := ctx.Param("uid")
 
@@ -167,9 +241,14 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
         return err
     }
 
+    controller.Logger.Info("Validating user update request..." + reqInfo)
+
     if err := validateUpdateRequestBody(filter, body); err != nil {
+        controller.Logger.Error("Invalid user update request" + reqInfo, err.Error())
         return err
     }
+
+    controller.Logger.Info("Validating user update request: OK" + reqInfo)
 
     var e *Error.Status
 
@@ -192,15 +271,48 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    return update(ctx, new(datamodel.ChangeLoginBody))
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Changing user login..." + reqInfo)
+
+    if err := update(ctx, new(datamodel.ChangeLoginBody)); err != nil {
+        controller.Logger.Error("Failed to change user login" + reqInfo, err.Error())
+        return err
+    }
+
+    controller.Logger.Info("Changing user login: OK" + reqInfo)
+
+    return nil
 }
 
 func ChangePassword(ctx echo.Context) error {
-    return update(ctx, new(datamodel.ChangePasswordBody))
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Changing user password..." + reqInfo)
+
+    if err := update(ctx, new(datamodel.ChangePasswordBody)); err != nil {
+        controller.Logger.Error("Failed to change user password" + reqInfo, err.Error())
+        return err
+    }
+
+    controller.Logger.Info("Changing user password: OK" + reqInfo)
+
+    return nil
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    return update(ctx, new(datamodel.ChangeRolesBody))
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Changing user roles..." + reqInfo)
+
+    if err := update(ctx, new(datamodel.ChangeRolesBody)); err != nil {
+        controller.Logger.Error("Failed to change user roles" + reqInfo, err.Error())
+        return err
+    }
+
+    controller.Logger.Info("Changing user roles: OK" + reqInfo)
+
+    return nil
 }
 
 func GetRoles(ctx echo.Context) error {
@@ -211,10 +323,17 @@ func GetRoles(ctx echo.Context) error {
         return err
     }
 
+    reqInfo := controller.RequestInfo(ctx)
+
+    controller.Logger.Info("Getting user roles..." + reqInfo)
+
     roles, e := DB.Database.GetRoles(filter)
     if e != nil {
+        controller.Logger.Error("Failed to get user roles" + reqInfo, err.Error())
         return controller.ConvertErrorStatusToHTTP(e)
     }
+
+    controller.Logger.Info("Getting user roles: OK" + reqInfo)
 
     return ctx.JSON(
         http.StatusOK,
@@ -223,24 +342,28 @@ func GetRoles(ctx echo.Context) error {
 }
 
 func IsLoginAvailable(ctx echo.Context) error {
-    login := ctx.QueryParam("login")
+    reqInfo := controller.RequestInfo(ctx)
+
+	login := ctx.QueryParam("login")
+
+	controller.Logger.Info("Checking if login '"+login+"' available..." + reqInfo)
 
     if login == "" {
+		message := "query param 'login' isn't specified"
+
+		controller.Logger.Error("Failed to check if login '"+login+"' available" + reqInfo, message)
+
         return echo.NewHTTPError(
             http.StatusBadRequest,
-            "query param 'login' isn't specified",
+			message,
         )
     }
 
-    if err := user.ValidateLogin(login); err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
-    }
+    available := DB.Database.IsLoginAvailable(login)
 
-    available, e := DB.Database.IsLoginAvailable(login)
-
-    if e != nil {
-        return controller.ConvertErrorStatusToHTTP(e)
-    }
+	controller.Logger.Info(
+		"Checking if login '"+login+"' available: " + strconv.FormatBool(available) + reqInfo,
+	)
 
     return ctx.JSON(
         http.StatusOK,

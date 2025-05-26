@@ -13,14 +13,28 @@ import (
 
 var Logger = logger.NewSource("CONTROLLER", logger.Default)
 
+func RequestInfo(ctx echo.Context) string {
+    req := ctx.Request()
+
+    return " ("+req.RemoteAddr+" "+req.Method+" "+req.URL.Path+"; user agent: "+req.UserAgent()+")"
+}
+
 func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
+    reqInfo := RequestInfo(ctx)
+
+    Logger.Info("Binding and validating request..." + reqInfo)
+
     if err := ctx.Bind(&dest); err != nil {
+        Logger.Error("Failed to bind request" + reqInfo, err.Error())
         return err
     }
 
     if err := dest.Validate(); err != nil {
+        Logger.Error("Request validation failed" + reqInfo, err.Error())
         return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
+
+    Logger.Info("Binding and validating request: OK" + reqInfo)
 
     return nil
 }

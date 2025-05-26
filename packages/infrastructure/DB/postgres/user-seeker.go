@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
@@ -115,25 +114,19 @@ func (s *seeker) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
     )
 }
 
-func (s *seeker) IsLoginAvailable(login string) (bool, *Error.Status) {
+func (s *seeker) IsLoginAvailable(login string) bool  {
     if err := user.ValidateLogin(login); err != nil {
-        return false, err
+        return false
     }
 
     cacheKey := cache.KeyBase[cache.UserByLogin] + login
 
     _, err := s.findUserBy(user.LoginProperty, login, user.NotDeletedState, cacheKey)
-
-    if err != nil {
-        if err.Status() == http.StatusNotFound {
-            cache.Client.Set(cacheKey, false)
-            return false, nil
-        }
-
-        return false, err
+    if err == nil {
+        return false
     }
 
-    return true, nil
+    return true
 }
 
 func (_ *seeker) GetRoles(act *actiondto.Targeted) ([]string, *Error.Status) {
