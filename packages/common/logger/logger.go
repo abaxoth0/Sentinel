@@ -46,7 +46,7 @@ func logPreprocessing(
     transmissions []Logger,
     handler logHandler,
 ) bool {
-    if entry.rawLevel == DebugLogLevel && debug {
+    if entry.rawLevel == DebugLogLevel && !debug {
         return false
     }
 
