@@ -15,14 +15,22 @@ func DeleteCookie(ctx echo.Context, cookie *http.Cookie) {
 }
 
 func GetAuthCookie(ctx echo.Context) (*http.Cookie, *echo.HTTPError) {
+	reqInfo := RequestInfo(ctx)
+
+	Logger.Info("Getting auth cookie..." + reqInfo)
+
     authCookie, err := ctx.Cookie(RefreshTokenCookieKey)
 
     if err != nil {
+		Logger.Error("Failed to get auth cookie" + reqInfo, err.Error())
+
         if err == http.ErrNoCookie {
             return nil, ConvertErrorStatusToHTTP(Error.StatusUnauthorized)
         }
         return nil, ConvertErrorStatusToHTTP(Error.StatusInternalError)
     }
+
+	Logger.Info("Getting auth cookie: OK" + reqInfo)
 
     return authCookie, nil
 }
