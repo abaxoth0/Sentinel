@@ -24,7 +24,7 @@ import (
 func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, error) {
     reqInfo := controller.RequestInfo(ctx)
 
-    controller.Logger.Info("Retrieving access token from the request..." + reqInfo)
+    controller.Logger.Debug("Retrieving access token from the request..." + reqInfo)
 
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
@@ -32,8 +32,8 @@ func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, er
         return nil, controller.HandleTokenError(ctx, err)
     }
 
-    controller.Logger.Info("Retrieving access token from the request: OK" + reqInfo)
-    controller.Logger.Info("Creating action DTO from token claims..." + reqInfo)
+    controller.Logger.Debug("Retrieving access token from the request: OK" + reqInfo)
+    controller.Logger.Debug("Creating action DTO from token claims..." + reqInfo)
 
     // claims can be trusted if token is valid
     act, err := UserMapper.TargetedActionDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
@@ -42,7 +42,7 @@ func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, er
         return nil, controller.ConvertErrorStatusToHTTP(err)
     }
 
-    controller.Logger.Info("Creating action DTO from token claims: OK" + reqInfo)
+    controller.Logger.Debug("Creating action DTO from token claims: OK" + reqInfo)
 
     return act, nil
 }
@@ -65,7 +65,7 @@ func Create(ctx echo.Context) error {
     }
 
     if config.App.IsLoginEmail {
-        controller.Logger.Info("Creating activation token..." + reqInfo)
+        controller.Logger.Debug("Creating activation token..." + reqInfo)
 
         tk, err := token.NewActivationToken(
             uid,
@@ -77,8 +77,8 @@ func Create(ctx echo.Context) error {
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
-        controller.Logger.Info("Creating activation token: OK" + reqInfo)
-        controller.Logger.Info("Creating and equeueing activation email..." + reqInfo)
+        controller.Logger.Debug("Creating activation token: OK" + reqInfo)
+        controller.Logger.Debug("Creating and equeueing activation email..." + reqInfo)
 
         err = email.CreateAndEnqueueActivationEmail(body.Login, tk.String())
         if err != nil {
@@ -86,7 +86,7 @@ func Create(ctx echo.Context) error {
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
-        controller.Logger.Info("Creating and equeueing activation email: OK" + reqInfo)
+        controller.Logger.Debug("Creating and equeueing activation email: OK" + reqInfo)
     }
 
     controller.Logger.Info("Creating new user: OK" + reqInfo)

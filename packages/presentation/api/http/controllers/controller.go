@@ -22,7 +22,7 @@ func RequestInfo(ctx echo.Context) string {
 func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
     reqInfo := RequestInfo(ctx)
 
-    Logger.Info("Binding and validating request..." + reqInfo)
+    Logger.Debug("Binding and validating request..." + reqInfo)
 
     if err := ctx.Bind(&dest); err != nil {
         Logger.Error("Failed to bind request" + reqInfo, err.Error())
@@ -34,7 +34,7 @@ func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) err
         return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
-    Logger.Info("Binding and validating request: OK" + reqInfo)
+    Logger.Debug("Binding and validating request: OK" + reqInfo)
 
     return nil
 }
