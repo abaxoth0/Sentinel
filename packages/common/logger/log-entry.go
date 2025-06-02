@@ -4,9 +4,9 @@ import (
 	"time"
 )
 
-type logLevel uint8
+type logLevel int8
 
-// Logs with this level will appear only if app running in debug mode
+const TraceLogLevel logLevel = -1
 const DebugLogLevel logLevel = 0
 const InfoLogLevel logLevel = 1
 const WarningLogLevel logLevel = 2
@@ -19,6 +19,7 @@ const FatalLogLevel logLevel = 4
 const PanicLogLevel logLevel = 5
 
 var logLevelToStrMap = map[logLevel]string{
+    TraceLogLevel: "TRACE",
     DebugLogLevel: "DEBUG",
     InfoLogLevel: "INFO",
     WarningLogLevel: "WARNING",

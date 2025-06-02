@@ -6,6 +6,7 @@ import (
 )
 
 var Debug atomic.Bool
+var Trace atomic.Bool
 
 type Logger interface {
     Log(entry *LogEntry)
@@ -41,12 +42,15 @@ type TransmittingLogger interface {
 type logHandler = func (*LogEntry)
 
 func logPreprocessing(
-    debug bool,
     entry *LogEntry,
     transmissions []Logger,
     handler logHandler,
 ) bool {
-    if entry.rawLevel == DebugLogLevel && !debug {
+    if entry.rawLevel == DebugLogLevel && !Debug.Load() {
+        return false
+    }
+
+    if entry.rawLevel == TraceLogLevel && !Trace.Load() {
         return false
     }
 

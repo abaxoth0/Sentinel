@@ -24,16 +24,16 @@ import (
 func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, error) {
     reqInfo := controller.RequestInfo(ctx)
 
-    controller.Logger.Debug("Retrieving access token from the request..." + reqInfo)
+    controller.Logger.Trace("Retrieving access token from the request..." + reqInfo)
 
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
-        controller.Logger.Error("Failed to retrieve access token from the request" + reqInfo, err.Error())
+        controller.Logger.Error("Failed to retrieve valid access token from the request" + reqInfo, err.Error())
         return nil, controller.HandleTokenError(ctx, err)
     }
 
-    controller.Logger.Debug("Retrieving access token from the request: OK" + reqInfo)
-    controller.Logger.Debug("Creating action DTO from token claims..." + reqInfo)
+    controller.Logger.Trace("Retrieving access token from the request: OK" + reqInfo)
+    controller.Logger.Trace("Creating action DTO from token claims..." + reqInfo)
 
     // claims can be trusted if token is valid
     act, err := UserMapper.TargetedActionDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
@@ -42,7 +42,7 @@ func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, er
         return nil, controller.ConvertErrorStatusToHTTP(err)
     }
 
-    controller.Logger.Debug("Creating action DTO from token claims: OK" + reqInfo)
+    controller.Logger.Trace("Creating action DTO from token claims: OK" + reqInfo)
 
     return act, nil
 }
@@ -65,7 +65,7 @@ func Create(ctx echo.Context) error {
     }
 
     if config.App.IsLoginEmail {
-        controller.Logger.Debug("Creating activation token..." + reqInfo)
+        controller.Logger.Trace("Creating activation token..." + reqInfo)
 
         tk, err := token.NewActivationToken(
             uid,
@@ -77,8 +77,8 @@ func Create(ctx echo.Context) error {
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
-        controller.Logger.Debug("Creating activation token: OK" + reqInfo)
-        controller.Logger.Debug("Creating and equeueing activation email..." + reqInfo)
+        controller.Logger.Trace("Creating activation token: OK" + reqInfo)
+        controller.Logger.Trace("Creating and equeueing activation email..." + reqInfo)
 
         err = email.CreateAndEnqueueActivationEmail(body.Login, tk.String())
         if err != nil {
@@ -86,7 +86,7 @@ func Create(ctx echo.Context) error {
             return controller.ConvertErrorStatusToHTTP(err)
         }
 
-        controller.Logger.Debug("Creating and equeueing activation email: OK" + reqInfo)
+        controller.Logger.Trace("Creating and equeueing activation email: OK" + reqInfo)
     }
 
     controller.Logger.Info("Creating new user: OK" + reqInfo)
@@ -225,14 +225,14 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
 func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
     reqInfo := controller.RequestInfo(ctx)
 
-    controller.Logger.Info("Binding request..." + reqInfo)
+    controller.Logger.Trace("Binding request..." + reqInfo)
 
     if err := ctx.Bind(body); err != nil {
         controller.Logger.Error("Failed to bind request" + reqInfo, err.Error())
         return err
     }
 
-    controller.Logger.Info("Binding request: OK" + reqInfo)
+    controller.Logger.Trace("Binding request: OK" + reqInfo)
 
     uid := ctx.Param("uid")
 
@@ -241,14 +241,14 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
         return err
     }
 
-    controller.Logger.Info("Validating user update request..." + reqInfo)
+    controller.Logger.Trace("Validating user update request..." + reqInfo)
 
     if err := validateUpdateRequestBody(filter, body); err != nil {
         controller.Logger.Error("Invalid user update request" + reqInfo, err.Error())
         return err
     }
 
-    controller.Logger.Info("Validating user update request: OK" + reqInfo)
+    controller.Logger.Trace("Validating user update request: OK" + reqInfo)
 
     var e *Error.Status
 

@@ -37,6 +37,8 @@ user-activation-token-ttl: 24h
 
 show-logs: true
 
+trace-logs: true
+
 ### EMAIL ###
 
 smtp-host: smtp.gmail.com

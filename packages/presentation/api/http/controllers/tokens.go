@@ -21,6 +21,10 @@ var invalidAuthorizationHeaderFormat = Error.NewStatusError(
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
 func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
+	reqInfo := RequestInfo(ctx)
+
+	Logger.Trace("Getting access token from the request..." + reqInfo)
+
     authHeader := ctx.Request().Header.Get("Authorization")
 	if strings.ReplaceAll(authHeader, " ", "") == "" {
 		return nil, Error.StatusUnauthorized
@@ -41,6 +45,8 @@ func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
         return nil, err
     }
 
+	Logger.Trace("Getting access token from the request: OK" + reqInfo)
+
 	return token, nil
 }
 
@@ -51,6 +57,10 @@ const RefreshTokenCookieKey string = "refreshToken"
 // Returns pointer to token and nil if valid and not expired token was found.
 // Otherwise returns empty pointer to token and *Error.Status.
 func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
+	reqInfo := RequestInfo(ctx)
+
+	Logger.Trace("Getting refresh token from the request..." + reqInfo)
+
     cookie, err := ctx.Cookie(RefreshTokenCookieKey)
     if err != nil {
         if err == http.ErrNoCookie {
@@ -65,6 +75,8 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
     if e != nil {
         return nil, e
     }
+
+	Logger.Trace("Getting refresh token from the request: OK" + reqInfo)
 
 	return token, nil
 }

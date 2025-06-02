@@ -22,6 +22,12 @@ func (s *Source[L]) log(level logLevel, msg string, err string) {
     s.logger.Log(&entry)
 }
 
+// Will create log only if trace logs are enabled,
+// Same as L.Log(), but sets level to the TraceLogLevel.
+func (s *Source[L]) Trace(msg string) {
+    s.log(TraceLogLevel, msg, "")
+}
+
 // Will create log only if app running in debug mode,
 // Same as L.Log(), but sets level to the DebugLogLevel.
 func (s *Source[L]) Debug(msg string) {
@@ -48,8 +54,8 @@ func (s *Source[L]) Fatal(msg string, err string) {
     s.log(FatalLogLevel, msg, err)
 }
 
-// Same as L.Log(), but sets level to the FatalLogLevel
+// Same as L.Log(), but sets level to the PanicLogLevel
 func (s *Source[L]) Panic(msg string, err string) {
-    s.log(FatalLogLevel, msg, err)
+    s.log(PanicLogLevel, msg, err)
 }
 

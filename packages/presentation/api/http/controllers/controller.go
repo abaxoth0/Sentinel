@@ -22,7 +22,7 @@ func RequestInfo(ctx echo.Context) string {
 func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
     reqInfo := RequestInfo(ctx)
 
-    Logger.Debug("Binding and validating request..." + reqInfo)
+    Logger.Trace("Binding and validating request..." + reqInfo)
 
     if err := ctx.Bind(&dest); err != nil {
         Logger.Error("Failed to bind request" + reqInfo, err.Error())
@@ -34,7 +34,7 @@ func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) err
         return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
-    Logger.Debug("Binding and validating request: OK" + reqInfo)
+    Logger.Trace("Binding and validating request: OK" + reqInfo)
 
     return nil
 }
@@ -53,6 +53,10 @@ func applyWWWAuthenticate(ctx echo.Context, params *wwwAuthenticateParamas) {
 }
 
 func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
+	reqInfo := RequestInfo(ctx)
+
+	Logger.Trace("Handling token error..." + reqInfo)
+
     // token persist, but invalid
     if token.IsTokenError(err) {
         applyWWWAuthenticate(ctx, &wwwAuthenticateParamas{
@@ -63,6 +67,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
 
         authCookie, err := GetAuthCookie(ctx)
         if err != nil {
+			Logger.Trace("Handling token error: OK" + reqInfo)
             return err
         }
 
@@ -75,6 +80,9 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
             ErrorDescription: "No token provided",
         })
     }
+
+	Logger.Trace("Handling token error: OK" + reqInfo)
+
     return ConvertErrorStatusToHTTP(err)
 }
 

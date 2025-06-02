@@ -158,7 +158,7 @@ func (l *FileLogger) log(entry *LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-    ok := logPreprocessing(Debug.Load(), entry, l.transmissions, l.preprocessingHandler)
+    ok := logPreprocessing(entry, l.transmissions, l.preprocessingHandler)
     if !ok {
         return
     }

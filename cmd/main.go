@@ -42,6 +42,7 @@ func initialize() *echo.Echo {
     config.Init()
 
     logger.Debug.Store(config.Debug.Enabled)
+    logger.Trace.Store(config.App.TraceLogsEnabled)
 
     authz.Init()
     cache.Client.Connect()

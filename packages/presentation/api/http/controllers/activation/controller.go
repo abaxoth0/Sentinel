@@ -68,7 +68,7 @@ func Resend(ctx echo.Context) error {
         )
     }
 
-	controller.Logger.Debug("Creating activation token..." + reqInfo)
+	controller.Logger.Trace("Creating activation token..." + reqInfo)
 
     tk, err := token.NewActivationToken(user.ID, user.Login, user.Roles)
     if err != nil {
@@ -76,8 +76,8 @@ func Resend(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	controller.Logger.Debug("Creating activation token..." + reqInfo)
-	controller.Logger.Debug("Creating and enqueueing activation email" + reqInfo)
+	controller.Logger.Trace("Creating activation token..." + reqInfo)
+	controller.Logger.Trace("Creating and enqueueing activation email" + reqInfo)
 
     email.CreateAndEnqueueActivationEmail(user.Login, tk.String())
     if err != nil {
@@ -85,7 +85,7 @@ func Resend(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	controller.Logger.Debug("Creating and enqueueing activation email: OK" + reqInfo)
+	controller.Logger.Trace("Creating and enqueueing activation email: OK" + reqInfo)
 	controller.Logger.Info("Resending activation email: OK" + reqInfo)
 
     return ctx.NoContent(http.StatusOK)

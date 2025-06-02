@@ -81,12 +81,12 @@ var insufficientPermissions = Error.NewStatusError(
 // This method authorize operations only in THIS service!
 // Operations on other services must be authorized by themselves!
 func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) *Error.Status {
-	authzLogger.Debug("Authorizing "+action.String()+"...")
+	authzLogger.Trace("Authorizing "+action.String()+"...")
 
 	err := resource.Authorize(action, userRoles)
 
     if err != nil {
-		authzLogger.Debug("Authorization of "+action.String()+" failed: " + err.Error())
+		authzLogger.Trace("Authorization of "+action.String()+" failed: " + err.Error())
 
         if err == rbac.InsufficientPermissions {
             return insufficientPermissions
@@ -105,7 +105,7 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
         )
     }
 
-	authzLogger.Debug("Authorizing "+action.String()+": OK")
+	authzLogger.Trace("Authorizing "+action.String()+": OK")
 
     return nil
 }
