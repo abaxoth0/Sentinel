@@ -33,16 +33,16 @@ var Secret secrets
 func getEnv(key string) string {
     env, _ := os.LookupEnv(key)
 
-    configLogger.Info("Loaded: " + key)
+    configLogger.Info("Loaded: " + key, nil)
 
     return env
 }
 
 func loadSecrets() {
-	configLogger.Info("Loading environment vairables...")
+	configLogger.Info("Loading environment vairables...", nil)
 
     if err := godotenv.Load(); err != nil {
-        configLogger.Fatal("Failed to load environment vairables", err.Error())
+        configLogger.Fatal("Failed to load environment vairables", err.Error(), nil)
     }
 
     requiredEnvVars := []string{
@@ -67,14 +67,15 @@ func loadSecrets() {
             configLogger.Fatal(
                 "Failed to load environment variables",
                 "Missing required env variable" + variable,
-            )
+            	nil,
+			)
         }
     }
 
     cacheDB, err := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
 
     if err != nil {
-        configLogger.Fatal("Failed to parse CACHE_DB env variable", err.Error())
+        configLogger.Fatal("Failed to parse CACHE_DB env variable", err.Error(), nil)
     }
 
     Secret.CacheURI = getEnv("CACHE_URI")
@@ -98,18 +99,21 @@ func loadSecrets() {
         configLogger.Fatal(
             "Invalid environment variable value",
             "Invalid length of access token secret (must be 32 bytes long)",
-        )
+         	nil,
+		)
     }
     if len(RefreshTokenSecret) != 32 {
         configLogger.Fatal(
             "Invalid environment variable value",
             "Invalid length of refresh token secret (must be 32 bytes long)",
+			nil,
         )
     }
     if len(ActivationTokenSecret) != 32 {
         configLogger.Fatal(
             "Invalid environment variable value",
             "Invalid length of activation token secret (must be 32 bytes long)",
+			nil,
         )
     }
 
@@ -123,9 +127,9 @@ func loadSecrets() {
     Secret.RefreshTokenPublicKey = Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
     Secret.ActivationTokenPublicKey = Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
 
-    configLogger.Info("Loading environment vairables: OK")
+    configLogger.Info("Loading environment vairables: OK", nil)
 
-    configLogger.Info("Validating secrets...")
+    configLogger.Info("Validating secrets...", nil)
 
     validate := validator.New()
 
@@ -134,9 +138,9 @@ func loadSecrets() {
     })
 
     if err := validate.Struct(Secret); err != nil {
-        configLogger.Fatal("Secrets validation failed", err.Error())
+        configLogger.Fatal("Secrets validation failed", err.Error(), nil)
     }
 
-    configLogger.Info("Validating secrets: OK")
+    configLogger.Info("Validating secrets: OK", nil)
 }
 

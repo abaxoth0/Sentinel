@@ -17,45 +17,45 @@ func NewSource[L Logger](src string, logger L) *Source[L] {
     }
 }
 
-func (s *Source[L]) log(level logLevel, msg string, err string) {
-    entry := NewLogEntry(level, s.src, msg, err)
+func (s *Source[L]) log(level logLevel, msg string, err string, meta Meta) {
+    entry := NewLogEntry(level, s.src, msg, err, meta)
     s.logger.Log(&entry)
 }
 
 // Will create log only if trace logs are enabled,
 // Same as L.Log(), but sets level to the TraceLogLevel.
-func (s *Source[L]) Trace(msg string) {
-    s.log(TraceLogLevel, msg, "")
+func (s *Source[L]) Trace(msg string, meta Meta) {
+    s.log(TraceLogLevel, msg, "", meta)
 }
 
 // Will create log only if app running in debug mode,
 // Same as L.Log(), but sets level to the DebugLogLevel.
-func (s *Source[L]) Debug(msg string) {
-    s.log(DebugLogLevel, msg, "")
+func (s *Source[L]) Debug(msg string, meta Meta) {
+    s.log(DebugLogLevel, msg, "", meta)
 }
 
 // Same as L.Log(), but sets level to the InfoLogLevel.
-func (s *Source[L]) Info(msg string) {
-    s.log(InfoLogLevel, msg, "")
+func (s *Source[L]) Info(msg string, meta Meta) {
+    s.log(InfoLogLevel, msg, "", meta)
 }
 
 // Same as L.Log(), but sets level to the WarningLogLevel.
-func (s *Source[L]) Warning(msg string) {
-    s.log(WarningLogLevel, msg, "")
+func (s *Source[L]) Warning(msg string, meta Meta) {
+    s.log(WarningLogLevel, msg, "", meta)
 }
 
 // Same as L.Log(), but sets level to the ErrorLogLevel.
-func (s *Source[L]) Error(msg string, err string) {
-    s.log(ErrorLogLevel, msg, err)
+func (s *Source[L]) Error(msg string, err string, meta Meta) {
+    s.log(ErrorLogLevel, msg, err, meta)
 }
 
 // Same as L.Log(), but sets level to the FatalLogLevel
-func (s *Source[L]) Fatal(msg string, err string) {
-    s.log(FatalLogLevel, msg, err)
+func (s *Source[L]) Fatal(msg string, err string, meta Meta) {
+    s.log(FatalLogLevel, msg, err, meta)
 }
 
 // Same as L.Log(), but sets level to the PanicLogLevel
-func (s *Source[L]) Panic(msg string, err string) {
-    s.log(PanicLogLevel, msg, err)
+func (s *Source[L]) Panic(msg string, err string, meta Meta) {
+    s.log(PanicLogLevel, msg, err, meta)
 }
 

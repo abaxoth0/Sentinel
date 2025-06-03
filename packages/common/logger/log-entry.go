@@ -41,11 +41,18 @@ type LogEntry struct {
     Source    string    `json:"source,omitempty"`
     Message   string    `json:"msg"`
     Error     string    `json:"error,omitempty"`
+	Meta	  Meta   	`json:"meta,omitempty"`
 }
 
 // Creates a new log entry. Timestamp is time.Now().
 // If level is not error, fatal or panic, then Error will be empty, even if err specified.
-func NewLogEntry(level logLevel, src string, msg string, err string) LogEntry {
+func NewLogEntry(
+	level logLevel,
+	src string,
+	msg string,
+	err string,
+	meta Meta,
+) LogEntry {
     e := LogEntry{
         Timestamp: time.Now(),
         Service: "sentinel",
@@ -54,6 +61,7 @@ func NewLogEntry(level logLevel, src string, msg string, err string) LogEntry {
         Level: level.String(),
         Source: src,
         Message: msg,
+		Meta: meta,
     }
 
     // error, fatal, panic

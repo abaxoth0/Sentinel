@@ -113,31 +113,31 @@ var Email *emailConfig
 var isInit bool = false
 
 func loadConfig(path string, dest *configs) {
-	configLogger.Info("Reading config file...")
+	configLogger.Info("Reading config file...", nil)
 
     file, err := os.Open(path)
 
     if err != nil {
-        configLogger.Fatal("Failed to open config file", err.Error())
+        configLogger.Fatal("Failed to open config file", err.Error(), nil)
     }
 
     rawConfig, err := io.ReadAll(file)
 
     if err != nil {
-        configLogger.Fatal("Failed to read config file", err.Error())
+        configLogger.Fatal("Failed to read config file", err.Error(), nil)
     }
 
-    configLogger.Info("Reading config file: OK")
+    configLogger.Info("Reading config file: OK", nil)
 
-    configLogger.Info("Parsing config file...")
+    configLogger.Info("Parsing config file...", nil)
 
     if err := yaml.Unmarshal(rawConfig, dest); err != nil {
-        configLogger.Fatal("Failed to parse config file", err.Error())
+        configLogger.Fatal("Failed to parse config file", err.Error(), nil)
     }
 
-    configLogger.Info("Parsing config file: OK")
+    configLogger.Info("Parsing config file: OK", nil)
 
-    configLogger.Info("Validating config...")
+    configLogger.Info("Validating config...", nil)
 
     validate := validator.New()
 
@@ -146,19 +146,19 @@ func loadConfig(path string, dest *configs) {
     })
 
     if err := validate.Struct(dest); err != nil {
-        configLogger.Fatal("Failed to validate config", err.Error())
+        configLogger.Fatal("Failed to validate config", err.Error(), nil)
         os.Exit(1)
     }
 
-    configLogger.Info("Validating config: OK")
+    configLogger.Info("Validating config: OK", nil)
 }
 
 func Init() {
     if isInit {
-        configLogger.Fatal("Failed to initialize config", "Config already initialized")
+        configLogger.Fatal("Failed to initialize config", "Config already initialized", nil)
     }
 
-	configLogger.Info("Initializing...")
+	configLogger.Info("Initializing...", nil)
 
     configs := new(configs)
 
@@ -175,7 +175,7 @@ func Init() {
     App = &configs.appConfig
     Email = &configs.emailConfig
 
-	configLogger.Info("Initializing: OK")
+	configLogger.Info("Initializing: OK", nil)
 
     isInit = true
 }

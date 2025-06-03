@@ -24,7 +24,7 @@ var isRunning = false
 
 func Run() {
     if isRunning {
-        emailLogger.Fatal("Failed to start mailer", "Mailer already running")
+        emailLogger.Fatal("Failed to start mailer", "Mailer already running", nil)
     }
 
     initActivationEmailBody()
@@ -32,7 +32,7 @@ func Run() {
     validSMTPPorts := []int{587, 25, 465, 2525}
 
     if !slices.Contains(validSMTPPorts, config.Email.SmtpPort) {
-        emailLogger.Fatal("Failed to start mailer", "Invlid SMTP port")
+        emailLogger.Fatal("Failed to start mailer", "Invlid SMTP port", nil)
     }
 
     dialer = gomail.NewDialer(

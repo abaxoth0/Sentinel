@@ -6,25 +6,30 @@ import (
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	"sentinel/packages/presentation/api/http/request"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
 func Drop(ctx echo.Context) error {
-	reqInfo := controller.RequestInfo(ctx)
+	reqMeta, e := request.GetLogMeta(ctx)
+	if e != nil {
+		controller.Logger.Panic("Failed to get log meta for the request",e.Error(), nil)
+		return e
+	}
 
-	controller.Logger.Info("Crealing cache..." + reqInfo)
+	controller.Logger.Info("Crealing cache...", reqMeta)
 
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
-		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
+		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
         return controller.HandleTokenError(ctx, err)
     }
 
     filter, err := UserMapper.BasicActionDTOFromClaims(accessToken.Claims.(jwt.MapClaims))
     if err != nil {
-		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
+		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
@@ -33,15 +38,15 @@ func Drop(ctx echo.Context) error {
         authz.Resource.Cache,
         filter.RequesterRoles,
     ); err != nil {
-		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
+		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
     if err := cache.Client.FlushAll(); err != nil {
-		controller.Logger.Error("Failed to clear cache" + reqInfo, err.Error())
+		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
         return err
     }
 
-	controller.Logger.Info("Crealing cache: OK" + reqInfo)
+	controller.Logger.Info("Crealing cache: OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }

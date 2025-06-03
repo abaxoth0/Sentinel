@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	"sentinel/packages/presentation/api/http/request"
 
 	"github.com/labstack/echo/v4"
 )
@@ -25,7 +26,13 @@ func handleHttpError(err error, ctx echo.Context) {
 
     status := http.StatusText(code)
 
-    controller.Logger.Error(message, status)
+	reqMeta, err := request.GetLogMeta(ctx)
+	if err != nil {
+		controller.Logger.Panic("Failed to get log meta for the request", err.Error(), nil)
+		return
+	}
+
+    controller.Logger.Error(message, status, reqMeta)
 
     ctx.JSON(code, map[string]string{
         "error": status,

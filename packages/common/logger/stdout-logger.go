@@ -17,7 +17,7 @@ func newStdoutLogger() stdoutLogger {
 }
 
 func (l stdoutLogger) log(entry *LogEntry) {
-    l.logger.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message)
+    l.logger.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message + entry.Meta.stringSuffix())
 }
 
 func (l stdoutLogger) Log(entry *LogEntry) {

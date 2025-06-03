@@ -20,7 +20,7 @@ func Decode[T any](input io.Reader) (T, error) {
 	var result T
 
 	if err := json.NewDecoder(input).Decode(&result); err != nil {
-        jsonLogger.Error("Decoding failed", err.Error())
+        jsonLogger.Error("Decoding failed", err.Error(), nil)
 
 		return result, err
 	}
@@ -38,7 +38,7 @@ func Encode(target any) ([]byte, error) {
 	result, err := json.Marshal(target)
 
 	if err != nil {
-        jsonLogger.Error("Encoding failed", err.Error())
+        jsonLogger.Error("Encoding failed", err.Error(), nil)
 
 		return nil, err
 	}

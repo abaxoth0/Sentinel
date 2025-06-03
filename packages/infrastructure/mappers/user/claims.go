@@ -44,6 +44,7 @@ func mapFromClaims[T ActionDTO.Targeted | ActionDTO.Basic | UserDTO.Payload](
         mappers.Logger.Error(
             "Failed to create user filter from claims",
             err.Error(),
+			nil,
         )
         return nil, Error.StatusInternalError
     }

@@ -67,7 +67,7 @@ func newSignedToken(
 
     tokenStr, err := token.SignedString(key)
     if err != nil {
-        tokenLogger.Error("Failed to sign token", err.Error())
+        tokenLogger.Error("Failed to sign token", err.Error(), nil)
         return nil, Error.StatusInternalError
     }
 
@@ -146,7 +146,7 @@ func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Erro
             // Check if someone tampered with the token
             return nil, TokenModified
         default:
-            tokenLogger.Error("Failed to parse signed token", err.Error())
+            tokenLogger.Error("Failed to parse signed token", err.Error(), nil)
             return nil, Error.StatusInternalError
         }
     }

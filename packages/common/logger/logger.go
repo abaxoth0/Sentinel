@@ -8,6 +8,17 @@ import (
 var Debug atomic.Bool
 var Trace atomic.Bool
 
+type Meta map[string]any
+
+func (m Meta) stringSuffix() string {
+	if m == nil {
+		return ""
+	}
+
+	// TODO make it pretty
+	return " ("+m["addr"].(string)+" "+m["method"].(string)+" "+m["path"].(string)+"; user agent: "+m["user_agent"].(string)+")"
+}
+
 type Logger interface {
     Log(entry *LogEntry)
     // Just logs entry, ignoring its content.

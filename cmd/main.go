@@ -48,11 +48,11 @@ func initialize() *echo.Echo {
     cache.Client.Connect()
 	DB.Database.Connect()
 
-	appLogger.Info("Initializng router...")
+	appLogger.Info("Initializng router...", nil)
 
 	Router := router.Create()
 
-	appLogger.Info("Initializng router: OK")
+	appLogger.Info("Initializng router: OK", nil)
 
     if !config.App.ShowLogs {
         if err := logger.Default.RemoveTransmission(logger.Stdout); err != nil {
@@ -80,7 +80,8 @@ func start(Router *echo.Echo) {
                 "APP",
                 "Failed to stop logger",
                 err.Error(),
-                )
+				nil,
+            )
             logger.Stderr.Log(&entry)
         }
     }()
@@ -98,7 +99,7 @@ func start(Router *echo.Echo) {
     go func(){
         err := Router.Start(":" + config.HTTP.Port)
 
-        appLogger.Info(err.Error())
+        appLogger.Info(err.Error(), nil)
     }()
 
     printAppInfo()
@@ -106,34 +107,34 @@ func start(Router *echo.Echo) {
     sig := <-stop
 
     println()
-    appLogger.Info(sig.String() + " signal received, shutting down...")
+    appLogger.Info(sig.String() + " signal received, shutting down...", nil)
 
-    appLogger.Info("Stopping...")
+    appLogger.Info("Stopping...", nil)
 
     ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
     defer cancel()
 
     if err := Router.Shutdown(ctx); err != nil {
-        appLogger.Error("Failed to stop HTTP server", err.Error())
+        appLogger.Error("Failed to stop HTTP server", err.Error(), nil)
     } else {
-        appLogger.Info("HTTP server stopped")
+        appLogger.Info("HTTP server stopped", nil)
     }
 
     if err := DB.Database.Disconnect(); err != nil {
-        appLogger.Error("Failed to disconnect from DB", err.Error())
+        appLogger.Error("Failed to disconnect from DB", err.Error(), nil)
     }
 
     if err := cache.Client.Close(); err != nil {
-        appLogger.Error("Failed to disconnect from DB", err.Error())
+        appLogger.Error("Failed to disconnect from DB", err.Error(), nil)
     }
 
     if config.App.IsLoginEmail {
         if err := email.Stop(); err != nil {
-            appLogger.Error("Failed to stop mailer", err.Error())
+            appLogger.Error("Failed to stop mailer", err.Error(), nil)
         }
     }
 
-    appLogger.Info("Shutted down")
+    appLogger.Info("Shutted down", nil)
 }
 
 func printAppInfo() {
@@ -155,7 +156,7 @@ func printAppInfo() {
     fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
     if config.Debug.Enabled {
-        appLogger.Warning("Debug mode enabled.")
+        appLogger.Warning("Debug mode enabled.", nil)
         print("\n\n")
     }
 }

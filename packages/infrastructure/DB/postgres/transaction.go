@@ -19,7 +19,7 @@ func (t *transaction) Exec() *Error.Status {
     tx, err := driver.pool.Begin(ctx)
 
     if err != nil {
-        dbLogger.Error("Failed to begin transaction", err.Error())
+        dbLogger.Error("Failed to begin transaction", err.Error(), nil)
         return Error.StatusInternalError
     }
 
@@ -32,7 +32,7 @@ func (t *transaction) Exec() *Error.Status {
     }
 
     if err := tx.Commit(ctx); err != nil {
-        dbLogger.Error("Failed to commit transaction", err.Error())
+        dbLogger.Error("Failed to commit transaction", err.Error(), nil)
         return Error.StatusInternalError
     }
 

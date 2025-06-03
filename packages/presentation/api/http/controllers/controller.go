@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/common/logger"
 	"sentinel/packages/common/util"
 	"sentinel/packages/infrastructure/token"
+	"sentinel/packages/presentation/api/http/request"
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/labstack/echo/v4"
@@ -13,28 +14,26 @@ import (
 
 var Logger = logger.NewSource("CONTROLLER", logger.Default)
 
-func RequestInfo(ctx echo.Context) string {
-    req := ctx.Request()
-
-    return " ("+req.RemoteAddr+" "+req.Method+" "+req.URL.Path+"; user agent: "+req.UserAgent()+")"
-}
-
 func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
-    reqInfo := RequestInfo(ctx)
+    reqMeta, e := request.GetLogMeta(ctx)
+	if e != nil {
+		Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
+		return e
+	}
 
-    Logger.Trace("Binding and validating request..." + reqInfo)
+    Logger.Trace("Binding and validating request...", reqMeta)
 
     if err := ctx.Bind(&dest); err != nil {
-        Logger.Error("Failed to bind request" + reqInfo, err.Error())
+        Logger.Error("Failed to bind request", err.Error(), reqMeta)
         return err
     }
 
     if err := dest.Validate(); err != nil {
-        Logger.Error("Request validation failed" + reqInfo, err.Error())
+        Logger.Error("Request validation failed", err.Error(), reqMeta)
         return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
-    Logger.Trace("Binding and validating request: OK" + reqInfo)
+    Logger.Trace("Binding and validating request: OK", reqMeta)
 
     return nil
 }
@@ -53,9 +52,13 @@ func applyWWWAuthenticate(ctx echo.Context, params *wwwAuthenticateParamas) {
 }
 
 func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
-	reqInfo := RequestInfo(ctx)
+	reqMeta, e := request.GetLogMeta(ctx)
+	if e != nil {
+		Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
+		return echo.NewHTTPError(http.StatusInternalServerError, e.Error())
+	}
 
-	Logger.Trace("Handling token error..." + reqInfo)
+	Logger.Trace("Handling token error...", reqMeta)
 
     // token persist, but invalid
     if token.IsTokenError(err) {
@@ -67,7 +70,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
 
         authCookie, err := GetAuthCookie(ctx)
         if err != nil {
-			Logger.Trace("Handling token error: OK" + reqInfo)
+			Logger.Trace("Handling token error: OK", reqMeta)
             return err
         }
 
@@ -81,7 +84,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
         })
     }
 
-	Logger.Trace("Handling token error: OK" + reqInfo)
+	Logger.Trace("Handling token error: OK", reqMeta)
 
     return ConvertErrorStatusToHTTP(err)
 }

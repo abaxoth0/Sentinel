@@ -28,14 +28,14 @@ func newQuery(sql string, args ...any) *query {
 }
 
 func (q *query) toStatusError(err error) *Error.Status {
-    defer dbLogger.Debug("Failed query: " + q.sql)
+    defer dbLogger.Debug("Failed query: " + q.sql, nil)
 
     if err == context.DeadlineExceeded {
-        dbLogger.Error("Query failed", "Query timeout")
+        dbLogger.Error("Query failed", "Query timeout", nil)
         return Error.StatusTimeout
     }
 
-    dbLogger.Error("Query failed", err.Error())
+    dbLogger.Error("Query failed", err.Error(), nil)
     return Error.StatusInternalError
 }
 
@@ -90,6 +90,7 @@ func (q *query) Row() (scanRow, *Error.Status) {
                     dbLogger.Panic(
                         "Query scan failed",
                         "Destination for scanning must be a pointer, but got '"+typeof.String()+"'",
+						nil,
                     )
                 }
             }

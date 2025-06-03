@@ -8,6 +8,7 @@ import (
 	Cache "sentinel/packages/presentation/api/http/controllers/cache"
 	Roles "sentinel/packages/presentation/api/http/controllers/roles"
 	User "sentinel/packages/presentation/api/http/controllers/user"
+	"sentinel/packages/presentation/api/http/request"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -41,6 +42,7 @@ func Create() *echo.Echo {
         },
     }
 
+	router.Use(request.Middleware)
     router.Use(middleware.CORSWithConfig(cors))
     router.Use(middleware.Recover())
     // router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))

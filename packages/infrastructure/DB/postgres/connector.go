@@ -23,12 +23,12 @@ func defaultTimeoutContext() (context.Context, context.CancelFunc) {
 
 func (c *connector) Connect() {
     if c.isConnected {
-        dbLogger.Panic("DB connection failed", "connection already established")
+        dbLogger.Panic("DB connection failed", "connection already established", nil)
     }
 
     c.ctx = context.Background()
 
-    dbLogger.Info("Creating connection pool...")
+    dbLogger.Info("Creating connection pool...", nil)
 
     config, err := pgxpool.ParseConfig(fmt.Sprintf(
         "postgres://%s:%s@%s:%s/%s",
@@ -45,18 +45,18 @@ func (c *connector) Connect() {
     config.MaxConnLifetime = time.Minute * 60
 
     if err != nil {
-        dbLogger.Fatal("Failed to parse DB connection URI", err.Error())
+        dbLogger.Fatal("Failed to parse DB connection URI", err.Error(), nil)
     }
 
     pool, err := pgxpool.NewWithConfig(c.ctx, config)
 
     if err != nil {
-        dbLogger.Fatal("Failed to create connection pool", err.Error())
+        dbLogger.Fatal("Failed to create connection pool", err.Error(), nil)
     }
 
-    dbLogger.Info("Creating connection pool: OK")
+    dbLogger.Info("Creating connection pool: OK", nil)
 
-    dbLogger.Info("Ping connection...")
+    dbLogger.Info("Ping connection...", nil)
 
     ctx, cancel := defaultTimeoutContext()
 
@@ -64,20 +64,20 @@ func (c *connector) Connect() {
 
     if err = pool.Ping(ctx); err != nil {
         if err == context.DeadlineExceeded {
-            dbLogger.Fatal("Failed to ping DB", "Ping timeout")
+            dbLogger.Fatal("Failed to ping DB", "Ping timeout", nil)
         }
 
-        dbLogger.Fatal("Failed to ping DB", err.Error())
+        dbLogger.Fatal("Failed to ping DB", err.Error(), nil)
     }
 
-    dbLogger.Info("Ping connection: OK")
+    dbLogger.Info("Ping connection: OK", nil)
 
     c.pool = pool
 
     err = c.postConnection()
 
     if err != nil {
-        dbLogger.Fatal("Post-connection failed", err.Error())
+        dbLogger.Fatal("Post-connection failed", err.Error(), nil)
     }
 
     c.isConnected = true
@@ -88,7 +88,7 @@ func (c *connector) Disconnect() error {
         return errors.New("connection not established")
     }
 
-    dbLogger.Info("Closing connection pool...")
+    dbLogger.Info("Closing connection pool...", nil)
 
     done := make(chan bool)
 
@@ -103,7 +103,7 @@ func (c *connector) Disconnect() error {
         return errors.New("timeout exceeded")
     }
 
-    dbLogger.Info("Closing connection pool: OK")
+    dbLogger.Info("Closing connection pool: OK", nil)
 
     c.isConnected = false
 
@@ -126,6 +126,7 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
         dbLogger.Error(
             "Failed to acquire connection from pool",
             err.Error(),
+			nil,
         )
 
         return nil, Error.StatusInternalError
@@ -135,7 +136,7 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
 }
 
 func (c *connector) postConnection() error {
-    dbLogger.Info("Post-connection...")
+    dbLogger.Info("Post-connection...", nil)
 
     if err := c.initializeTable(
         "user",
@@ -168,7 +169,7 @@ func (c *connector) postConnection() error {
         return err
     }
 
-    dbLogger.Info("Post-connection: OK")
+    dbLogger.Info("Post-connection: OK", nil)
 
     return nil
 }
@@ -182,13 +183,13 @@ func (c *connector) initializeTable(tableName string, query string) error {
 
     defer con.Release()
 
-    dbLogger.Info("Verifying that table '"+tableName+"' exists...")
+    dbLogger.Info("Verifying that table '"+tableName+"' exists...", nil)
 
     if _, e := con.Exec(c.ctx, query); e != nil {
         return errors.New("Failed to verify that table '"+tableName+"' exists: "+e.Error())
     }
 
-    dbLogger.Info("Verifying that table '"+tableName+"' exists: OK")
+    dbLogger.Info("Verifying that table '"+tableName+"' exists: OK", nil)
 
     return nil
 }

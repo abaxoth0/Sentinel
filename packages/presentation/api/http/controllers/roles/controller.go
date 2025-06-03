@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/auth/authz"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	"sentinel/packages/presentation/api/http/request"
 	datamodel "sentinel/packages/presentation/data"
 	"strings"
 
@@ -16,21 +17,25 @@ var serviceIdIsNotSpecified = echo.NewHTTPError(
 )
 
 func GetAll(ctx echo.Context) error {
-	reqInfo := controller.RequestInfo(ctx)
+	reqMeta, e := request.GetLogMeta(ctx)
+	if e != nil {
+		controller.Logger.Panic("Failed to get log meta for the request",e.Error(), nil)
+		return e
+	}
 
     serviceID := ctx.Param("serviceID")
 
     if strings.ReplaceAll(serviceID, " ", "") == "" {
-		controller.Logger.Error("Failed to get service roles" + reqInfo, serviceIdIsNotSpecified.Error())
+		controller.Logger.Error("Failed to get service roles", serviceIdIsNotSpecified.Error(), reqMeta)
         return serviceIdIsNotSpecified
     }
 
-	controller.Logger.Info("Getting roles for service '"+serviceID+"'..." + reqInfo)
+	controller.Logger.Info("Getting roles for service '"+serviceID+"'...", reqMeta)
 
-    schema, e := authz.Host.GetSchema(serviceID)
-    if e != nil {
-		controller.Logger.Error("Failed to get roles of service '"+serviceID+"'" + reqInfo, e.Error())
-        return echo.NewHTTPError(http.StatusBadRequest, e.Message)
+    schema, err := authz.Host.GetSchema(serviceID)
+    if err != nil {
+		controller.Logger.Error("Failed to get roles of service '"+serviceID+"'", err.Error(), reqMeta)
+        return echo.NewHTTPError(http.StatusBadRequest, err.Message)
     }
 
     roles := make([]string, len(schema.Roles))
@@ -39,7 +44,7 @@ func GetAll(ctx echo.Context) error {
         roles[i] = role.Name
     }
 
-	controller.Logger.Info("Getting roles for service '"+serviceID+"': OK" + reqInfo)
+	controller.Logger.Info("Getting roles for service '"+serviceID+"': OK", reqMeta)
 
     return ctx.JSON(
         http.StatusOK,

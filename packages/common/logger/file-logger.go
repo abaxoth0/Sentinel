@@ -133,7 +133,7 @@ func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
 
         stream.WriteVal(entry)
         if stream.Error != nil {
-            errLogger.Error("failed to write log", stream.Error.Error())
+            errLogger.Error("failed to write log", stream.Error.Error(), nil)
             return
         }
 

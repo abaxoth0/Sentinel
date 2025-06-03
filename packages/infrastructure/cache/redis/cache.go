@@ -28,10 +28,10 @@ func New() *driver {
 
 func (d *driver) Connect() {
     if d.isConnected {
-        cacheLogger.Panic("DB connection failed", "Connection already established")
+        cacheLogger.Panic("DB connection failed", "Connection already established", nil)
     }
 
-	cacheLogger.Info("Connecting to DB...")
+	cacheLogger.Info("Connecting to DB...", nil)
 
 	d.client = redis.NewClient(&redis.Options{
 		Addr:        config.Secret.CacheURI,
@@ -44,10 +44,10 @@ func (d *driver) Connect() {
     defer cancel()
 
     if err := d.client.Ping(ctx).Err(); err != nil {
-        cacheLogger.Panic("DB connection failed", err.Error())
+        cacheLogger.Panic("DB connection failed", err.Error(), nil)
     }
 
-	cacheLogger.Info("Connecting to DB: OK")
+	cacheLogger.Info("Connecting to DB: OK", nil)
 
     d.isConnected = true
 }
@@ -60,7 +60,7 @@ func (d *driver) Close() *Error.Status {
         )
     }
 
-    cacheLogger.Info("Disconnecting from DB...")
+    cacheLogger.Info("Disconnecting from DB...", nil)
 
     if err := d.client.Close(); err != nil {
         return Error.NewStatusError(
@@ -69,7 +69,7 @@ func (d *driver) Close() *Error.Status {
         )
     }
 
-    cacheLogger.Info("Disconnecting from DB: OK")
+    cacheLogger.Info("Disconnecting from DB: OK", nil)
 
     d.isConnected = false
 
@@ -93,17 +93,19 @@ func logAndConvert(action string, err error) *Error.Status {
             cacheLogger.Error(
                 "Request failed",
                 "TIMEOUT: " + action,
+				nil,
             )
         } else {
             cacheLogger.Error(
                 "Request failed",
                 "Failed to "+action+": "+err.Error(),
+				nil,
             )
         }
         return Error.StatusInternalError
 	}
 
-    cacheLogger.Info(action)
+    cacheLogger.Info(action, nil)
 
     return nil
 }
@@ -114,7 +116,7 @@ func (d *driver) Get(key string) (string, bool) {
 
 	cachedData, err := d.client.Get(ctx, key).Result()
     if err == redis.Nil {
-        cacheLogger.Info("Miss: " + key)
+        cacheLogger.Info("Miss: " + key, nil)
         return "", false
     }
 
@@ -152,7 +154,7 @@ func(d *driver) Set(key string, value any) *Error.Status {
 func (d *driver) EncodeAndSet(key string, value any) *Error.Status {
     encodedData, err := json.Encode(value)
     if err != nil {
-        cacheLogger.Error("JSON encoding failed ", err.Error())
+        cacheLogger.Error("JSON encoding failed ", err.Error(), nil)
         return Error.NewStatusError(
             "JSON encoding failed",
             http.StatusInternalServerError,
@@ -244,7 +246,7 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
 
             deleted := strconv.FormatInt(int64(len(keys)), 64)
 
-            cacheLogger.Info("Deleted "+deleted+"keys with pattern: "+pattern)
+            cacheLogger.Info("Deleted "+deleted+"keys with pattern: "+pattern, nil)
         }
 
         // Exit when cursor is 0 (no more keys to scan)
@@ -311,7 +313,7 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
         if nextCursor == 0 {
             deleted := strconv.FormatInt(int64(keysDeleted), 64)
 
-            cacheLogger.Info("Deleted "+deleted+" keys matching "+pattern)
+            cacheLogger.Info("Deleted "+deleted+" keys matching "+pattern, nil)
             break
         }
 

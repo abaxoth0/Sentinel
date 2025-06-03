@@ -50,7 +50,7 @@ func CreateAndEnqueueActivationEmail(to string, token string) *Error.Status {
     }
 
     if err := MainMailer.Push(email); err != nil {
-        emailLogger.Error("Failed to push email in queue", err.Error())
+        emailLogger.Error("Failed to push email in queue", err.Error(), nil)
         return Error.StatusInternalError
     }
 

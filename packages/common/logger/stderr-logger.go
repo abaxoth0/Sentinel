@@ -20,7 +20,7 @@ func newStderrLogger() *stderrLogger {
 
 func (l *stderrLogger) log(entry *LogEntry) {
     // Must not change behaviour based on log level
-    log.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message)
+    log.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message + entry.Meta.stringSuffix())
 }
 
 func (l *stderrLogger) Log(entry *LogEntry) {

@@ -22,25 +22,25 @@ var Host *rbac.Host
 var schema *rbac.Schema
 
 func Init() {
-	authzLogger.Info("Loading Host configuration...")
+	authzLogger.Info("Loading Host configuration...", nil)
 
 	h, e := rbac.LoadHost("RBAC.json")
 	if e != nil {
-        authzLogger.Fatal("Failed to load Host configuration", e.Error())
+        authzLogger.Fatal("Failed to load Host configuration", e.Error(), nil)
 	}
 
-	authzLogger.Info("Loading Host configuration: OK")
-	authzLogger.Info("Getting schema for this service...")
+	authzLogger.Info("Loading Host configuration: OK", nil)
+	authzLogger.Info("Getting schema for this service...", nil)
 
     Host = &h
 
 	s, err := Host.GetSchema(config.App.ServiceID)
 	if err != nil {
-		authzLogger.Fatal("Failed to get schema for this service", err.Error())
+		authzLogger.Fatal("Failed to get schema for this service", err.Error(), nil)
 	}
 
-	authzLogger.Info("Getting schema for this service: OK")
-	authzLogger.Info("Initializing resources...")
+	authzLogger.Info("Getting schema for this service: OK", nil)
+	authzLogger.Info("Initializing resources...", nil)
 
     schema = s
 
@@ -63,7 +63,7 @@ func Init() {
         })()),
     }
 
-	authzLogger.Info("Initializing resources: OK")
+	authzLogger.Info("Initializing resources: OK", nil)
 }
 
 var user = rbac.NewEntity("user")
@@ -81,12 +81,12 @@ var insufficientPermissions = Error.NewStatusError(
 // This method authorize operations only in THIS service!
 // Operations on other services must be authorized by themselves!
 func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) *Error.Status {
-	authzLogger.Trace("Authorizing "+action.String()+"...")
+	authzLogger.Trace("Authorizing "+action.String()+"...", nil)
 
 	err := resource.Authorize(action, userRoles)
 
     if err != nil {
-		authzLogger.Trace("Authorization of "+action.String()+" failed: " + err.Error())
+		authzLogger.Trace("Authorization of "+action.String()+" failed: " + err.Error(), nil)
 
         if err == rbac.InsufficientPermissions {
             return insufficientPermissions
@@ -95,6 +95,7 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
 		authzLogger.Error(
 			"Unexpected error occured on authorizing "+action.String()+" (on resource "+resource.Name+") for " + strings.Join(userRoles, ","),
 			err.Error(),
+			nil,
 		)
 
         // if err is not nil and not rbac.InsufficientPermissions that means
@@ -105,7 +106,7 @@ func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) 
         )
     }
 
-	authzLogger.Trace("Authorizing "+action.String()+": OK")
+	authzLogger.Trace("Authorizing "+action.String()+": OK", nil)
 
     return nil
 }
