@@ -16,6 +16,11 @@ import (
 
 var errLogger = NewSource("LOG", Stderr)
 
+const (
+	fallbackBatchSize = 500
+	fallbackWorkers   = 5
+)
+
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
     done                 chan struct{}
@@ -56,10 +61,7 @@ func NewFileLogger(name string) *FileLogger {
     return &FileLogger{
         done: make(chan struct{}),
         disruptor: structs.NewDisruptor[*LogEntry](),
-        fallback: structs.NewWorkerPool(
-            context.Background(),
-            structs.NewCondWaiter(new(sync.Mutex)),
-            ),
+        fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
         logger: logger,
         logFile: f,
         transmissions: []Logger{},
@@ -75,16 +77,13 @@ func (l *FileLogger) Start(debug bool) error {
 
     // canceled WorkerPool can't be started
     if l.fallback.IsCanceled() {
-        l.fallback = structs.NewWorkerPool(
-            context.Background(),
-            structs.NewCondWaiter(new(sync.Mutex)),
-        )
+        l.fallback = structs.NewWorkerPool(context.Background(), fallbackBatchSize)
     }
 
     l.isRunning.Store(true)
 
     go l.disruptor.Consume(newLogEntryHandlerProducer(l.logger))
-    go l.fallback.Start(true)
+    go l.fallback.Start(fallbackWorkers)
 
     for {
         select {

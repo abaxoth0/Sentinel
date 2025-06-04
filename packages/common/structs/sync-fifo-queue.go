@@ -7,7 +7,6 @@ import (
 )
 
 // TODO add size limit
-// TODO add batch processing
 
 // Concurrency-safe first-in-first-out queue
 type SyncFifoQueue[T comparable] struct {
@@ -55,8 +54,7 @@ func (q *SyncFifoQueue[T]) Peek() (T, bool) {
     return q.elems[0], true
 }
 
-// If queue isn't empty - deletes and returns first element of queue and true.
-// If queue is empty - returns zero-value of T and false.
+// Same as Peek(), but also deletes first element in queue.
 func (q *SyncFifoQueue[T]) Pop() (T, bool) {
     q.mut.Lock()
     defer q.mut.Unlock()
@@ -75,6 +73,34 @@ func (q *SyncFifoQueue[T]) Pop() (T, bool) {
     }
 
     return v, true
+}
+
+// Pops n elements from the queue.
+// If n is greater then queue size, then to prevent panic n will be equated to the queue size.
+// If queue is empty - returns nil and false.
+func (q *SyncFifoQueue[T]) PopN(n int) ([]T, bool) {
+    q.mut.Lock()
+    defer q.mut.Unlock()
+
+	s := make([]T, n)
+	size := len(q.elems)
+
+    if size == 0 {
+        return nil, false
+    }
+
+	if n > size {
+		n = size
+	}
+
+	s = q.elems[:n]
+    q.elems = q.elems[n:]
+
+    if size == 0 {
+        q.cond.Broadcast()
+    }
+
+    return s, true
 }
 
 // Preserves the head element of the queue
@@ -119,12 +145,6 @@ func (q *SyncFifoQueue[T]) PreserveAndPop() (T, bool) {
     q.Preserve()
     return q.Pop()
 }
-
-/*
-    IMPORTANT:
-    DO NOT CALL THIS METHOD IN OTHER METHODS OF THIS STURCT,
-    THIS WILL CAUSE DEADLOCK!!!
-*/
 
 // Returns amount of elements in queue
 func (q *SyncFifoQueue[T]) Size() int {
