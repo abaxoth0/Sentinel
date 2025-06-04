@@ -101,7 +101,11 @@ type updater = func (*ActionDTO.Targeted) *Error.Status
 // if omitUid is true, then uid will be set to empty string,
 // otherwise uid will be taken from path params (in this case uid must be a valid UUID).
 // If you want to change other user properties then use 'update' isntead.
-func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
+func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool, logMessageBase string) error {
+    reqMeta := request.GetMetadata(ctx)
+
+    controller.Logger.Info(logMessageBase + "...", reqMeta)
+
     var uid string
 
     if !omitUid {
@@ -110,6 +114,7 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
 
     act, err := newTargetedActionDTO(ctx, uid)
     if err != nil {
+		controller.Logger.Error(logMessageBase + ": FAILED", err.Error(), reqMeta)
         return err
     }
 
@@ -117,54 +122,21 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
+	controller.Logger.Info(logMessageBase + ": OK", reqMeta)
+
     return ctx.NoContent(http.StatusOK)
 }
 
-// TODO a lot of boilerplate, try to do smth with that
-
 func SoftDelete(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Soft deleting user...", reqMeta)
-
-    if err := handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false); err != nil {
-        controller.Logger.Error("Failed to soft delete user", err.Error(), reqMeta)
-        return err
-    }
-
-    controller.Logger.Info("Soft deleting user: OK", reqMeta)
-
-    return nil
+    return handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
 }
 
 func Restore(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Restoring user...", reqMeta)
-
-    if err := handleUserDeleteUpdate(ctx, DB.Database.Restore, false); err != nil {
-        controller.Logger.Error("Failed to restore user", err.Error(), reqMeta)
-        return err
-    }
-
-    controller.Logger.Info("Restoring user: OK", reqMeta)
-
-    return nil
+    return handleUserDeleteUpdate(ctx, DB.Database.Restore, false, "Restoring user")
 }
 
 func Drop(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Dropping user...", reqMeta)
-
-    if err := handleUserDeleteUpdate(ctx, DB.Database.Drop, false); err != nil {
-        controller.Logger.Error("Failed to drop user", err.Error(), reqMeta)
-        return err
-    }
-
-    controller.Logger.Info("Dropping user: OK", reqMeta)
-
-    return nil
+    return handleUserDeleteUpdate(ctx, DB.Database.Drop, false, "Dropping user")
 }
 
 func DropAllDeleted(ctx echo.Context) error {
@@ -225,8 +197,10 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
 
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
-func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
+func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBase string) error {
     reqMeta := request.GetMetadata(ctx)
+
+    controller.Logger.Info(logMessageBase + "...", reqMeta)
 
     controller.Logger.Trace("Binding request...", reqMeta)
 
@@ -267,55 +241,25 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
     }
 
     if err != nil {
+		controller.Logger.Info(logMessageBase + ": FAILED", reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
+
+	controller.Logger.Info(logMessageBase + ": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Changing user login...", reqMeta)
-
-    if err := update(ctx, new(datamodel.ChangeLoginBody)); err != nil {
-        controller.Logger.Error("Failed to change user login", err.Error(), reqMeta)
-        return err
-    }
-
-    controller.Logger.Info("Changing user login: OK", reqMeta)
-
-    return nil
+    return update(ctx, new(datamodel.ChangeLoginBody), "Changing user login")
 }
 
 func ChangePassword(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Changing user password...", reqMeta)
-
-    if err := update(ctx, new(datamodel.ChangePasswordBody)); err != nil {
-        controller.Logger.Error("Failed to change user password", err.Error(), reqMeta)
-        return err
-    }
-
-    controller.Logger.Info("Changing user password: OK", reqMeta)
-
-    return nil
+    return update(ctx, new(datamodel.ChangePasswordBody), "Changing user password")
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Changing user roles...", reqMeta)
-
-    if err := update(ctx, new(datamodel.ChangeRolesBody)); err != nil {
-        controller.Logger.Error("Failed to change user roles", err.Error(), reqMeta)
-        return err
-    }
-
-    controller.Logger.Info("Changing user roles: OK", reqMeta)
-
-    return nil
+    return update(ctx, new(datamodel.ChangeRolesBody), "Changing user roles")
 }
 
 func GetRoles(ctx echo.Context) error {
