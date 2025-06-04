@@ -23,11 +23,7 @@ func Login(ctx echo.Context) error {
         return err
     }
 
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Logger.Info("Authenticating user '"+body.Login+"'...", reqMeta)
 
@@ -76,11 +72,7 @@ func Login(ctx echo.Context) error {
 }
 
 func Logout(ctx echo.Context) error {
-	reqMeta, err := request.GetLogMeta(ctx)
-	if err != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", err.Error(), nil)
-		return err
-	}
+	reqMeta := request.GetMetadata(ctx)
 
     authCookie, err := controller.GetAuthCookie(ctx)
     if err != nil {
@@ -109,11 +101,7 @@ func Logout(ctx echo.Context) error {
 }
 
 func Refresh(ctx echo.Context) error {
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request",e.Error(), nil)
-		return e
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Logger.Info("Refreshing auth tokens...", reqMeta)
 
@@ -150,11 +138,7 @@ func Refresh(ctx echo.Context) error {
 }
 
 func Verify(ctx echo.Context) error {
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request",e.Error(), nil)
-		return e
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Logger.Info("Verifying access token...", reqMeta)
 

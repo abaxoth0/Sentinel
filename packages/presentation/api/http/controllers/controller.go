@@ -15,11 +15,7 @@ import (
 var Logger = logger.NewSource("CONTROLLER", logger.Default)
 
 func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     Logger.Trace("Binding and validating request...", reqMeta)
 
@@ -52,11 +48,7 @@ func applyWWWAuthenticate(ctx echo.Context, params *wwwAuthenticateParamas) {
 }
 
 func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return echo.NewHTTPError(http.StatusInternalServerError, e.Error())
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	Logger.Trace("Handling token error...", reqMeta)
 

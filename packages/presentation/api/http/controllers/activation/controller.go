@@ -19,11 +19,7 @@ var tokenIsMissing = echo.NewHTTPError(
 )
 
 func Activate(ctx echo.Context) error {
-	reqMeta, err := request.GetLogMeta(ctx)
-	if err != nil {
-		controller.Logger.Panic("Failed to get log meta for the request",err.Error(), nil)
-		return err
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Logger.Info("Activating user...", nil)
 
@@ -45,25 +41,21 @@ func Activate(ctx echo.Context) error {
 }
 
 func Resend(ctx echo.Context) error {
-	reqMeta, err := request.GetLogMeta(ctx)
-	if err != nil {
-		controller.Logger.Panic("Failed to get log meta for the request",err.Error(), nil)
-		return err
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Logger.Info("Resending activation email...", reqMeta)
 
     var body datamodel.LoginBody
 
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-		controller.Logger.Error("Failed to resend activation email", err.Error(), reqMeta)
-        return err
+    if e := controller.BindAndValidate(ctx, &body); e != nil {
+		controller.Logger.Error("Failed to resend activation email", e.Error(), reqMeta)
+        return e
     }
 
-    user, e := DB.Database.FindUserByLogin(body.Login)
-    if e != nil {
-		controller.Logger.Error("Failed to resend activation email", e.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(e)
+    user, err := DB.Database.FindUserByLogin(body.Login)
+    if err != nil {
+		controller.Logger.Error("Failed to resend activation email", err.Error(), reqMeta)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if user.IsActive() {
@@ -79,19 +71,19 @@ func Resend(ctx echo.Context) error {
 
 	controller.Logger.Trace("Creating activation token...", reqMeta)
 
-    tk, e := token.NewActivationToken(user.ID, user.Login, user.Roles)
-    if e != nil {
-		controller.Logger.Error("Failed to create activation token", e.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(e)
+    tk, err := token.NewActivationToken(user.ID, user.Login, user.Roles)
+    if err != nil {
+		controller.Logger.Error("Failed to create activation token", err.Error(), reqMeta)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
 	controller.Logger.Trace("Creating activation token...", reqMeta)
 	controller.Logger.Trace("Creating and enqueueing activation email", reqMeta)
 
-	e = email.CreateAndEnqueueActivationEmail(user.Login, tk.String())
+	err = email.CreateAndEnqueueActivationEmail(user.Login, tk.String())
     if err != nil {
-		controller.Logger.Error("Failed to create and enqueue activation email", e.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(e)
+		controller.Logger.Error("Failed to create and enqueue activation email", err.Error(), reqMeta)
+        return controller.ConvertErrorStatusToHTTP(err)
     }
 
 	controller.Logger.Trace("Creating and enqueueing activation email: OK", reqMeta)

@@ -16,11 +16,7 @@ func DeleteCookie(ctx echo.Context, cookie *http.Cookie) {
 }
 
 func GetAuthCookie(ctx echo.Context) (*http.Cookie, *echo.HTTPError) {
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, e.Error())
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	Logger.Trace("Getting auth cookie...", reqMeta)
 

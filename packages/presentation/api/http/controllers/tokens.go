@@ -22,11 +22,7 @@ var invalidAuthorizationHeaderFormat = Error.NewStatusError(
 // Returns token pointer and nil if valid and not expired token was found.
 // Otherwise returns empty token pointer and error.
 func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return nil, Error.NewStatusError(e.Error(), http.StatusInternalServerError)
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	Logger.Trace("Getting access token from the request...", reqMeta)
 
@@ -62,11 +58,7 @@ const RefreshTokenCookieKey string = "refreshToken"
 // Returns pointer to token and nil if valid and not expired token was found.
 // Otherwise returns empty pointer to token and *Error.Status.
 func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
-	reqMeta, err := request.GetLogMeta(ctx)
-	if err != nil {
-		Logger.Panic("Failed to get log meta for the request", err.Error(), nil)
-		return nil, Error.NewStatusError(err.Error(), http.StatusInternalServerError)
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	Logger.Trace("Getting refresh token from the request...", reqMeta)
 

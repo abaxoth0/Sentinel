@@ -26,11 +26,7 @@ func handleHttpError(err error, ctx echo.Context) {
 
     status := http.StatusText(code)
 
-	reqMeta, err := request.GetLogMeta(ctx)
-	if err != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", err.Error(), nil)
-		return
-	}
+	reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Error(message, status, reqMeta)
 

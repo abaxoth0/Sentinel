@@ -13,11 +13,7 @@ import (
 )
 
 func Drop(ctx echo.Context) error {
-	reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request",e.Error(), nil)
-		return e
-	}
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Logger.Info("Crealing cache...", reqMeta)
 

@@ -23,11 +23,7 @@ import (
 )
 
 func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, error) {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return nil, e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Trace("Retrieving access token from the request...", reqMeta)
 
@@ -59,11 +55,7 @@ func Create(ctx echo.Context) error {
         return err
     }
 
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Creating new user...", reqMeta)
 
@@ -131,11 +123,7 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool) error {
 // TODO a lot of boilerplate, try to do smth with that
 
 func SoftDelete(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Soft deleting user...", reqMeta)
 
@@ -150,11 +138,7 @@ func SoftDelete(ctx echo.Context) error {
 }
 
 func Restore(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Restoring user...", reqMeta)
 
@@ -169,11 +153,7 @@ func Restore(ctx echo.Context) error {
 }
 
 func Drop(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Dropping user...", reqMeta)
 
@@ -188,11 +168,7 @@ func Drop(ctx echo.Context) error {
 }
 
 func DropAllDeleted(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Dropping all soft deleted user...", reqMeta)
 
@@ -250,11 +226,7 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Trace("Binding request...", reqMeta)
 
@@ -302,11 +274,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody) error {
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Changing user login...", reqMeta)
 
@@ -321,11 +289,7 @@ func ChangeLogin(ctx echo.Context) error {
 }
 
 func ChangePassword(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Changing user password...", reqMeta)
 
@@ -340,11 +304,7 @@ func ChangePassword(ctx echo.Context) error {
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Changing user roles...", reqMeta)
 
@@ -366,11 +326,7 @@ func GetRoles(ctx echo.Context) error {
         return e
     }
 
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info("Getting user roles...", reqMeta)
 
@@ -389,11 +345,7 @@ func GetRoles(ctx echo.Context) error {
 }
 
 func IsLoginAvailable(ctx echo.Context) error {
-    reqMeta, e := request.GetLogMeta(ctx)
-	if e != nil {
-		controller.Logger.Panic("Failed to get log meta for the request", e.Error(), nil)
-		return e
-	}
+    reqMeta := request.GetMetadata(ctx)
 
 	login := ctx.QueryParam("login")
 
