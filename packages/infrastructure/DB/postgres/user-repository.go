@@ -81,29 +81,17 @@ func (_ *repository) SoftDelete(filter *ActionDTO.Targeted) *Error.Status {
         return err
     }
 
-    // TODO add possibility to config what kind of users can delete themselves
-    // all users can delete themselves, except admins (TEMP)
-    if filter.TargetUID != filter.RequesterUID {
-        if err := authz.Authorize(
-            authz.Action.SoftDelete,
-            authz.Resource.User,
-            filter.RequesterRoles,
-        ); err != nil {
-            return err
-        }
-    }
+	if err := authz.User.SoftDeleteUser(
+		filter.RequesterUID == filter.TargetUID,
+		filter.RequesterRoles,
+	); err != nil {
+		return err
+	}
 
     user, err := driver.FindUserByID(filter.TargetUID)
 
     if err != nil {
         return err
-    }
-
-    if slices.Contains(user.Roles, "admin") {
-        return Error.NewStatusError(
-            "Нельзя удалить пользователя с ролью администратора",
-            http.StatusBadRequest,
-        )
     }
 
     audit := newAudit(deleteOperation, filter, user)
@@ -132,13 +120,9 @@ func (_ *repository) Restore(filter *ActionDTO.Targeted) *Error.Status {
         return err
     }
 
-    if err := authz.Authorize(
-        authz.Action.Restore,
-        authz.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return err
-    }
+	if err := authz.User.RestoreUser(filter.RequesterRoles); err != nil {
+		return err
+	}
 
     user, err := driver.FindSoftDeletedUserByID(filter.TargetUID)
 
@@ -171,13 +155,9 @@ func (_ *repository) Drop(filter *ActionDTO.Targeted) *Error.Status {
         return err
     }
 
-    if err := authz.Authorize(
-        authz.Action.Drop,
-        authz.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return err
-    }
+	if err := authz.User.DropUser(filter.RequesterRoles); err != nil {
+		return err
+	}
 
     user, err := driver.FindAnyUserByID(filter.TargetUID)
 
@@ -214,13 +194,9 @@ func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
         return err
     }
 
-    if err := authz.Authorize(
-        authz.Action.DropAllSoftDeleted,
-        authz.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return err
-    }
+	if err := authz.User.DropAllSoftDeletedUsers(filter.RequesterRoles); err != nil {
+		return err
+	}
 
     user, err := driver.FindUserByID(filter.RequesterUID)
     if err != nil {
@@ -259,13 +235,12 @@ func (r *repository) ChangeLogin(filter *ActionDTO.Targeted, newLogin string) *E
         return err
     }
 
-    if err := authz.Authorize(
-        authz.Action.ChangeLogin,
-        authz.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return err
-    }
+	if err := authz.User.ChangeUserLogin(
+		filter.RequesterUID == filter.TargetUID,
+		filter.RequesterRoles,
+	); err != nil {
+		return err
+	}
 
     user, err := driver.FindUserByID(filter.TargetUID)
 
@@ -310,15 +285,12 @@ func (_ *repository) ChangePassword(filter *ActionDTO.Targeted, newPassword stri
         return err
     }
 
-    if filter.RequesterUID != filter.TargetUID {
-        if err := authz.Authorize(
-            authz.Action.ChangePassword,
-            authz.Resource.User,
-            filter.RequesterRoles,
-        ); err != nil {
-            return err
-        }
-    }
+	if err := authz.User.ChangeUserPassword(
+		filter.RequesterUID == filter.TargetUID,
+		filter.RequesterRoles,
+	); err != nil {
+		return err
+	}
 
     user, err := driver.FindUserByID(filter.TargetUID)
     if err != nil {
@@ -367,13 +339,12 @@ func (_ *repository) ChangeRoles(filter *ActionDTO.Targeted, newRoles []string) 
         return err
     }
 
-    if err := authz.Authorize(
-        authz.Action.ChangeRoles,
-        authz.Resource.User,
-        filter.RequesterRoles,
-    ); err != nil {
-        return err
-    }
+	if err := authz.User.ChangeUserRoles(
+		filter.RequesterUID == filter.TargetUID,
+		filter.RequesterRoles,
+	); err != nil {
+		return err
+	}
 
     audit := newAudit(updatedOperation, filter, user)
 

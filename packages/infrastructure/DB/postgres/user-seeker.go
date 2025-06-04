@@ -134,13 +134,9 @@ func (_ *seeker) GetRoles(act *actiondto.Targeted) ([]string, *Error.Status) {
         return nil, err
     }
 
-    if err := authz.Authorize(
-        authz.Action.GetRoles,
-        authz.Resource.User,
-        act.RequesterRoles,
-    ); err != nil {
-        return nil, err
-    }
+	if err := authz.User.GetUserRoles(act.RequesterRoles); err != nil {
+		return nil, err
+	}
 
     if rawRoles, hit := cache.Client.Get(cache.KeyBase[cache.UserRolesById] + act.TargetUID); hit {
         return strings.Split(rawRoles, ","), nil

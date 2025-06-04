@@ -12,14 +12,13 @@ import (
 
 var authzLogger = logger.NewSource("AUTHZ", logger.Default)
 
-type resource struct {
-	User  *rbac.Resource
-	Cache *rbac.Resource
-}
+var userResource *rbac.Resource
+var cacheResource *rbac.Resource
 
-var Resource resource
-var Host *rbac.Host
+var userEntity = rbac.NewEntity("user")
+
 var schema *rbac.Schema
+var Host *rbac.Host
 
 func Init() {
 	authzLogger.Info("Loading Host configuration...", nil)
@@ -44,43 +43,39 @@ func Init() {
 
     schema = s
 
-    Resource = resource{
-        User: rbac.NewResource("user", schema.Roles),
+	userResource = rbac.NewResource("user", schema.Roles)
 
-        Cache: rbac.NewResource("cache", (func() []rbac.Role {
-            roles := make([]rbac.Role, len(schema.Roles))
+	cacheResource = rbac.NewResource("cache", (func() []rbac.Role {
+		roles := make([]rbac.Role, len(schema.Roles))
 
-            for i, role := range schema.Roles {
-                // Only admins can interact with cache
-                if role.Name == "admin" {
-                    roles[i] = role
-                } else {
-                    roles[i] = rbac.NewRole(role.Name, 0)
-                }
-            }
+		for i, role := range schema.Roles {
+			// Only admins can interact with cache
+			if role.Name == "admin" {
+				roles[i] = role
+			} else {
+				roles[i] = rbac.NewRole(role.Name, 0)
+			}
+		}
 
-            return roles
-        })()),
-    }
+		return roles
+	})())
 
 	authzLogger.Info("Initializing resources: OK", nil)
 }
-
-var user = rbac.NewEntity("user")
 
 var insufficientPermissions = Error.NewStatusError(
     "Недостаточно прав для выполнения данной операции",
     http.StatusForbidden,
 )
 
-// TODO is there any point in this function? why just don't use resource.Authorize(...)?
+// TODO is there any point in this function? why just don't use resource.authorize(...)?
 
 // Checks if user with specified roles can perform action on given resource.
 // Returns *Error.Status if user has insufficient permissions or smth is missconfigured, otherwise returns nil.
 //
 // This method authorize operations only in THIS service!
 // Operations on other services must be authorized by themselves!
-func Authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) *Error.Status {
+func authorize(action rbac.Action, resource *rbac.Resource, userRoles []string) *Error.Status {
 	authzLogger.Trace("Authorizing "+action.String()+"...", nil)
 
 	err := resource.Authorize(action, userRoles)

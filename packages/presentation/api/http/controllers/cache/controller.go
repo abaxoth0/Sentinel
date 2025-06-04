@@ -29,14 +29,11 @@ func Drop(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    if err := authz.Authorize(
-        authz.Action.Drop,
-        authz.Resource.Cache,
-        filter.RequesterRoles,
-    ); err != nil {
+	if err := authz.User.DropCache(filter.RequesterRoles); err != nil {
 		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
-    }
+		return err
+	}
+
     if err := cache.Client.FlushAll(); err != nil {
 		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
         return err
