@@ -1,7 +1,7 @@
 package usercontroller
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -237,7 +237,12 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBa
     case *datamodel.ChangeRolesBody:
         err = DB.Database.ChangeRoles(filter, b.Roles)
     default:
-        return errors.New("Invalid update call: received unacceptable request body")
+		controller.Logger.Panic(
+			"Invalid update call",
+			fmt.Sprintf("Unexpected request body type - %T"),
+			reqMeta,
+		)
+        return nil
     }
 
     if err != nil {
