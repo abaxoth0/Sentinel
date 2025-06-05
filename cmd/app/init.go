@@ -1,7 +1,7 @@
 package app
 
 import (
-	"log"
+	"os"
 	"runtime"
 	"sentinel/packages/common/config"
 	"sentinel/packages/common/logger"
@@ -31,19 +31,28 @@ func EndInit() {
 func InitDefault() {
 	// Program wasn't tested on OS other than Linux.
 	if runtime.GOOS != "linux" {
-		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
+		println("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
+		os.Exit(1)
 	}
 
 	config.Init()
 }
 
 func InitModules() {
+	appLogger.Info("Initializng modules...", nil)
+
     authz.Init()
+
+	appLogger.Info("Initializng modules: OK", nil)
 }
 
 func InitConnections() {
+	appLogger.Info("Initializng connections...", nil)
+
     cache.Client.Connect()
 	DB.Database.Connect()
+
+	appLogger.Info("Initializng connections: OK", nil)
 }
 
 func InitRouter() *echo.Echo {
