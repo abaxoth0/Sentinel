@@ -18,3 +18,12 @@ type connector interface {
 // Implemets all entities "Repository" interfaces
 var Database database = postgres.InitDriver()
 
+type migrate interface {
+	Up() 		 error
+	Down() 		 error
+	Steps(n int) error
+}
+
+// Used for applying DB migrations
+var Migrate migrate = postgres.Migrate{}
+
