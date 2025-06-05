@@ -1,72 +1,36 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"os"
-	"os/signal"
-	"runtime"
+	"sentinel/cmd/app"
 	"sentinel/packages/common/config"
 	"sentinel/packages/common/logger"
-	"sentinel/packages/infrastructure/DB"
-	"sentinel/packages/infrastructure/auth/authz"
-	"sentinel/packages/infrastructure/cache"
-	"sentinel/packages/infrastructure/email"
-	"sentinel/packages/presentation/api/http/router"
-	"syscall"
 	"time"
-
-	"github.com/labstack/echo/v4"
 )
 
+var mainLogger = logger.NewSource("MAIN", logger.Default)
+
 func main() {
-    Router := initialize()
+	app.Args.Parse()
 
-    start(Router)
-}
+	app.StartInit()
 
-var appLogger = logger.NewSource("APP", logger.Default)
+	app.InitDefault()
 
-func initialize() *echo.Echo {
-	// Program wasn't tested on OS other than Linux.
-	if runtime.GOOS != "linux" {
-		log.Fatalln("[ CRITICAL ERROR ] OS is not supported. This program can be used only on Linux-based OS.")
+	if *app.Args.Debug {
+		config.Debug.Enabled = true
+	}
+	if *app.Args.ShowLogs {
+		config.App.ShowLogs = true
+	}
+	if *app.Args.TraceLogs {
+		config.App.TraceLogsEnabled = true
 	}
 
-    // All init logs will be shown anyway
-    if err := logger.Default.NewTransmission(logger.Stdout); err != nil {
-        panic(err.Error())
-    }
+	logger.Debug.Store(config.Debug.Enabled)
+	logger.Trace.Store(config.App.TraceLogsEnabled)
 
-    config.Init()
-
-    logger.Debug.Store(config.Debug.Enabled)
-    logger.Trace.Store(config.App.TraceLogsEnabled)
-
-    authz.Init()
-    cache.Client.Connect()
-	DB.Database.Connect()
-
-	appLogger.Info("Initializng router...", nil)
-
-	Router := router.Create()
-
-	appLogger.Info("Initializng router: OK", nil)
-
-    if !config.App.ShowLogs {
-        if err := logger.Default.RemoveTransmission(logger.Stdout); err != nil {
-            panic(err.Error())
-        }
-    }
-
-    return Router
-}
-
-func start(Router *echo.Echo) {
-    stop := make(chan os.Signal, 1)
-
-    signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	app.InitModules()
+	app.InitConnections()
 
     go func () {
         if err := logger.Default.Start(config.Debug.Enabled); err != nil {
@@ -75,89 +39,21 @@ func start(Router *echo.Echo) {
     }()
     defer func() {
         if err := logger.Default.Stop(); err != nil {
-            entry := logger.NewLogEntry(
-                logger.ErrorLogLevel,
-                "APP",
-                "Failed to stop logger",
-                err.Error(),
-				nil,
-            )
-            logger.Stderr.Log(&entry)
+			mainLogger.Error("Failed to stop logger", err.Error(), nil)
         }
     }()
 
     // Reserve some time for logger to start up
     time.Sleep(time.Millisecond * 50)
 
-    // Currently email module used only to send activation emails,
-    // so there are no point to run/stop it if login isn't email.
-    // (cuz in this case activation emails not sends and all users are active by default)
-    if config.App.IsLoginEmail {
-        email.Run()
-    }
+	if steps := *app.Args.MigrateDB; steps != "" {
+		app.MigrateDB(steps)
+	}
 
-    go func(){
-        err := Router.Start(":" + config.HTTP.Port)
+	r := app.InitRouter()
 
-        appLogger.Info(err.Error(), nil)
-    }()
+	app.EndInit()
 
-    printAppInfo()
-
-    sig := <-stop
-
-    println()
-    appLogger.Info(sig.String() + " signal received, shutting down...", nil)
-
-    appLogger.Info("Stopping...", nil)
-
-    ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-    defer cancel()
-
-    if err := Router.Shutdown(ctx); err != nil {
-        appLogger.Error("Failed to stop HTTP server", err.Error(), nil)
-    } else {
-        appLogger.Info("HTTP server stopped", nil)
-    }
-
-    if err := DB.Database.Disconnect(); err != nil {
-        appLogger.Error("Failed to disconnect from DB", err.Error(), nil)
-    }
-
-    if err := cache.Client.Close(); err != nil {
-        appLogger.Error("Failed to disconnect from DB", err.Error(), nil)
-    }
-
-    if config.App.IsLoginEmail {
-        if err := email.Stop(); err != nil {
-            appLogger.Error("Failed to stop mailer", err.Error(), nil)
-        }
-    }
-
-    appLogger.Info("Shutted down", nil)
-}
-
-func printAppInfo() {
-    fmt.Print(`
-
-  ███████╗ ███████╗ ███╗   ██╗ ████████╗ ██╗ ███╗   ██╗ ███████╗ ██╗
-  ██╔════╝ ██╔════╝ ████╗  ██║ ╚══██╔══╝ ██║ ████╗  ██║ ██╔════╝ ██║
-  ███████╗ █████╗   ██╔██╗ ██║    ██║    ██║ ██╔██╗ ██║ █████╗   ██║
-  ╚════██║ ██╔══╝   ██║╚██╗██║    ██║    ██║ ██║╚██╗██║ ██╔══╝   ██║
-  ███████║ ███████╗ ██║ ╚████║    ██║    ██║ ██║ ╚████║ ███████╗ ███████╗
-  ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝    ╚═╝    ╚═╝ ╚═╝  ╚═══╝ ╚══════╝ ╚══════╝
-
-`)
-
-    fmt.Println("  Authentication/authorization service")
-
-    fmt.Println("  Mady by Stepan Ananin (xrf848@gmail.com)")
-
-    fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
-
-    if config.Debug.Enabled {
-        appLogger.Warning("Debug mode enabled.", nil)
-        print("\n\n")
-    }
+    app.Start(r)
 }
 
