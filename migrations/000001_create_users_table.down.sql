@@ -1,4 +1,6 @@
-DROP TABLE IF EXISTS "user";
+BEGIN;
+    DROP TABLE IF EXISTS "user";
 
-DROP TABLE IF EXISTS "audit_user";
+    DROP TABLE IF EXISTS "audit_user";
+COMMIT;
 
