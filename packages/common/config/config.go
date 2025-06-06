@@ -73,6 +73,7 @@ func (c *cacheConfig) TTL() time.Duration {
 type debugConfig struct {
     Enabled           bool `yaml:"debug-mode" validate:"exists"`
     SafeDatabaseScans bool `yaml:"debug-safe-db-scans" validate:"exists"`
+	LogDbQueries	  bool `yaml:"log-db-queries" validate:"exists"`
 }
 
 type appConfig struct {

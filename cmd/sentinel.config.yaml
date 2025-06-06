@@ -28,6 +28,8 @@ debug-mode: true
 
 debug-safe-db-scans: false
 
+log-db-queries: true
+
 ### APP ###
 service-id: cb663674-803e-4b06-bfeb-87c5cc86383e
 

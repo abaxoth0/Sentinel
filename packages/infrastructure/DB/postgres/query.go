@@ -10,6 +10,8 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/cache"
 	"sentinel/packages/presentation/data/json"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -54,6 +56,27 @@ func(q *query) runSQL(returnRow bool) (pgx.Row, *Error.Status) {
     ctx, cancel := defaultTimeoutContext()
 
     defer cancel()
+
+	if config.Debug.Enabled && config.Debug.LogDbQueries {
+		args := make([]string, len(q.args))
+
+		for i, arg := range q.args {
+			switch a := arg.(type) {
+			case string:
+				args[i] = a
+			case []string:
+				args[i] = strings.Join(a, ", ")
+			case int:
+				args[i] = strconv.FormatInt(int64(a), 10)
+			case int64:
+				args[i] = strconv.FormatInt(a, 10)
+			case int32:
+				args[i] = strconv.FormatInt(int64(a), 10)
+			}
+		}
+
+		dbLogger.Debug("Running query:\n" + q.sql + "\nQuery args: " + strings.Join(args, "; "), nil)
+	}
 
     if returnRow {
         return con.QueryRow(ctx, q.sql, q.args...), nil
