@@ -15,6 +15,7 @@ type connector struct {
     ctx         context.Context
     pool        *pgxpool.Pool
     isConnected bool
+	config 		*pgxpool.Config
 }
 
 func defaultTimeoutContext() (context.Context, context.CancelFunc) {
@@ -30,7 +31,7 @@ func (c *connector) Connect() {
 
     dbLogger.Info("Creating connection pool...", nil)
 
-    config, err := pgxpool.ParseConfig(fmt.Sprintf(
+    conConfig, err := pgxpool.ParseConfig(fmt.Sprintf(
         "postgres://%s:%s@%s:%s/%s",
         config.Secret.DatabaseUser,
         config.Secret.DatabasePassword,
@@ -39,16 +40,18 @@ func (c *connector) Connect() {
         config.Secret.DatabaseName,
     ))
 
-    config.MinConns = 10
-    config.MaxConns = 50
-    config.MaxConnIdleTime = time.Minute * 5
-    config.MaxConnLifetime = time.Minute * 60
-
     if err != nil {
         dbLogger.Fatal("Failed to parse DB connection URI", err.Error(), nil)
     }
 
-    pool, err := pgxpool.NewWithConfig(c.ctx, config)
+	conConfig.MinConns = 10
+	conConfig.MaxConns = 50
+	conConfig.MaxConnIdleTime = time.Minute * 5
+	conConfig.MaxConnLifetime = time.Minute * 60
+
+	c.config = conConfig
+
+    pool, err := pgxpool.NewWithConfig(c.ctx, conConfig)
 
     if err != nil {
         dbLogger.Fatal("Failed to create connection pool", err.Error(), nil)
@@ -138,8 +141,8 @@ func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
 func (c *connector) postConnection() error {
     dbLogger.Info("Post-connection...", nil)
 
-    if err := c.initializeTable(
-        "user",
+    if err := c.exec(
+		"Verifying that table 'user' exists",
         `CREATE TABLE IF NOT EXISTS "user" (
             id uuid PRIMARY KEY,
             login VARCHAR(72) UNIQUE NOT NULL,
@@ -152,8 +155,8 @@ func (c *connector) postConnection() error {
         return err
     }
 
-    if err := c.initializeTable(
-        "audit_user",
+    if err := c.exec(
+		"Verifying that table 'audit_user' exists",
         `CREATE TABLE IF NOT EXISTS "audit_user" (
             id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             changed_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
@@ -174,7 +177,7 @@ func (c *connector) postConnection() error {
     return nil
 }
 
-func (c *connector) initializeTable(tableName string, query string) error {
+func (c *connector) exec(logBase string, query string) error {
     con, err := c.getConnection()
 
     if err != nil {
@@ -183,14 +186,14 @@ func (c *connector) initializeTable(tableName string, query string) error {
 
     defer con.Release()
 
-    dbLogger.Info("Verifying that table '"+tableName+"' exists...", nil)
+	dbLogger.Info(logBase + "...", nil)
 
     if _, e := con.Exec(c.ctx, query); e != nil {
-        return errors.New("Failed to verify that table '"+tableName+"' exists: "+e.Error())
+        return errors.New(logBase+": ERROR"+e.Error())
     }
 
-    dbLogger.Info("Verifying that table '"+tableName+"' exists: OK", nil)
+	dbLogger.Info(logBase + ": OK", nil)
 
-    return nil
+	return nil
 }
 
