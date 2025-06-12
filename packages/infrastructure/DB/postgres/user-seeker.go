@@ -1,10 +1,12 @@
 package postgres
 
 import (
+	"fmt"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
 	actiondto "sentinel/packages/core/action/DTO"
+	"sentinel/packages/core/filter"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -16,12 +18,72 @@ type seeker struct {
     //
 }
 
-// TODO Now users can be found only by one property,
-//      there are no way to create some complex search filter.
-//      do smth with that.
+func (s *seeker) FindUsers(entityFilters []filter.Entity[user.Property]) ([]*UserDTO.Basic, *Error.Status) {
+	if entityFilters == nil || len(entityFilters) == 0 {
+		dbLogger.Panic(
+			"Failed to find users",
+			fmt.Sprintf("Invalid filters value, expected non-nil and non-empty slice, but got: %+v", entityFilters),
+			nil,
+		)
+		return nil, Error.StatusInternalError
+	}
 
-// TODO now value can be only a string, rework that.
-//      (make it a function with some generic instead of seeker's method?)
+	filters := mapFilters(entityFilters)
+
+	sql := `SELECT id, login, password, roles, deleted_at FROM "user" WHERE `
+
+	valuesCount := 1
+	// Not preallocated cuz if cond is condIsNull or condIsNotNull then there will be no value for this filter
+	values := []any{}
+	// query conds, not the filters ones
+	conds := make([]string, len(filters))
+
+	for i, filter := range filters {
+		if filter.Property == user.IdProperty {
+			if err := validation.UUID(filter.StringValue()); err != nil {
+				return nil, err.ToStatus(
+					"user id isn't specified",
+					"user id has invalid value",
+				)
+			}
+		}
+		if filter.Property == user.LoginProperty && config.App.IsLoginEmail {
+			if err := validation.Email(filter.StringValue()); err != nil {
+				return nil, err.ToStatus(
+					"User login isn't specified",
+					"User login has invalid value",
+				)
+			}
+		}
+
+		conds[i] = filter.Build(valuesCount)
+
+		if filter.Cond != condIsNotNull && filter.Cond != condIsNull {
+			if filter.Value == nil {
+				dbLogger.Panic(
+					"Failed to find user",
+					"Filter value is nil",
+					nil,
+				)
+				return nil, Error.StatusInternalError
+			}
+
+			valuesCount++
+
+			values = append(values, filter.Value)
+		}
+	}
+
+    query := newQuery(sql + strings.Join(conds, " AND ") + ";", values...)
+
+    dtos, err := query.QueryBasicUserDTO()
+    if err != nil {
+        return nil, err
+    }
+
+	return dtos, nil
+}
+
 func (s *seeker) findUserBy(
     conditionProperty user.Property,
     conditionValue string,
@@ -59,11 +121,11 @@ func (s *seeker) findUserBy(
     }
 
     if state == user.NotDeletedState && dto.IsDeleted() {
-        return nil, userNotFound
+        return nil, Error.StatusNotFound
     }
 
     if state == user.DeletedState && !dto.IsDeleted() {
-        return nil, userNotFound
+        return nil, Error.StatusNotFound
     }
 
     return dto, nil
@@ -158,7 +220,7 @@ func (_ *seeker) GetRoles(act *actiondto.Targeted) ([]string, *Error.Status) {
 
     if e := scan(&roles); e != nil {
         if e == Error.StatusNotFound {
-            return nil, userNotFound
+            return nil, Error.StatusNotFound
         }
         return nil, e
     }

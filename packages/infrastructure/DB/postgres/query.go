@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -41,14 +42,22 @@ func (q *query) toStatusError(err error) *Error.Status {
     return Error.StatusInternalError
 }
 
+type queryMode int
+
+const (
+	execMode queryMode = iota
+	rowsMode
+	rowMode
+)
+
 // Executes given SQL. If returnRow is true then returns resulting row and error,
 // otherwise returns nil and error.
 // Also substitutes query args (see pgx docs for details).
-func(q *query) runSQL(returnRow bool) (pgx.Row, *Error.Status) {
+func(q *query) runSQL(mode queryMode) (pgx.Row, pgx.Rows, *Error.Status) {
     con, err := driver.getConnection()
 
     if err != nil {
-        return nil, err
+        return nil, nil, err
     }
 
     defer con.Release()
@@ -78,15 +87,36 @@ func(q *query) runSQL(returnRow bool) (pgx.Row, *Error.Status) {
 		dbLogger.Debug("Running query:\n" + q.sql + "\nQuery args: " + strings.Join(args, "; "), nil)
 	}
 
-    if returnRow {
-        return con.QueryRow(ctx, q.sql, q.args...), nil
-    }
+	switch mode {
+	case execMode:
+		if _, e := con.Exec(ctx, q.sql, q.args...); e != nil {
+			return nil, nil, q.toStatusError(e)
+		}
+	case rowMode:
+		return con.QueryRow(ctx, q.sql, q.args...), nil, nil
+	case rowsMode:
+		r, e := con.Query(ctx, q.sql, q.args...)
+		if e != nil {
+			return nil, nil, q.toStatusError(e)
+		}
+		return nil, r, nil
+	}
 
-    if _, e := con.Exec(ctx, q.sql, q.args...); e != nil {
-        return nil, q.toStatusError(e)
-    }
+	dbLogger.Panic(
+		"Failed to execute SQL",
+		fmt.Sprintf("Unexpected query mode: %v", mode),
+		nil,
+	)
+	return nil, nil, nil
+}
 
-    return nil, nil
+func (q *query) Rows() (pgx.Rows, *Error.Status) {
+	_, rows, err := q.runSQL(rowsMode)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 // Scans a row into the given destinations.
@@ -94,12 +124,11 @@ func(q *query) runSQL(returnRow bool) (pgx.Row, *Error.Status) {
 // By default, dests are not validated,
 // but it can be added by setting env variable DEBUG_SAFE_DB_SCANS to true.
 // (works only if app launched in debug mode)
-type scanRow = func(dests ...any) *Error.Status
+type scanRowFunc = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
-func (q *query) Row() (scanRow, *Error.Status) {
-    row, err := q.runSQL(true)
-
+func (q *query) Row() (scanRowFunc, *Error.Status) {
+    row, _, err := q.runSQL(rowMode)
     if err != nil {
         return nil, err
     }
@@ -133,9 +162,45 @@ func (q *query) Row() (scanRow, *Error.Status) {
 
 // Wrapper for '*pgxpool.Con.Exec'
 func (q *query) Exec() (*Error.Status) {
-    _, err := q.runSQL(false)
-
+    _, _, err := q.runSQL(execMode)
     return err
+}
+
+// TODO add cache
+func (q *query) QueryBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
+    rows, err := q.Rows()
+    if err != nil {
+        return nil, err
+    }
+
+	dtos, e := pgx.CollectRows(rows, func (row pgx.CollectableRow) (*UserDTO.Basic, error) {
+		dto := new(UserDTO.Basic)
+
+		var deletedAt sql.NullTime
+
+		if err := row.Scan(
+			&dto.ID,
+			&dto.Login,
+			&dto.Password,
+			&dto.Roles,
+			&deletedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		setTime(&dto.DeletedAt, deletedAt)
+
+		return dto, nil
+	})
+    if e != nil {
+		dbLogger.Error("Failed to collect rows", e.Error(), nil)
+        return nil, q.toStatusError(e)
+    }
+	if len(dtos) == 0 {
+		return nil, Error.StatusNotFound
+	}
+
+    return dtos, nil
 }
 
 // Works same as queryRow, but also creates and returns
@@ -175,7 +240,7 @@ func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status)
     )
 
     if err != nil {
-        return nil, tryMapToUserNotFound(err)
+        return nil, err
     }
 
     setTime(&dto.DeletedAt, deletedAt)

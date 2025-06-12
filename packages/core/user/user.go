@@ -17,17 +17,21 @@ const (
     LoginProperty Property = "login"
     RolesProperty Property = "roles"
     PasswordProperty Property = "password"
-    DeletedAtProperty Property = "deletedAt"
+    DeletedAtProperty Property = "deleted_at"
 )
+
+func (p Property) Unwrap() core.EntityProperty {
+	return core.EntityProperty(p)
+}
 
 // Represents user deletion state, might be:
 // deleted (deletedState), not deleted (notDeletedState), any (anyState)
 type State byte
 
 const (
-    NotDeletedState State = 0
-    DeletedState State = 1
-    AnyState State = 2
+    NotDeletedState State = iota
+    DeletedState
+    AnyState
 )
 
 const allowedSymbolsMsg = "Разрешённые символы: латинксие буквы, цифры от 0 до 9, спецсимволы '_', '-', '.', '@', '$', '!', '#'"

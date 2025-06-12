@@ -3,15 +3,24 @@ package user
 import (
 	Error "sentinel/packages/common/errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
+	"sentinel/packages/core/filter"
 	UserDTO "sentinel/packages/core/user/DTO"
 )
 
 type Repository interface {
+	creator
 	seeker
-	repository
+	updater
+	deleter
 }
 
-// Responsible for R in CRUD
+type creator interface {
+	// Returns user id if error is nil, otherwise returns empty string and error
+	Create(login string, password string) (string, *Error.Status)
+
+	FindUsers([]filter.Entity[Property]) ([]*UserDTO.Basic, *Error.Status)
+}
+
 type seeker interface {
 	FindAnyUserByID(string) (*UserDTO.Basic, *Error.Status)
 
@@ -28,11 +37,17 @@ type seeker interface {
     GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status)
 }
 
-// Responsible for CUD in CRUD
-type repository interface {
-    // Returns user id if error is nil, otherwise returns empty string and error
-	Create(login string, password string) (string, *Error.Status)
+type updater interface {
+	ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.Status
 
+	ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status
+
+	ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status
+
+	Activate(token string) *Error.Status
+}
+
+type deleter interface {
 	SoftDelete(act *ActionDTO.Targeted) *Error.Status
 
 	Restore(act *ActionDTO.Targeted) *Error.Status
@@ -40,13 +55,5 @@ type repository interface {
 	Drop(act *ActionDTO.Targeted) *Error.Status
 
 	DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status
-
-	ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.Status
-
-	ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status
-
-	ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status
-
-    Activate(token string) *Error.Status
 }
 
