@@ -6,7 +6,7 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
-	actiondto "sentinel/packages/core/action/DTO"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/filter"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
@@ -19,7 +19,14 @@ type seeker struct {
     //
 }
 
-func (s *seeker) SearchUsers(entityFilters []filter.Entity[user.Property]) ([]*UserDTO.Public, *Error.Status) {
+func (s *seeker) SearchUsers(
+	act *ActionDTO.Basic,
+	entityFilters []filter.Entity[user.Property],
+) ([]*UserDTO.Public, *Error.Status) {
+	if err := authz.User.SearchUsers(act.RequesterRoles); err != nil {
+		return nil, err
+	}
+
 	if entityFilters == nil || len(entityFilters) == 0 {
 		dbLogger.Panic(
 			"Failed to find users",
@@ -198,7 +205,7 @@ func (s *seeker) IsLoginAvailable(login string) bool  {
     return true
 }
 
-func (_ *seeker) GetRoles(act *actiondto.Targeted) ([]string, *Error.Status) {
+func (_ *seeker) GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status) {
     if err := act.ValidateTargetUID(); err != nil {
         return nil, err
     }

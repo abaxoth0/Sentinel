@@ -5,6 +5,10 @@ import (
 	"sentinel/packages/common/validation"
 )
 
+type Any interface {
+	ValidateRequesterUID() *Error.Status
+}
+
 type Basic struct {
 	RequesterUID   string
 	RequesterRoles []string

@@ -89,3 +89,9 @@ var getRolesAction = registerAction(
 	rbac.ReadPermission,
 )
 
+var searchUsersAction = registerAction(
+	userEntity,
+	"search_users",
+	rbac.ReadPermission,
+)
+

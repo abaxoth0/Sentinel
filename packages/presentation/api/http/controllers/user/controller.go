@@ -23,7 +23,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, error) {
+func newActionDTO[T ActionDTO.Any](
+	ctx echo.Context,
+	uid string,
+	mapFunc func (uid string, claims jwt.MapClaims) (T, *Error.Status),
+) (T, *echo.HTTPError) {
+	var zero T
     reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Trace("Retrieving access token from the request...", reqMeta)
@@ -31,22 +36,34 @@ func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, er
     accessToken, err := controller.GetAccessToken(ctx)
     if err != nil {
         controller.Logger.Error("Failed to retrieve valid access token from the request", err.Error(), reqMeta)
-        return nil, controller.HandleTokenError(ctx, err)
+        return zero, controller.HandleTokenError(ctx, err)
     }
 
     controller.Logger.Trace("Retrieving access token from the request: OK", reqMeta)
     controller.Logger.Trace("Creating action DTO from token claims...", reqMeta)
 
-    // claims can be trusted if token is valid
-    act, err := UserMapper.TargetedActionDTOFromClaims(uid, accessToken.Claims.(jwt.MapClaims))
+	// claims can be trusted if token is valid
+	act, err := mapFunc(uid, accessToken.Claims.(jwt.MapClaims))
     if err != nil {
         controller.Logger.Error("Failed to create action DTO from token claims", err.Error(), reqMeta)
-        return nil, controller.ConvertErrorStatusToHTTP(err)
+        return zero, controller.ConvertErrorStatusToHTTP(err)
     }
 
     controller.Logger.Trace("Creating action DTO from token claims: OK", reqMeta)
 
     return act, nil
+}
+
+func newBasicActionDTO(ctx echo.Context) (*ActionDTO.Basic, *echo.HTTPError) {
+	return newActionDTO(ctx, "", func (_ string, claims jwt.MapClaims) (*ActionDTO.Basic, *Error.Status) {
+		return UserMapper.BasicActionDTOFromClaims(claims)
+	})
+}
+
+func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, *echo.HTTPError) {
+	return newActionDTO(ctx, uid, func (id string, claims jwt.MapClaims) (*ActionDTO.Targeted, *Error.Status) {
+		return UserMapper.TargetedActionDTOFromClaims(id, claims)
+	})
 }
 
 func Create(ctx echo.Context) error {
@@ -331,6 +348,11 @@ func SearchUsers(ctx echo.Context) error {
 
 	rawFilter := ctx.QueryParams()["filter"]
 
+	act, e := newBasicActionDTO(ctx)
+	if e != nil {
+		return e
+	}
+
 	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilter, "&")+"' filters...", reqMeta)
 
 	filters, err := parseFiltersFromUrlQuery(rawFilter)
@@ -338,9 +360,9 @@ func SearchUsers(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	dtos, err := DB.Database.SearchUsers(filters)
+	dtos, err := DB.Database.SearchUsers(act, filters)
 	if err != nil {
-		return err
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
 	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilter, "&")+"' filters: OK", reqMeta)

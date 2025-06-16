@@ -60,6 +60,10 @@ func (u user) GetUserRoles(roles []string) *Error.Status {
 	return authorize(getRolesAction, userResource, roles)
 }
 
+func (u user) SearchUsers(roles []string) *Error.Status {
+	return authorize(searchUsersAction, userResource, roles)
+}
+
 func (u user) DropCache(roles []string) *Error.Status {
 	return authorize(dropAction, cacheResource, roles)
 }
