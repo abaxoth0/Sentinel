@@ -9,6 +9,21 @@ type Any interface {
     IsDeleted() bool
 }
 
+type Public struct {
+    ID           string    `json:"id"`
+	Login        string    `json:"login"`
+	Roles        []string  `json:"roles"`
+	DeletedAt    time.Time `json:"deletedAt"`
+}
+
+func (dto *Public) IsDeleted() bool {
+    return !dto.DeletedAt.IsZero()
+}
+
+func (dto *Public) IsActive() bool {
+    return !slices.Contains(dto.Roles, "unconfirmed_user")
+}
+
 type Basic struct {
     ID           string    `json:"id"`
 	Login        string    `json:"login"`

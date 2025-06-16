@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
@@ -18,7 +19,7 @@ type seeker struct {
     //
 }
 
-func (s *seeker) FindUsers(entityFilters []filter.Entity[user.Property]) ([]*UserDTO.Basic, *Error.Status) {
+func (s *seeker) SearchUsers(entityFilters []filter.Entity[user.Property]) ([]*UserDTO.Public, *Error.Status) {
 	if entityFilters == nil || len(entityFilters) == 0 {
 		dbLogger.Panic(
 			"Failed to find users",
@@ -30,7 +31,7 @@ func (s *seeker) FindUsers(entityFilters []filter.Entity[user.Property]) ([]*Use
 
 	filters := mapFilters(entityFilters)
 
-	sql := `SELECT id, login, password, roles, deleted_at FROM "user" WHERE `
+	sql := `SELECT id, login, roles, deleted_at FROM "user" WHERE `
 
 	valuesCount := 1
 	// Not preallocated cuz if cond is condIsNull or condIsNotNull then there will be no value for this filter
@@ -39,6 +40,12 @@ func (s *seeker) FindUsers(entityFilters []filter.Entity[user.Property]) ([]*Use
 	conds := make([]string, len(filters))
 
 	for i, filter := range filters {
+		if filter.Property == user.PasswordProperty {
+			return nil, Error.NewStatusError(
+				"Can't search by user password",
+				http.StatusBadRequest,
+			)
+		}
 		if filter.Property == user.IdProperty {
 			if err := validation.UUID(filter.StringValue()); err != nil {
 				return nil, err.ToStatus(
@@ -76,7 +83,7 @@ func (s *seeker) FindUsers(entityFilters []filter.Entity[user.Property]) ([]*Use
 
     query := newQuery(sql + strings.Join(conds, " AND ") + ";", values...)
 
-    dtos, err := query.QueryBasicUserDTO()
+    dtos, err := query.CollectPublicUserDTO()
     if err != nil {
         return nil, err
     }
@@ -114,7 +121,7 @@ func (s *seeker) findUserBy(
         conditionValue,
     )
 
-    dto, err := query.RowBasicUserDTO(cacheKey)
+    dto, err := query.BasicUserDTO(cacheKey)
 
     if err != nil {
         return nil, err

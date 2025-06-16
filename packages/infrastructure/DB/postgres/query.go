@@ -167,13 +167,28 @@ func (q *query) Exec() (*Error.Status) {
 }
 
 // TODO add cache
-func (q *query) QueryBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
+func collect[T UserDTO.Any](q *query, collectFunc func(pgx.CollectableRow) (T, error)) ([]T, *Error.Status) {
     rows, err := q.Rows()
     if err != nil {
         return nil, err
     }
 
-	dtos, e := pgx.CollectRows(rows, func (row pgx.CollectableRow) (*UserDTO.Basic, error) {
+	dtos, e := pgx.CollectRows(rows, collectFunc)
+
+    if e != nil {
+		dbLogger.Error("Failed to collect rows", e.Error(), nil)
+        return nil, q.toStatusError(e)
+    }
+	if len(dtos) == 0 {
+		return nil, Error.StatusNotFound
+	}
+
+    return dtos, nil
+}
+
+// TODO add cache
+func (q *query) CollectBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
+	return collect(q, func (row pgx.CollectableRow) (*UserDTO.Basic, error) {
 		dto := new(UserDTO.Basic)
 
 		var deletedAt sql.NullTime
@@ -192,20 +207,33 @@ func (q *query) QueryBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
 
 		return dto, nil
 	})
-    if e != nil {
-		dbLogger.Error("Failed to collect rows", e.Error(), nil)
-        return nil, q.toStatusError(e)
-    }
-	if len(dtos) == 0 {
-		return nil, Error.StatusNotFound
-	}
+}
 
-    return dtos, nil
+// TODO add cache
+func (q *query) CollectPublicUserDTO() ([]*UserDTO.Public, *Error.Status) {
+	return collect(q, func (row pgx.CollectableRow) (*UserDTO.Public, error) {
+		dto := new(UserDTO.Public)
+
+		var deletedAt sql.NullTime
+
+		if err := row.Scan(
+			&dto.ID,
+			&dto.Login,
+			&dto.Roles,
+			&deletedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		setTime(&dto.DeletedAt, deletedAt)
+
+		return dto, nil
+	})
 }
 
 // Works same as queryRow, but also creates and returns
 // UserDTO.Basic after scanning resulting row into it.
-func (q *query) RowBasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
+func (q *query) BasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
         r, err := json.DecodeString[UserDTO.Basic](cached)
 
