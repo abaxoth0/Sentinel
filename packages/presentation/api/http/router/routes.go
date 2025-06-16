@@ -72,6 +72,7 @@ func Create() *echo.Echo {
     userGroup.PATCH("/:uid/roles", User.ChangeRoles)
     userGroup.GET("/activation/:token", Activation.Activate)
     userGroup.PUT("/activation/resend", Activation.Resend)
+	userGroup.GET("/search", User.SearchUsers)
 
     rolesGroup := router.Group("/roles")
 

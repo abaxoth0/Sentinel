@@ -16,6 +16,7 @@ import (
 	"sentinel/packages/presentation/api/http/request"
 	datamodel "sentinel/packages/presentation/data"
 	"strconv"
+	"strings"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"github.com/golang-jwt/jwt/v5"
@@ -323,5 +324,27 @@ func IsLoginAvailable(ctx echo.Context) error {
             Available: available,
         },
     )
+}
+
+func SearchUsers(ctx echo.Context) error {
+    reqMeta := request.GetMetadata(ctx)
+
+	rawFilter := ctx.QueryParams()["filter"]
+
+	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilter, "&")+"' filters...", reqMeta)
+
+	filters, err := parseFiltersFromUrlQuery(rawFilter)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	dtos, err := DB.Database.SearchUsers(filters)
+	if err != nil {
+		return err
+	}
+
+	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilter, "&")+"' filters: OK", reqMeta)
+
+	return ctx.JSON(http.StatusOK, dtos)
 }
 
