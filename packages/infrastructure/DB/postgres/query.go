@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"sentinel/packages/common/config"
-	"sentinel/packages/common/encoding/json"
+	pbencoding "sentinel/packages/common/encoding/protobuf"
 	Error "sentinel/packages/common/errors"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/cache"
@@ -235,10 +235,12 @@ func (q *query) CollectPublicUserDTO() ([]*UserDTO.Public, *Error.Status) {
 // UserDTO.Basic after scanning resulting row into it.
 func (q *query) BasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
-        r, err := json.DecodeString[UserDTO.Basic](cached)
+		r, err := pbencoding.UnmarshallBasicUserDTO([]byte(cached))
+
+        // r, err := json.DecodeString[UserDTO.Basic](cached)
 
         if err == nil {
-            return &r, nil
+            return r, nil
         }
 
         // if json decoding failed thats mean more likely it was invalid,
@@ -273,7 +275,16 @@ func (q *query) BasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
 
     setTime(&dto.DeletedAt, deletedAt)
 
-    cache.Client.EncodeAndSet(cacheKey, dto)
+	cached, e := pbencoding.MarshallBasicUserDTO(dto)
+	if e != nil {
+		dbLogger.Error(
+			"Failed to encode basic user DTO",
+			e.Error(),
+			nil,
+		)
+	} else {
+    	cache.Client.Set(cacheKey, cached)
+	}
 
     return dto, nil
 }

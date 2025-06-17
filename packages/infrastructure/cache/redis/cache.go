@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"sentinel/packages/common/config"
-	"sentinel/packages/common/encoding/json"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/logger"
 	"strconv"
@@ -149,23 +148,6 @@ func(d *driver) Set(key string, value any) *Error.Status {
 	err := d.client.Set(ctx, key, value, config.Cache.TTL()).Err()
 
    return logAndConvert("Set: " + key, err)
-}
-
-func (d *driver) EncodeAndSet(key string, value any) *Error.Status {
-    encodedData, err := json.Encode(value)
-    if err != nil {
-        cacheLogger.Error("JSON encoding failed ", err.Error(), nil)
-        return Error.NewStatusError(
-            "JSON encoding failed",
-            http.StatusInternalServerError,
-        )
-    }
-
-    if err := d.Set(key, encodedData); err != nil {
-        return err
-    }
-
-    return nil
 }
 
 func (d *driver) Delete(keys ...string) *Error.Status {

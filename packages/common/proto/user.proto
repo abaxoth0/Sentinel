@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package user.proto;
+option go_package = "github.com/StepanAnanin/Sentinel/packages/common/proto/generated";
+
+import "google/protobuf/timestamp.proto";
+
+message PublicUserDTO {
+  string id = 1;
+  string login = 2;
+  repeated string roles = 3;
+  google.protobuf.Timestamp deleted_at = 4;
+}
+
+message BasicUserDTO {
+  string id = 1;
+  string login = 2;
+  string password = 3;
+  repeated string roles = 4;
+  google.protobuf.Timestamp deleted_at = 5;
+}
+
+message ExtendedUserDTO {
+  string id = 1;
+  string login = 2;
+  string password = 3;
+  repeated string roles = 4;
+  google.protobuf.Timestamp deleted_at = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message AuditUserDTO {
+  string id = 1;
+  string changed_user_id = 2;
+  string changed_by_id = 3;
+  string operation = 4;
+  string login = 5;
+  string password = 6;
+  repeated string roles = 7;
+  google.protobuf.Timestamp deleted_at = 8;
+  google.protobuf.Timestamp changed_at = 9;
+}
+

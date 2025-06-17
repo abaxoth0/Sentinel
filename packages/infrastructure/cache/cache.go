@@ -23,7 +23,6 @@ type client interface {
     Close() *Error.Status
     Get(key string) (string, bool)
     Set(key string, value any) *Error.Status
-    EncodeAndSet(key string, value any) *Error.Status
     Delete(keys ...string) *Error.Status
     FlushAll() *Error.Status
     // If 'err' is not nil, then deletes cache for each of specified 'keys'.
