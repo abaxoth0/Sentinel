@@ -3,6 +3,7 @@ package pbencoding
 import (
 	"errors"
 	"fmt"
+	"sentinel/packages/common/encoding"
 	pbgen "sentinel/packages/common/proto/generated"
 	UserDTO "sentinel/packages/core/user/DTO"
 
@@ -10,9 +11,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// TODO a lot of boilerplate in unmarshall funcs, try to smth with that
-
 func marshallUserDTO(pb any) ([]byte, error){
+	encoding.Logger.Trace("Marshalling user DTO into a protobuf...", nil)
+
 	var message proto.Message
 
 	switch v := pb.(type) {
@@ -28,7 +29,23 @@ func marshallUserDTO(pb any) ([]byte, error){
 		return nil, errors.New("Faield to marshall user DTO in protobuf: " + err.Error())
 	}
 
+	encoding.Logger.Trace("Marshalling user DTO into a protobuf: OK", nil)
+
 	return data, nil
+}
+
+func unmarshall[T proto.Message](message T, rawDTO []byte) (T, error) {
+	encoding.Logger.Trace("Unmarshalling user DTO from protobuf...", nil)
+
+	var zero T
+
+	if err := proto.Unmarshal(rawDTO, message); err != nil {
+		return zero, errors.New("Faield to decode public user DTO: " + err.Error())
+	}
+
+	encoding.Logger.Trace("Unmarshalling user DTO from protobuf: OK", nil)
+
+	return message, nil
 }
 
 func MarshallPublicUserDTO(dto *UserDTO.Public) ([]byte, error) {
@@ -41,11 +58,10 @@ func MarshallPublicUserDTO(dto *UserDTO.Public) ([]byte, error) {
 }
 
 func UnmarshallPublicUserDTO(rawDTO []byte) (*UserDTO.Public, error) {
-	dto := pbgen.PublicUserDTO{}
-	if err := proto.Unmarshal(rawDTO, &dto); err != nil {
-		return nil, errors.New("Faield to decode public user DTO: " + err.Error())
+	dto, err := unmarshall(new(pbgen.PublicUserDTO), rawDTO)
+	if err != nil {
+		return nil, err
 	}
-
 	return &UserDTO.Public{
 		ID: dto.Id,
 		Login: dto.Login,
@@ -65,11 +81,10 @@ func MarshallBasicUserDTO(dto *UserDTO.Basic) ([]byte, error) {
 }
 
 func UnmarshallBasicUserDTO(rawDTO []byte) (*UserDTO.Basic, error) {
-	dto := pbgen.BasicUserDTO{}
-	if err := proto.Unmarshal(rawDTO, &dto); err != nil {
-		return nil, errors.New("Faield to decode public user DTO: " + err.Error())
+	dto, err := unmarshall(new(pbgen.BasicUserDTO), rawDTO)
+	if err != nil {
+		return nil, err
 	}
-
 	return &UserDTO.Basic{
 		ID: dto.Id,
 		Login: dto.Login,
@@ -91,11 +106,10 @@ func MarshallExtendedUserDTO(dto *UserDTO.Extended) ([]byte, error) {
 }
 
 func UnmarshallExtendedUserDTO(rawDTO []byte) (*UserDTO.Extended, error) {
-	dto := pbgen.ExtendedUserDTO{}
-	if err := proto.Unmarshal(rawDTO, &dto); err != nil {
-		return nil, errors.New("Faield to decode public user DTO: " + err.Error())
+	dto, err := unmarshall(new(pbgen.ExtendedUserDTO), rawDTO)
+	if err != nil {
+		return nil, err
 	}
-
 	return &UserDTO.Extended{
 		ID: dto.Id,
 		Login: dto.Login,
@@ -121,11 +135,10 @@ func MarshallAuditUserDTO(dto *UserDTO.Audit) ([]byte, error) {
 }
 
 func UnmarshallAuditUserDTO(rawDTO []byte) (*UserDTO.Audit, error) {
-	dto := pbgen.AuditUserDTO{}
-	if err := proto.Unmarshal(rawDTO, &dto); err != nil {
-		return nil, errors.New("Faield to decode public user DTO: " + err.Error())
+	dto, err := unmarshall(new(pbgen.AuditUserDTO), rawDTO)
+	if err != nil {
+		return nil, err
 	}
-
 	return &UserDTO.Audit{
 		ID: dto.Id,
 		ChangedByUserID: dto.ChangedById,
