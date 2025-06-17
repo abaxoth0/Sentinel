@@ -2,7 +2,7 @@ package datamodel
 
 import (
 	"io"
-	"sentinel/packages/presentation/data/json"
+	"sentinel/packages/common/encoding/json"
 )
 
 func Encode(data interface{}) ([]byte, error) {
