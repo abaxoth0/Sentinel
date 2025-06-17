@@ -3,7 +3,6 @@ package user
 import (
 	Error "sentinel/packages/common/errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
-	"sentinel/packages/core/filter"
 	UserDTO "sentinel/packages/core/user/DTO"
 )
 
@@ -18,7 +17,7 @@ type creator interface {
 	// Returns user id if error is nil, otherwise returns empty string and error
 	Create(login string, password string) (string, *Error.Status)
 
-	SearchUsers(*ActionDTO.Basic, []filter.Entity[Property]) ([]*UserDTO.Public, *Error.Status)
+	SearchUsers(act *ActionDTO.Basic, rawFilters []string) ([]*UserDTO.Public, *Error.Status)
 }
 
 type seeker interface {

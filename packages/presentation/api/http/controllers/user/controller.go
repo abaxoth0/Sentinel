@@ -346,26 +346,21 @@ func IsLoginAvailable(ctx echo.Context) error {
 func SearchUsers(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
-	rawFilter := ctx.QueryParams()["filter"]
+	rawFilters := ctx.QueryParams()["filter"]
 
 	act, e := newBasicActionDTO(ctx)
 	if e != nil {
 		return e
 	}
 
-	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilter, "&")+"' filters...", reqMeta)
+	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters...", reqMeta)
 
-	filters, err := parseFiltersFromUrlQuery(rawFilter)
+	dtos, err := DB.Database.SearchUsers(act, rawFilters)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	dtos, err := DB.Database.SearchUsers(act, filters)
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilter, "&")+"' filters: OK", reqMeta)
+	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters: OK", reqMeta)
 
 	return ctx.JSON(http.StatusOK, dtos)
 }

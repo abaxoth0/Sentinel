@@ -7,11 +7,11 @@ import (
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
-	"sentinel/packages/core/filter"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
+	FilterParser "sentinel/packages/infrastructure/parsers/filter"
 	"strings"
 )
 
@@ -21,19 +21,24 @@ type seeker struct {
 
 func (s *seeker) SearchUsers(
 	act *ActionDTO.Basic,
-	entityFilters []filter.Entity[user.Property],
+	rawFilters []string,
 ) ([]*UserDTO.Public, *Error.Status) {
 	if err := authz.User.SearchUsers(act.RequesterRoles); err != nil {
 		return nil, err
 	}
 
-	if entityFilters == nil || len(entityFilters) == 0 {
+	if rawFilters == nil || len(rawFilters) == 0 {
 		dbLogger.Panic(
 			"Failed to find users",
-			fmt.Sprintf("Invalid filters value, expected non-nil and non-empty slice, but got: %+v", entityFilters),
+			fmt.Sprintf("Invalid filters value, expected non-nil and non-empty slice, but got: %+v", rawFilters),
 			nil,
 		)
 		return nil, Error.StatusInternalError
+	}
+
+	entityFilters, err := FilterParser.ParseAll(rawFilters)
+	if err != nil {
+		return nil, err
 	}
 
 	filters := mapFilters(entityFilters)

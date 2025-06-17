@@ -1,4 +1,4 @@
-package usercontroller
+package filterparser
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 	"sentinel/packages/core/filter"
 	"sentinel/packages/core/user"
 	FilterMapper "sentinel/packages/infrastructure/mappers/filter"
-	controller "sentinel/packages/presentation/api/http/controllers"
+	parser "sentinel/packages/infrastructure/parsers"
 	"strings"
 	"time"
 )
@@ -19,16 +19,16 @@ var prefixes = []string{
 	string(user.DeletedAtProperty),
 }
 
-// Each filter must have following format:
+// Each filter must be a string in a following format:
 //
 // <property>:<condition><value>
 //
 // Value should be omitted if condition is either "is null", either "is not null"
-func parseFilter(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
+func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 	var zero filter.Entity[user.Property]
 	var property user.Property
 
-	controller.Logger.Trace("Parsing user filter '"+rawFilter+"'...", nil)
+	parser.Logger.Trace("Parsing user filter '"+rawFilter+"'...", nil)
 
 	for _, pref := range prefixes {
 		if strings.HasPrefix(rawFilter, pref) {
@@ -44,7 +44,7 @@ func parseFilter(rawFilter string) (filter.Entity[user.Property], *Error.Status)
 			http.StatusBadRequest,
 		)
 
-		controller.Logger.Error("Faield to parse user filter", e.Error(), nil)
+		parser.Logger.Error("Faield to parse user filter", e.Error(), nil)
 
 		return zero, e
 	}
@@ -56,14 +56,14 @@ func parseFilter(rawFilter string) (filter.Entity[user.Property], *Error.Status)
 			http.StatusBadRequest,
 		)
 
-		controller.Logger.Error("Faield to parse user filter", e.Error(), nil)
+		parser.Logger.Error("Faield to parse user filter", e.Error(), nil)
 
 		return zero, e
 	}
 
 	cond, err := FilterMapper.GetCondFromStringPrefix(rawFilter[len(property)+1:])
 	if err != nil {
-		controller.Logger.Error("Faield to parse user filter", err.Error(), nil)
+		parser.Logger.Error("Faield to parse user filter", err.Error(), nil)
 
 		return zero, Error.NewStatusError(err.Error(), http.StatusBadRequest)
 	}
@@ -96,7 +96,7 @@ func parseFilter(rawFilter string) (filter.Entity[user.Property], *Error.Status)
 				http.StatusBadRequest,
 			)
 
-			controller.Logger.Error("Faield to parse user filter", e.Error(), nil)
+			parser.Logger.Error("Faield to parse user filter", e.Error(), nil)
 
 			return zero, e
 		}
@@ -104,7 +104,7 @@ func parseFilter(rawFilter string) (filter.Entity[user.Property], *Error.Status)
 	default:
 		// property should be valid at this point, but an additional check won't be redundant
 		// (especially when this function will need to be refactored/fixed/reworked)
-		controller.Logger.Panic(
+		parser.Logger.Panic(
 			"Faield to parse user filter",
 			"Unknown user property received: " + string(property),
 			nil,
@@ -112,7 +112,7 @@ func parseFilter(rawFilter string) (filter.Entity[user.Property], *Error.Status)
 		return zero, Error.StatusInternalError
 	}
 
-	controller.Logger.Trace("Parsing user filter '"+rawFilter+"': OK", nil)
+	parser.Logger.Trace("Parsing user filter '"+rawFilter+"': OK", nil)
 
 	return filter.Entity[user.Property]{
 		Property: property,
@@ -131,19 +131,19 @@ var errorInvalidUrlQuery = Error.NewStatusError(
 	http.StatusBadRequest,
 )
 
-func parseFiltersFromUrlQuery(filtersQuery []string) ([]filter.Entity[user.Property], *Error.Status){
-	if filtersQuery == nil || len(filtersQuery) == 0{
+func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Status){
+	if rawFilters == nil || len(rawFilters) == 0{
 		return nil, errorInvalidUrlQuery
 	}
 
-	if len(filtersQuery) == 0 {
+	if len(rawFilters) == 0 {
 		return nil, errorNoFilters
 	}
 
-	filters := make([]filter.Entity[user.Property], len(filtersQuery))
+	filters := make([]filter.Entity[user.Property], len(rawFilters))
 
-	for i, rawFilter := range filtersQuery {
-		filter, err := parseFilter(rawFilter)
+	for i, rawFilter := range rawFilters {
+		filter, err := Parse(rawFilter)
 		if err != nil {
 			return nil, err
 		}
