@@ -126,17 +126,8 @@ var errorNoFilters = Error.NewStatusError(
 	http.StatusBadRequest,
 )
 
-var errorInvalidUrlQuery = Error.NewStatusError(
-	"URL query param 'filter' has invalid value",
-	http.StatusBadRequest,
-)
-
 func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Status){
-	if rawFilters == nil || len(rawFilters) == 0{
-		return nil, errorInvalidUrlQuery
-	}
-
-	if len(rawFilters) == 0 {
+	if rawFilters == nil || len(rawFilters) == 0 {
 		return nil, errorNoFilters
 	}
 
