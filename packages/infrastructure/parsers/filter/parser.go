@@ -19,12 +19,18 @@ var prefixes = []string{
 	string(user.DeletedAtProperty),
 }
 
+var cache = map[string]filter.Entity[user.Property]{}
+
 // Each filter must be a string in a following format:
 //
 // <property>:<condition><value>
 //
 // Value should be omitted if condition is either "is null", either "is not null"
 func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
+	if cached, hit := cache[rawFilter]; hit {
+		return cached, nil
+	}
+
 	var zero filter.Entity[user.Property]
 	var property user.Property
 
@@ -114,11 +120,15 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 	parser.Logger.Trace("Parsing user filter '"+rawFilter+"': OK", nil)
 
-	return filter.Entity[user.Property]{
+	f := filter.Entity[user.Property]{
 		Property: property,
 		Cond: cond,
 		Value: value,
-	}, nil
+	}
+
+	cache[rawFilter] = f
+
+	return f, nil
 }
 
 var errorNoFilters = Error.NewStatusError(
