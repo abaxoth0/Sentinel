@@ -28,8 +28,11 @@ var cache = map[string]filter.Entity[user.Property]{}
 // Value should be omitted if condition is either "is null", either "is not null"
 func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 	if cached, hit := cache[rawFilter]; hit {
+		parser.Logger.Trace("Cache hit: " + rawFilter, nil)
 		return cached, nil
 	}
+
+	parser.Logger.Trace("Cache miss: " + rawFilter, nil)
 
 	var zero filter.Entity[user.Property]
 	var property user.Property
@@ -127,6 +130,8 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 	}
 
 	cache[rawFilter] = f
+
+	parser.Logger.Trace("Cache set: " + rawFilter, nil)
 
 	return f, nil
 }

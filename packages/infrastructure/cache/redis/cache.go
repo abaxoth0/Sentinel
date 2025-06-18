@@ -104,7 +104,7 @@ func logAndConvert(action string, err error) *Error.Status {
         return Error.StatusInternalError
 	}
 
-    cacheLogger.Info(action, nil)
+    cacheLogger.Trace(action, nil)
 
     return nil
 }
@@ -115,7 +115,7 @@ func (d *driver) Get(key string) (string, bool) {
 
 	cachedData, err := d.client.Get(ctx, key).Result()
     if err == redis.Nil {
-        cacheLogger.Info("Miss: " + key, nil)
+        cacheLogger.Trace("Miss: " + key, nil)
         return "", false
     }
 
@@ -228,7 +228,7 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
 
             deleted := strconv.FormatInt(int64(len(keys)), 64)
 
-            cacheLogger.Info("Deleted "+deleted+"keys with pattern: "+pattern, nil)
+            cacheLogger.Trace("Deleted "+deleted+"keys with pattern: "+pattern, nil)
         }
 
         // Exit when cursor is 0 (no more keys to scan)
@@ -295,7 +295,7 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
         if nextCursor == 0 {
             deleted := strconv.FormatInt(int64(keysDeleted), 64)
 
-            cacheLogger.Info("Deleted "+deleted+" keys matching "+pattern, nil)
+            cacheLogger.Trace("Deleted "+deleted+" keys matching "+pattern, nil)
             break
         }
 
