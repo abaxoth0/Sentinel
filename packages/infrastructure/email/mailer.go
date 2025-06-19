@@ -3,7 +3,6 @@ package email
 import (
 	"context"
 	"fmt"
-	"log"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/structs"
 	"sync"
@@ -46,7 +45,7 @@ func (m *Mailer) Run() error {
     m.isRunning = true
     m.mut.Unlock()
 
-    log.Printf("[ EMAIL ] Mailer '%s' started.", m.name)
+    emailLogger.Info("Mailer '"+m.name+"' started", nil)
 
     for {
         select {
@@ -63,12 +62,16 @@ func (m *Mailer) Run() error {
                 continue
             }
 
+			emailLogger.Trace("Mailer '"+m.name+"': sending email...", nil)
+
             if err := email.Send(); err != nil {
                 // Try to send email again if first attempt failed
                 if err := email.Send(); err != nil {
-                    log.Printf("[ EMAIL ] Error sending email in mailer '%s': %v", m.name, err)
+					emailLogger.Error("Mailer '"+m.name+"': failed to send email", err.Error(), nil)
                 }
             }
+
+			emailLogger.Trace("Mailer '"+m.name+"': sending email: OK", nil)
         }
     }
 }
@@ -76,7 +79,7 @@ func (m *Mailer) Run() error {
 // Stops mailer loop.
 // Doesn't wait for all emails to be send.
 func (m *Mailer) Stop() error {
-    log.Printf("[ EMAIL ] Mailer '%s' is shutting down...\n", m.name)
+	emailLogger.Info("Mailer '"+m.name+"': shutting down...", nil)
 
     m.mut.Lock()
 
@@ -89,15 +92,19 @@ func (m *Mailer) Stop() error {
 
     m.mut.Unlock()
 
-    log.Printf("[ EMAIL ] Mailer '%s' is waiting till queue is empty...\n", m.name)
+	emailLogger.Info("Mailer '"+m.name+"': waiting till queue is empty...", nil)
 
     if timeout := m.queue.WaitTillEmpty(time.Second * 5); timeout != nil {
-        log.Printf("[ EMAIL ] Mailer '%s': timeout waiting till queue is empty.\n", m.name)
+        emailLogger.Error(
+			"Mailer '"+m.name+"': failed to wait till queue is empty",
+			"Operation timeout waiting",
+			nil,
+		)
     } else {
-        log.Printf("[ EMAIL ] Mailer '%s' is waiting till queue is empty: OK\n", m.name)
+		emailLogger.Info("Mailer '"+m.name+"': waiting till queue is empty: OK", nil)
     }
 
-    log.Printf("[ EMAIL ] Mailer '%s' waiting till current work is finished...\n", m.name)
+	emailLogger.Info("Mailer '"+m.name+"': waiting till current work is finished...", nil)
 
     // at this point mailer loop still can process some email so...
     m.cancel()
@@ -106,16 +113,20 @@ func (m *Mailer) Stop() error {
         select {
         // ...wait till mailer loop will finish it's current work...
         case <-m.done:
-            log.Printf("[ EMAIL ] Mailer '%s' waiting till current work is finished: OK\n", m.name)
-            log.Printf(
-                "[ EMAIL ] Mailer '%s' shut down with %d pending emails.\n",
-                m.name, m.queue.Size(),
-                )
+			emailLogger.Info("Mailer '"+m.name+"': waiting till current work is finished: OK", nil)
+            emailLogger.Info(
+				fmt.Sprintf("Mailer '"+m.name+"': shut down with %d pending emails", m.queue.Size()),
+				nil,
+            )
 
             return nil
-        // ... or after some long time.
+        // ... or after some long time roll back queue and return timeout error.
         case <-time.After(time.Second * 5):
-            log.Printf("[ EMAIL ] Mailer '%s': timeout waiting till current job is done. Rolling back queue.\n", m.name)
+            emailLogger.Error(
+				"Mailer '"+m.name+"': failed to wait till all current job is done, queue will be rolled back",
+				"Operation timeout",
+				nil,
+			)
 
             m.queue.RollBack()
 
