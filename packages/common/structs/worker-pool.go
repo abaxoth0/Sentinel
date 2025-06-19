@@ -26,7 +26,7 @@ func NewWorkerPool(ctx context.Context, batchSize int) *WorkerPool {
     ctx, cancel := context.WithCancel(ctx)
 
     return &WorkerPool{
-        queue: NewSyncFifoQueue[Task](),
+        queue: NewSyncFifoQueue[Task](0),
         ctx: ctx,
         cancel: cancel,
         wg: new(sync.WaitGroup),

@@ -28,7 +28,7 @@ func NewMailer(name string, ctx context.Context) *Mailer {
         name: name,
         ctx: ctx,
         cancel: cancel,
-        queue: structs.NewSyncFifoQueue[Email](),
+        queue: structs.NewSyncFifoQueue[Email](0),
         done: make(chan bool),
     }
 }

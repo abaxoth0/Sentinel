@@ -1,31 +1,42 @@
 package structs
 
 import (
-    Error "sentinel/packages/common/errors"
-    "sync"
-    "time"
+	"errors"
+	Error "sentinel/packages/common/errors"
+	"sync"
+	"time"
 )
-
-// TODO add size limit
 
 // Concurrency-safe first-in-first-out queue
 type SyncFifoQueue[T comparable] struct {
-    elems []T
-    mut sync.Mutex
-    cond *sync.Cond
+	sizeLimit int
+    elems 	  []T
+    mut 	  sync.Mutex
+    cond 	  *sync.Cond
     preserved T
 }
 
-func NewSyncFifoQueue[T comparable]() *SyncFifoQueue[T] {
+// To disable size limit set sizeLimit <= 0
+func NewSyncFifoQueue[T comparable](sizeLimit int) *SyncFifoQueue[T] {
     q := new(SyncFifoQueue[T])
 
     q.cond = sync.NewCond(&q.mut)
+	q.sizeLimit = sizeLimit
 
     return q
 }
 
 // Appends v to the end of queue
-func (q *SyncFifoQueue[T]) Push(v T) {
+func (q *SyncFifoQueue[T]) Push(v T) error {
+	// second 'if' is nested to avoid redundant mutex
+	// lock\unlock (.Size() use mutex under the hood) for queues without size limit.
+	// (it may still not do that if place this conditions together, but i'm not sure about that, so better play it safe)
+	if q.sizeLimit > 0 {
+		if q.Size() >= q.sizeLimit {
+			return errors.New("Queue size exceeded")
+		}
+	}
+
     q.mut.Lock()
 
     wasEmpty := len(q.elems) == 0
@@ -37,6 +48,8 @@ func (q *SyncFifoQueue[T]) Push(v T) {
     if wasEmpty {
         q.cond.Broadcast()
     }
+
+	return nil
 }
 
 // If queue isn't empty - returns first element of queue and true.
