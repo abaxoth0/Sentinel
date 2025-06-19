@@ -37,7 +37,7 @@ type FileLogger struct {
     handler 			 logHandler
 }
 
-func NewFileLogger(name string) *FileLogger {
+func NewFileLogger() *FileLogger {
     if err := os.MkdirAll("/var/log/sentinel", 0755); err != nil {
         panic("Failed to create log directory: " + err.Error())
     }

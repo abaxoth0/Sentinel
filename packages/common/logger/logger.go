@@ -112,8 +112,7 @@ func logPreprocessing(
     return true
 }
 
-// TODO replace "default" with service id
-var Default = NewFileLogger("default")
+var Default = NewFileLogger()
 
 // Refers logger.Default
 var Undefined = NewSource("UNDEFINED", Default)
