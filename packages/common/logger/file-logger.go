@@ -23,6 +23,7 @@ const (
 
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
+	isInit 				 bool
     done                 chan struct{}
     isRunning            atomic.Bool
     disruptor            *structs.Disruptor[*LogEntry]
@@ -43,8 +44,23 @@ func NewFileLogger(name string) *FileLogger {
         panic("Failed to create log directory: " + err.Error())
     }
 
+	tempLogger := log.New(os.Stderr, "", 0)
+
+    return &FileLogger{
+        done: make(chan struct{}),
+        disruptor: structs.NewDisruptor[*LogEntry](),
+        fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
+        transmissions: []Logger{},
+		preprocessingHandler: newLogEntryHandlerProducer(tempLogger),
+		taskProducer: newTaskProducer(tempLogger),
+    }
+}
+
+func (l *FileLogger) Init(name string) {
+	fileName := "default:"+name+":"+time.Now().Format(time.RFC3339)+".log"
+
     f, err := os.OpenFile(
-        "/var/log/sentinel/"+name+".log",
+		"/var/log/sentinel/" + fileName,
         os.O_APPEND | os.O_CREATE | os.O_WRONLY,
         0644, // -rw-r--r--
     )
@@ -58,19 +74,18 @@ func NewFileLogger(name string) *FileLogger {
         log.LstdFlags | log.Lmicroseconds,
     )
 
-    return &FileLogger{
-        done: make(chan struct{}),
-        disruptor: structs.NewDisruptor[*LogEntry](),
-        fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
-        logger: logger,
-        logFile: f,
-        transmissions: []Logger{},
-        preprocessingHandler: newLogEntryHandlerProducer(logger),
-        taskProducer: newTaskProducer(logger),
-    }
+	l.logger = logger
+	l.logFile = f
+	l.preprocessingHandler = newLogEntryHandlerProducer(logger)
+	l.taskProducer = newTaskProducer(logger)
+	l.isInit = true
 }
 
 func (l *FileLogger) Start(debug bool) error {
+	if !l.isInit {
+		return errors.New("logger isn't initialized")
+	}
+
     if l.isRunning.Load() {
         return errors.New("logger already started")
     }
@@ -157,8 +172,7 @@ func (l *FileLogger) log(entry *LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-    ok := logPreprocessing(entry, l.transmissions, l.preprocessingHandler)
-    if !ok {
+    if !logPreprocessing(entry, l.transmissions, l.preprocessingHandler) {
         return
     }
 

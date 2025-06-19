@@ -15,8 +15,28 @@ func (m Meta) stringSuffix() string {
 		return ""
 	}
 
-	// TODO make it pretty
-	return " ("+m["addr"].(string)+" "+m["method"].(string)+" "+m["path"].(string)+"; user agent: "+m["user_agent"].(string)+")"
+	return createSuffixFromReqeustMeta(m)
+}
+
+func createSuffixFromReqeustMeta(m Meta) string {
+	s := " ("
+
+	if v, ok := m["addr"].(string); ok {
+		s += v + " "
+	}
+	if v, ok := m["method"].(string); ok {
+		s += v + " "
+	}
+	if v, ok := m["path"].(string); ok {
+		s += v + " "
+	}
+	if v, ok := m["user_agent"].(string); ok {
+		s += v
+	}
+
+	s += ")"
+
+	return s
 }
 
 type Logger interface {

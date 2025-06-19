@@ -16,6 +16,8 @@ func main() {
 
 	app.InitDefault()
 
+	logger.Default.Init(config.App.ServiceID)
+
 	if *app.Args.Debug {
 		config.Debug.Enabled = true
 	}
