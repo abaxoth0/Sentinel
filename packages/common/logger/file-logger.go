@@ -23,6 +23,7 @@ const (
 
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
+	name 				 string
 	isInit 				 bool
     done                 chan struct{}
     isRunning            atomic.Bool
@@ -32,11 +33,8 @@ type FileLogger struct {
     logFile              *os.File
     transmissions        []Logger
     taskProducer         func(entry *LogEntry) *logTask
-    // Function which will immediately handle entry with panic or fatal level.
-    // (so this function will be called only once)
-    // Placing it here will lead to no need in calling newLogEntryHandlerProducer() on each call of Log().
-    // (and all instances of FileLogger will have their own handler)
-    preprocessingHandler logHandler
+	// function which writes logs in file
+    handler 			 logHandler
 }
 
 func NewFileLogger(name string) *FileLogger {
@@ -44,16 +42,16 @@ func NewFileLogger(name string) *FileLogger {
         panic("Failed to create log directory: " + err.Error())
     }
 
-	tempLogger := log.New(os.Stderr, "", 0)
-
-    return &FileLogger{
+	logger := &FileLogger{
         done: make(chan struct{}),
         disruptor: structs.NewDisruptor[*LogEntry](),
         fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
         transmissions: []Logger{},
-		preprocessingHandler: newLogEntryHandlerProducer(tempLogger),
-		taskProducer: newTaskProducer(tempLogger),
     }
+	logger.handler = newLogEntryHandlerProducer(logger)
+	logger.taskProducer = newTaskProducer(logger, logger.handler)
+
+	return logger
 }
 
 func (l *FileLogger) Init(name string) {
@@ -74,10 +72,11 @@ func (l *FileLogger) Init(name string) {
         log.LstdFlags | log.Lmicroseconds,
     )
 
+	l.name = name
 	l.logger = logger
 	l.logFile = f
-	l.preprocessingHandler = newLogEntryHandlerProducer(logger)
-	l.taskProducer = newTaskProducer(logger)
+	l.handler = newLogEntryHandlerProducer(l)
+	l.taskProducer = newTaskProducer(l, l.handler)
 	l.isInit = true
 }
 
@@ -97,7 +96,7 @@ func (l *FileLogger) Start(debug bool) error {
 
     l.isRunning.Store(true)
 
-    go l.disruptor.Consume(newLogEntryHandlerProducer(l.logger))
+    go l.disruptor.Consume(l.handler)
     go l.fallback.Start(fallbackWorkers)
 
     for {
@@ -130,8 +129,10 @@ func (l *FileLogger) Stop() error {
     return nil
 }
 
+// TODO make it a method of FileLogger?
+
 // Creates producer wich will return function that handles log saving.
-func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
+func newLogEntryHandlerProducer(fileLogger *FileLogger) logHandler {
     pool := sync.Pool{
         New: func() any {
             return jsoniter.NewStream(jsoniter.ConfigFastest, nil, 1024)
@@ -144,6 +145,8 @@ func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
 
         stream.Reset(nil)
         stream.Error = nil
+
+		entry.Instance = fileLogger.name
 
         stream.WriteVal(entry)
         if stream.Error != nil {
@@ -158,7 +161,7 @@ func newLogEntryHandlerProducer(logger *log.Logger) func(*LogEntry) {
 
         // NOTE: log.Logger use mutex and atomic operations under the hood,
         //       so it's thread safe by default
-        logger.Writer().Write(stream.Buffer())
+        fileLogger.logger.Writer().Write(stream.Buffer())
     }
 }
 
@@ -172,7 +175,7 @@ func (l *FileLogger) log(entry *LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-    if !logPreprocessing(entry, l.transmissions, l.preprocessingHandler) {
+    if !logPreprocessing(entry, l.transmissions, l.handler) {
         return
     }
 

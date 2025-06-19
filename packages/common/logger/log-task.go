@@ -1,20 +1,19 @@
 package logger
 
-import "log"
-
 // Designed to be used by worker pool
 type logTask struct {
-    entry *LogEntry
-    logger *log.Logger
+    entry 	*LogEntry
+    logger  *FileLogger
+	handler logHandler
 }
 
 func (t logTask) Process() {
-    newLogEntryHandlerProducer(t.logger)(t.entry)
+	t.handler(t.entry)
 }
 
-func newTaskProducer(logger *log.Logger) func(*LogEntry) *logTask {
+func newTaskProducer(logger *FileLogger, handler logHandler) func(*LogEntry) *logTask {
     return func (entry *LogEntry) *logTask {
-        return &logTask{entry, logger}
+        return &logTask{entry, logger, handler}
     }
 }
 

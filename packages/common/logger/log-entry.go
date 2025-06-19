@@ -56,7 +56,6 @@ func NewLogEntry(
     e := LogEntry{
         Timestamp: time.Now(),
         Service: "sentinel",
-        Instance: "default", // TODO replace "default" with service id
         rawLevel: level,
         Level: level.String(),
         Source: src,
