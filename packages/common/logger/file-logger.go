@@ -33,8 +33,7 @@ type FileLogger struct {
     logFile              *os.File
     transmissions        []Logger
     taskProducer         func(entry *LogEntry) *logTask
-	// function which writes logs in file
-    handler 			 logHandler
+	streamPool			 sync.Pool
 }
 
 func NewFileLogger() *FileLogger {
@@ -47,8 +46,12 @@ func NewFileLogger() *FileLogger {
         disruptor: structs.NewDisruptor[*LogEntry](),
         fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
         transmissions: []Logger{},
+		streamPool: sync.Pool{
+			New: func() any {
+				return jsoniter.NewStream(jsoniter.ConfigFastest, nil, 1024)
+			},
+		},
     }
-	logger.handler = newLogEntryHandlerProducer(logger)
 	logger.taskProducer = newTaskProducer(logger, logger.handler)
 
 	return logger
@@ -75,7 +78,6 @@ func (l *FileLogger) Init(name string) {
 	l.name = name
 	l.logger = logger
 	l.logFile = f
-	l.handler = newLogEntryHandlerProducer(l)
 	l.taskProducer = newTaskProducer(l, l.handler)
 	l.isInit = true
 }
@@ -129,40 +131,29 @@ func (l *FileLogger) Stop() error {
     return nil
 }
 
-// TODO make it a method of FileLogger?
+func (l *FileLogger) handler(entry *LogEntry) {
+	stream := l.streamPool.Get().(*jsoniter.Stream)
+	defer l.streamPool.Put(stream)
 
-// Creates producer wich will return function that handles log saving.
-func newLogEntryHandlerProducer(fileLogger *FileLogger) logHandler {
-    pool := sync.Pool{
-        New: func() any {
-            return jsoniter.NewStream(jsoniter.ConfigFastest, nil, 1024)
-        },
-    }
+	stream.Reset(nil)
+	stream.Error = nil
 
-    return func(entry *LogEntry) {
-        stream := pool.Get().(*jsoniter.Stream)
-        defer pool.Put(stream)
+	entry.Instance = l.name
 
-        stream.Reset(nil)
-        stream.Error = nil
+	stream.WriteVal(entry)
+	if stream.Error != nil {
+		errLogger.Error("failed to write log", stream.Error.Error(), nil)
+		return
+	}
 
-		entry.Instance = fileLogger.name
+	if stream.Buffered() > 0 {
+		// Without this all logs will be written in single line
+		stream.WriteRaw("\n")
+	}
 
-        stream.WriteVal(entry)
-        if stream.Error != nil {
-            errLogger.Error("failed to write log", stream.Error.Error(), nil)
-            return
-        }
-
-        if stream.Buffered() > 0 {
-            // Without this all logs will be written in single line
-            stream.WriteRaw("\n")
-        }
-
-        // NOTE: log.Logger use mutex and atomic operations under the hood,
-        //       so it's thread safe by default
-        fileLogger.logger.Writer().Write(stream.Buffer())
-    }
+	// NOTE: log.Logger use mutex and atomic operations under the hood,
+	//       so it's thread safe by default
+	l.logger.Writer().Write(stream.Buffer())
 }
 
 func (l *FileLogger) log(entry *LogEntry) {
