@@ -41,7 +41,11 @@ func (s *seeker) SearchUsers(
 		return nil, err
 	}
 
-	filters := mapFilters(entityFilters)
+	filters, e := mapAndValidateFilters(entityFilters)
+	if e != nil {
+		dbLogger.Error("Failed to map user filters: validation error", err.Error(), nil)
+		return nil, Error.StatusInternalError
+	}
 
 	sql := `SELECT id, login, roles, deleted_at FROM "user" WHERE `
 

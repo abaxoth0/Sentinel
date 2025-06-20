@@ -66,28 +66,20 @@ var condMap = map[filter.Condition]filterCond {
 	filter.Containd: condContained,
 }
 
-func mapFilters(filters []filter.Entity[user.Property]) []QueryFilter {
+// Converts []filter.Entity[user.Property] to []QueryFilter.
+// Returns error if there are some validation error.
+func mapAndValidateFilters(filters []filter.Entity[user.Property]) ([]QueryFilter, error) {
 	queryFilter := make([]QueryFilter, len(filters))
 
 	for i, f := range filters {
 		if f.Property == "" || f.Cond == 0 {
-			dbLogger.Panic(
-				"Failed to map entity filter to query filter",
-				fmt.Sprintf(
-					"Filter property or condition has invalid value. Property value: %v; Condition value: %v",
-					f.Property, f.Cond,
-				),
-				nil,
+			return nil, fmt.Errorf(
+				"Filter property or condition has invalid value. Property value: %v; Condition value: %v",
+				f.Property, f.Cond,
 			)
 		}
-		if f.Cond != filter.IsNull && f.Cond != filter.IsNotNull {
-			if f.Value == nil {
-				dbLogger.Panic(
-					"Failed to map entity filter to query filter",
-					fmt.Sprintf("Invalid filter value: %v", f.Value),
-					nil,
-				)
-			}
+		if f.Cond != filter.IsNull && f.Cond != filter.IsNotNull && f.Value == nil{
+			return nil, fmt.Errorf("Filter value is missing or nil")
 		}
 
 		queryFilter[i] = QueryFilter{
@@ -97,6 +89,6 @@ func mapFilters(filters []filter.Entity[user.Property]) []QueryFilter {
 		}
 	}
 
-	return queryFilter
+	return queryFilter, nil
 }
 
