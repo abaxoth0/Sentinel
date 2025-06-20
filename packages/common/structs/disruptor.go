@@ -40,6 +40,7 @@ type Disruptor[T any] struct {
 	writer  sequence // write position (starts at -1)
 	reader  sequence // read position (starts at -1)
 	waiter  seqWaiter
+	idle 	atomic.Bool
 	done    chan struct{}
 }
 
@@ -54,6 +55,9 @@ func NewDisruptor[T any]() *Disruptor[T] {
 }
 
 func (d *Disruptor[T]) Close() {
+	for !d.idle.Load() {
+		time.Sleep(time.Microsecond * 10)
+	}
 	close(d.done)
 }
 
@@ -82,18 +86,25 @@ func (d *Disruptor[T]) Publish(entry T) bool {
 
 func (d *Disruptor[T]) Consume(handler func(T)) {
 	var claimed int64 = d.reader.Value.Load() + 1
+	closed := false
 
 	for {
 		select {
 		case <-d.done:
-			return
+			closed = true
 		default:
 			writer := d.writer.Value.Load()
 
 			if claimed > writer {
+				d.idle.Store(true)
+				if closed {
+					return
+				}
 				d.waiter.WaitFor(claimed, &d.writer, d.done)
 				continue
 			}
+
+			d.idle.Store(false)
 
 			// Process all entries from claimed to current writer
 			for i := claimed; i <= writer; i++ {
