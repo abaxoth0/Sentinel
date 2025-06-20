@@ -1,6 +1,7 @@
 // Entity filter
 package filter
 
+// For Pasrsing/Formatting use filtermapper module
 type Condition byte
 
 const (

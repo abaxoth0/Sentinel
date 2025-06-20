@@ -1,12 +1,13 @@
 package structs
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 )
 
 const (
-	BufferSize      = 1 << 16 // Power of 2
+	BufferSize      = 1 << 16 // Must be a power of 2 for correct indexing
 	BufferIndexMask = BufferSize - 1
 )
 
@@ -24,6 +25,7 @@ type seqWaiter interface {
 
 type yieldSeqWait struct{}
 
+// Waits till either sequence is greater or equal cursor, either done is closed
 func (w yieldSeqWait) WaitFor(seq int64, cursor *sequence, done <-chan struct{}) {
 	for cursor.Value.Load() < seq {
 		select {
@@ -35,6 +37,7 @@ func (w yieldSeqWait) WaitFor(seq int64, cursor *sequence, done <-chan struct{})
 	}
 }
 
+// Implements LMAX Disruptor pattern
 type Disruptor[T any] struct {
 	buffer  [BufferSize]T
 	writer  sequence // write position (starts at -1)
@@ -45,6 +48,11 @@ type Disruptor[T any] struct {
 }
 
 func NewDisruptor[T any]() *Disruptor[T] {
+	// Check if buffer size if power of two
+	if BufferSize&(BufferSize - 1) != 0 {
+		panic(fmt.Sprintf("invalid disruptor buffer size - %d: it must be a power of two", BufferSize))
+	}
+
 	d := &Disruptor[T]{
 		done:   make(chan struct{}),
 		waiter: yieldWaiter,
@@ -54,6 +62,7 @@ func NewDisruptor[T any]() *Disruptor[T] {
 	return d
 }
 
+// Closes Disruptor, after that it can't be started again.
 func (d *Disruptor[T]) Close() {
 	close(d.done)
 	for !d.closed.Load() {
@@ -61,6 +70,8 @@ func (d *Disruptor[T]) Close() {
 	}
 }
 
+// Adds specified entry into a Disruptor buffer.
+// Returns false if buffer is overflowed or if Disruptor is closed
 func (d *Disruptor[T]) Publish(entry T) bool {
 	select {
 	case <-d.done:
@@ -86,7 +97,12 @@ func (d *Disruptor[T]) Publish(entry T) bool {
 	}
 }
 
-func (d *Disruptor[T]) Consume(handler func(T)) {
+// Starts Disruptor with specified handler
+func (d *Disruptor[T]) Consume(handler func(T)) error {
+	if d.closed.Load() {
+		return fmt.Errorf("Can't start canceled Disruptor")
+	}
+
 	var claimed int64 = d.reader.Value.Load() + 1
 	closed := false
 
@@ -113,7 +129,7 @@ func (d *Disruptor[T]) Consume(handler func(T)) {
 
 		if closed {
 			d.closed.Store(true)
-			return
+			return nil
 		}
 	}
 }
