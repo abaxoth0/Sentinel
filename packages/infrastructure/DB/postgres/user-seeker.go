@@ -11,7 +11,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
-	FilterParser "sentinel/packages/infrastructure/parsers/filter"
+	UserFilterParser "sentinel/packages/infrastructure/parsers/user-filter"
 	"strings"
 )
 
@@ -36,7 +36,7 @@ func (s *seeker) SearchUsers(
 		return nil, Error.StatusInternalError
 	}
 
-	entityFilters, err := FilterParser.ParseAll(rawFilters)
+	entityFilters, err := UserFilterParser.ParseAll(rawFilters)
 	if err != nil {
 		return nil, err
 	}

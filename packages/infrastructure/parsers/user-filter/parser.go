@@ -1,4 +1,4 @@
-package filterparser
+package userfilterparser
 
 import (
 	"net/http"
@@ -77,6 +77,10 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 		return zero, Error.NewStatusError(err.Error(), http.StatusBadRequest)
 	}
 
+	if err := validatePropertyCond(property, cond); err != nil {
+		return zero, Error.NewStatusError(err.Error(), http.StatusBadRequest)
+	}
+
 	// cond is 100% valid, so there are will be no error in any case
 	condStr, _ := FilterMapper.FormatCond(cond)
 
@@ -85,7 +89,6 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 	// 1 is ':'
 	valueStart := len(property) + len(condStr) + 1
 
-	// TODO restrict conditions for each property (e.g. login property can have only 1 valid condition - equal)
 	switch property {
 	case user.IdProperty, user.LoginProperty, user.PasswordProperty:
 		value = rawFilter[valueStart:]
