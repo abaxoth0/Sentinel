@@ -112,7 +112,7 @@ func logPreprocessing(
     return true
 }
 
-var Default = NewFileLogger()
+var Default = NewFileLogger("default")
 
 // Refers logger.Default
 var Undefined = NewSource("UNDEFINED", Default)

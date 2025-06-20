@@ -4,16 +4,15 @@ package logger
 type logTask struct {
     entry 	*LogEntry
     logger  *FileLogger
-	handler logHandler
 }
 
 func (t logTask) Process() {
-	t.handler(t.entry)
+	t.logger.handler(t.entry)
 }
 
-func newTaskProducer(logger *FileLogger, handler logHandler) func(*LogEntry) *logTask {
+func newTaskProducer(logger *FileLogger) func(*LogEntry) *logTask {
     return func (entry *LogEntry) *logTask {
-        return &logTask{entry, logger, handler}
+        return &logTask{entry, logger}
     }
 }
 

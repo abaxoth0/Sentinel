@@ -24,6 +24,7 @@ const (
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
 	name 				 string
+	instance 			 string
 	isInit 				 bool
     done                 chan struct{}
     isRunning            atomic.Bool
@@ -36,12 +37,13 @@ type FileLogger struct {
 	streamPool			 sync.Pool
 }
 
-func NewFileLogger() *FileLogger {
+func NewFileLogger(name string) *FileLogger {
     if err := os.MkdirAll("/var/log/sentinel", 0755); err != nil {
         panic("Failed to create log directory: " + err.Error())
     }
 
 	logger := &FileLogger{
+		name: name,
         done: make(chan struct{}),
         disruptor: structs.NewDisruptor[*LogEntry](),
         fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
@@ -52,13 +54,14 @@ func NewFileLogger() *FileLogger {
 			},
 		},
     }
-	logger.taskProducer = newTaskProducer(logger, logger.handler)
+	logger.taskProducer = newTaskProducer(logger)
 
 	return logger
 }
 
-func (l *FileLogger) Init(name string) {
-	fileName := "default:"+name+":"+time.Now().Format(time.RFC3339)+".log"
+func (l *FileLogger) Init(instance string) {
+	// file with logs have following format: <logger name>:<app instance>:<session start date>
+	fileName := l.name+":"+instance+":"+time.Now().Format(time.RFC3339)+".log"
 
     f, err := os.OpenFile(
 		"/var/log/sentinel/" + fileName,
@@ -75,10 +78,10 @@ func (l *FileLogger) Init(name string) {
         log.LstdFlags | log.Lmicroseconds,
     )
 
-	l.name = name
+	l.instance = instance
 	l.logger = logger
 	l.logFile = f
-	l.taskProducer = newTaskProducer(l, l.handler)
+	l.taskProducer = newTaskProducer(l)
 	l.isInit = true
 }
 
@@ -138,7 +141,7 @@ func (l *FileLogger) handler(entry *LogEntry) {
 	stream.Reset(nil)
 	stream.Error = nil
 
-	entry.Instance = l.name
+	entry.Instance = l.instance
 
 	stream.WriteVal(entry)
 	if stream.Error != nil {
