@@ -257,7 +257,7 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBa
     default:
 		controller.Logger.Panic(
 			"Invalid update call",
-			fmt.Sprintf("Unexpected request body type - %T"),
+			fmt.Sprintf("Unexpected request body type - %T", body),
 			reqMeta,
 		)
         return nil
