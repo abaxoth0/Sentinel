@@ -348,6 +348,13 @@ func SearchUsers(ctx echo.Context) error {
 
 	rawFilters := ctx.QueryParams()["filter"]
 
+	if rawFilters == nil || len(rawFilters) == 0 {
+		return echo.NewHTTPError(
+			http.StatusBadRequest,
+			"Filter is missing",
+		)
+	}
+
 	act, e := newBasicActionDTO(ctx)
 	if e != nil {
 		return e

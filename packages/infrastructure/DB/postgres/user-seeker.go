@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"fmt"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -28,12 +27,10 @@ func (s *seeker) SearchUsers(
 	}
 
 	if rawFilters == nil || len(rawFilters) == 0 {
-		dbLogger.Panic(
-			"Failed to find users",
-			fmt.Sprintf("Invalid filters value, expected non-nil and non-empty slice, but got: %+v", rawFilters),
-			nil,
+		return nil, Error.NewStatusError(
+			"Filter is missing or has invalid format",
+			http.StatusBadRequest,
 		)
-		return nil, Error.StatusInternalError
 	}
 
 	entityFilters, err := UserFilterParser.ParseAll(rawFilters)
@@ -61,33 +58,15 @@ func (s *seeker) SearchUsers(
 				http.StatusBadRequest,
 			)
 		}
-		if filter.Property == user.IdProperty {
-			if err := validation.UUID(filter.StringValue()); err != nil {
-				return nil, err.ToStatus(
-					"user id isn't specified",
-					"user id has invalid value",
-				)
-			}
-		}
-		if filter.Property == user.LoginProperty && config.App.IsLoginEmail {
-			if err := validation.Email(filter.StringValue()); err != nil {
-				return nil, err.ToStatus(
-					"User login isn't specified",
-					"User login has invalid value",
-				)
-			}
-		}
 
 		conds[i] = filter.Build(valuesCount)
 
 		if filter.Cond != condIsNotNull && filter.Cond != condIsNull {
-			if filter.Value == nil {
-				dbLogger.Panic(
-					"Failed to find user",
-					"Filter value is nil",
-					nil,
+			if filter.Value == nil || filter.Value == "" {
+				return nil, Error.NewStatusError(
+					"Filter has no value: " + rawFilters[i],
+					http.StatusBadRequest,
 				)
-				return nil, Error.StatusInternalError
 			}
 
 			valuesCount++
