@@ -44,7 +44,7 @@ func Create() *echo.Echo {
 
 	router.Use(request.Middleware)
     router.Use(middleware.CORSWithConfig(cors))
-    router.Use(middleware.Recover())
+    router.Use(catchError)
     // router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))
 
     if config.Debug.Enabled {
