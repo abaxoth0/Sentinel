@@ -225,7 +225,9 @@ func (q *query) CollectPublicUserDTO() ([]*UserDTO.Public, *Error.Status) {
 			return nil, err
 		}
 
-		setTime(&dto.DeletedAt, deletedAt)
+		if deletedAt.Valid {
+			dto.DeletedAt = &deletedAt.Time
+		}
 
 		return dto, nil
 	})

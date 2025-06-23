@@ -53,7 +53,7 @@ func MarshallPublicUserDTO(dto *UserDTO.Public) ([]byte, error) {
 		Id: dto.ID,
 		Login: dto.Login,
 		Roles: dto.Roles,
-		DeletedAt: timestamppb.New(dto.DeletedAt),
+		DeletedAt: timestamppb.New(*dto.DeletedAt),
 	})
 }
 
@@ -62,11 +62,12 @@ func UnmarshallPublicUserDTO(rawDTO []byte) (*UserDTO.Public, error) {
 	if err != nil {
 		return nil, err
 	}
+	deletedAt := dto.DeletedAt.AsTime()
 	return &UserDTO.Public{
 		ID: dto.Id,
 		Login: dto.Login,
 		Roles: dto.Roles,
-		DeletedAt: dto.DeletedAt.AsTime(),
+		DeletedAt: &deletedAt,
 	}, nil
 }
 

@@ -13,7 +13,7 @@ type Public struct {
     ID           string    `json:"id"`
 	Login        string    `json:"login"`
 	Roles        []string  `json:"roles"`
-	DeletedAt    time.Time `json:"deletedAt"`
+	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
 }
 
 func (dto *Public) IsDeleted() bool {
