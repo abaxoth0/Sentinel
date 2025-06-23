@@ -41,9 +41,10 @@ func createSuffixFromReqeustMeta(m Meta) string {
 
 type Logger interface {
     Log(entry *LogEntry)
-    // Just logs entry, ignoring its content.
-    // This method is mostly required for TransmittingLogger.
-    // (e.g. entry with panic level won't cause panic)
+    // Just performs logging of an entry. (saving it into a file, sending it to stdout et cetera)
+	// This method mustn't cause any side effects and mostly required for TransmittingLogger.
+    // e.g. entry with panic level won't cause panic when
+	// transmitted to another logger, only when main logger will handle it
     log(entry *LogEntry)
 }
 
@@ -72,11 +73,8 @@ type TransmittingLogger interface {
 
 type logHandler = func (*LogEntry)
 
-func logPreprocessing(
-    entry *LogEntry,
-    transmissions []Logger,
-    handler logHandler,
-) bool {
+// Returns false if log must not be processed
+func logPreprocessing(entry *LogEntry, transmissions []Logger) bool {
     if entry.rawLevel == DebugLogLevel && !Debug.Load() {
         return false
     }
@@ -86,30 +84,25 @@ func logPreprocessing(
     }
 
     if transmissions != nil && len(transmissions) != 0 {
-        defer func() {
-            for _, transmission := range transmissions {
-                // Must call log() not Log(), since log() just doing logging
-                // without any additional side effects.
-                // Also log() won't cause recursive transmissions.
-                // (cuz transmissions handled at Log())
-                transmission.log(entry)
-            }
-        }()
-    }
-
-    // Immediatly handle panic or fatal log
-    if entry.rawLevel >= FatalLogLevel {
-        handler(entry)
-
-        if entry.rawLevel == PanicLogLevel {
-            panic(entry.Message + "\n" + entry.Error)
-        }
-
-        // Fatal
-        os.Exit(1)
+		for _, transmission := range transmissions {
+			// Must call log() not Log(), since log() just doing logging
+			// without any additional side effects.
+			// Also log() won't cause recursive transmissions.
+			// (cuz transmissions handled at Log())
+			transmission.log(entry)
+		}
     }
 
     return true
+}
+
+func throwError(entry *LogEntry) {
+	// panic level
+	if entry.rawLevel == PanicLogLevel {
+		panic(entry.Message+"\n"+entry.Error)
+	}
+	// fatal level
+	os.Exit(1)
 }
 
 var Default = NewFileLogger("default")

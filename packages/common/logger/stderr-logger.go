@@ -19,15 +19,22 @@ func newStderrLogger() *stderrLogger {
 }
 
 func (l *stderrLogger) log(entry *LogEntry) {
-    // Must not change behaviour based on log level
-    log.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message + entry.Meta.stringSuffix())
+	msg := "["+entry.Source+": "+entry.Level+"] " + entry.Message
+	if entry.rawLevel >= ErrorLogLevel {
+		msg += ": " + entry.Error
+	}
+    l.logger.Println(msg + entry.Meta.stringSuffix())
 }
 
 func (l *stderrLogger) Log(entry *LogEntry) {
-    if ok := logPreprocessing(entry, nil, l.log); !ok {
+    if ok := logPreprocessing(entry, nil); !ok {
         return
     }
 
     l.log(entry)
+
+	if entry.rawLevel >= FatalLogLevel {
+		throwError(entry)
+	}
 }
 

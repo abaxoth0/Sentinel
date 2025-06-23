@@ -17,14 +17,22 @@ func newStdoutLogger() stdoutLogger {
 }
 
 func (l stdoutLogger) log(entry *LogEntry) {
-    l.logger.Println("["+entry.Source+": "+entry.Level+"] " + entry.Message + entry.Meta.stringSuffix())
+	msg := "["+entry.Source+": "+entry.Level+"] " + entry.Message
+	if entry.rawLevel >= ErrorLogLevel {
+		msg += ": " + entry.Error
+	}
+    l.logger.Println(msg + entry.Meta.stringSuffix())
 }
 
 func (l stdoutLogger) Log(entry *LogEntry) {
-    if ok := logPreprocessing(entry, nil, l.log); !ok {
+    if ok := logPreprocessing(entry, nil); !ok {
         return
     }
 
     l.log(entry)
+
+	if entry.rawLevel >= FatalLogLevel {
+		throwError(entry)
+	}
 }
 
