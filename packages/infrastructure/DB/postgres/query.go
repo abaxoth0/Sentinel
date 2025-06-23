@@ -203,7 +203,9 @@ func (q *query) CollectBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
 			return nil, err
 		}
 
-		setTime(&dto.DeletedAt, deletedAt)
+		if deletedAt.Valid {
+			dto.DeletedAt = deletedAt.Time
+		}
 
 		return dto, nil
 	})
@@ -275,7 +277,9 @@ func (q *query) BasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
         return nil, err
     }
 
-    setTime(&dto.DeletedAt, deletedAt)
+	if deletedAt.Valid {
+		dto.DeletedAt = deletedAt.Time
+	}
 
 	cached, e := pbencoding.MarshallBasicUserDTO(dto)
 	if e != nil {

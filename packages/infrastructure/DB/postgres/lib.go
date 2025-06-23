@@ -1,9 +1,7 @@
 package postgres
 
 import (
-	"database/sql"
 	Error "sentinel/packages/common/errors"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -17,14 +15,5 @@ func hashPassword(password string) ([]byte, *Error.Status) {
     }
 
     return hashedPassword, nil
-}
-
-// Sets V equal to T if T is valid, otherwise sets V to time.Time{}
-func setTime(V *time.Time, T sql.NullTime) {
-    if T.Valid {
-        *V = T.Time
-    } else {
-        *V = time.Time{}
-    }
 }
 
