@@ -16,7 +16,7 @@ func newMeta(req *http.Request) logger.Meta {
 	return logger.Meta{
 		"addr": req.RemoteAddr,
 		"method": req.Method,
-		"path": req.URL.Path,
+		"path": req.URL.RequestURI(),
 		"user_agent": req.UserAgent(),
 	}
 }
