@@ -48,32 +48,22 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 	// if valid property wasn't found in prefix
 	if property == "" {
-		e := Error.NewStatusError(
-			"Filter does not begins with valid user property: " + rawFilter,
+		return zero, Error.NewStatusError(
+			"Filter does not begins with valid user property - " + rawFilter,
 			http.StatusBadRequest,
 		)
-
-		parser.Logger.Error("Faield to parse user filter", e.Error(), nil)
-
-		return zero, e
 	}
 
 	// if condition doesn't begins with ':'
 	if rawFilter[len(property)] != ':' {
-		e := Error.NewStatusError(
-			"Syntax error: missing ':' before condition in filter: " + rawFilter,
+		return zero, Error.NewStatusError(
+			"Syntax error: missing ':' before condition in filter - " + rawFilter,
 			http.StatusBadRequest,
 		)
-
-		parser.Logger.Error("Faield to parse user filter", e.Error(), nil)
-
-		return zero, e
 	}
 
 	cond, err := FilterMapper.GetCondFromStringPrefix(rawFilter[len(property)+1:])
 	if err != nil {
-		parser.Logger.Error("Faield to parse user filter", err.Error(), nil)
-
 		return zero, Error.NewStatusError(err.Error(), http.StatusBadRequest)
 	}
 
@@ -103,14 +93,10 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 		t, err := time.Parse(time.RFC3339, rawFilter[valueStart:])
 		if err != nil {
-			e := Error.NewStatusError(
-				"Filter has invalid time format (expected RFC3339): " + rawFilter,
+			return zero, Error.NewStatusError(
+				"Filter has invalid time format (expected RFC3339) - " + rawFilter,
 				http.StatusBadRequest,
 			)
-
-			parser.Logger.Error("Faield to parse user filter", e.Error(), nil)
-
-			return zero, e
 		}
 		value = t
 	default:
