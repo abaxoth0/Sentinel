@@ -33,6 +33,18 @@ func (s *seeker) SearchUsers(
 		)
 	}
 
+	sql := `SELECT id, login, roles, deleted_at FROM "user"`
+
+	if len(rawFilters) == 1 && rawFilters[0] == "null" {
+		dtos, err := newQuery(sql + ";").CollectPublicUserDTO()
+		if err != nil {
+			return nil, err
+		}
+		return dtos, nil
+	}
+
+	sql += ` WHERE `
+
 	entityFilters, err := UserFilterParser.ParseAll(rawFilters)
 	if err != nil {
 		return nil, err
@@ -42,8 +54,6 @@ func (s *seeker) SearchUsers(
 	if e != nil {
 		return nil, Error.NewStatusError(e.Error(), http.StatusBadRequest)
 	}
-
-	sql := `SELECT id, login, roles, deleted_at FROM "user" WHERE `
 
 	valuesCount := 1
 	// Not preallocated cuz if cond is condIsNull or condIsNotNull then there will be no value for this filter
