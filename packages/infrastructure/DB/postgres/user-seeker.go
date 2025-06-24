@@ -11,6 +11,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	UserFilterParser "sentinel/packages/infrastructure/parsers/user-filter"
+	"strconv"
 	"strings"
 )
 
@@ -18,12 +19,38 @@ type seeker struct {
     //
 }
 
+const (
+	searchUsersSqlStart = `WITH numbered_users AS (SELECT *, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) as row_num FROM "user"`
+	searchUsersSqlSelect = `SELECT id, login, roles, deleted_at FROM numbered_users WHERE row_num BETWEEN `
+)
+
+func searchUsersSqlEnd(page, pageSize int) string {
+	start := ((page - 1) * pageSize) + 1
+	end := page * pageSize
+	return ")" + searchUsersSqlSelect + strconv.Itoa(start) + " AND " + strconv.Itoa(end) + ";"
+}
+
 func (s *seeker) SearchUsers(
 	act *ActionDTO.Basic,
 	rawFilters []string,
+	page int,
+	pageSize int,
 ) ([]*UserDTO.Public, *Error.Status) {
 	if err := authz.User.SearchUsers(act.RequesterRoles); err != nil {
 		return nil, err
+	}
+
+	if page < 1 {
+		return nil, Error.NewStatusError(
+			"Invalid page size: "+strconv.Itoa(page)+". It must greater greater than 0.",
+			http.StatusBadRequest,
+		)
+	}
+	if pageSize < 1 || pageSize > config.DB.MaxSearchPageSize {
+		return nil, Error.NewStatusError(
+			"Invalid page size: "+strconv.Itoa(pageSize)+". It must be between 1 and " + strconv.Itoa(config.DB.MaxSearchPageSize),
+			http.StatusBadRequest,
+		)
 	}
 
 	if rawFilters == nil || len(rawFilters) == 0 {
@@ -33,17 +60,13 @@ func (s *seeker) SearchUsers(
 		)
 	}
 
-	sql := `SELECT id, login, roles, deleted_at FROM "user"`
-
 	if len(rawFilters) == 1 && rawFilters[0] == "null" {
-		dtos, err := newQuery(sql + ";").CollectPublicUserDTO()
+		dtos, err := newQuery(searchUsersSqlStart + searchUsersSqlEnd(page, pageSize)).CollectPublicUserDTO()
 		if err != nil {
 			return nil, err
 		}
 		return dtos, nil
 	}
-
-	sql += ` WHERE `
 
 	entityFilters, err := UserFilterParser.ParseAll(rawFilters)
 	if err != nil {
@@ -85,7 +108,7 @@ func (s *seeker) SearchUsers(
 		}
 	}
 
-    query := newQuery(sql + strings.Join(conds, " AND ") + ";", values...)
+    query := newQuery(searchUsersSqlStart + " WHERE " + strings.Join(conds, " AND ") + searchUsersSqlEnd(page, pageSize), values...)
 
     dtos, err := query.CollectPublicUserDTO()
     if err != nil {

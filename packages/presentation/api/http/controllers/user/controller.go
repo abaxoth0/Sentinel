@@ -347,12 +347,29 @@ func SearchUsers(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
 	rawFilters := ctx.QueryParams()["filter"]
+	rawPage := ctx.QueryParam("page")
+	rawPageSize := ctx.QueryParam("pageSize")
 
 	if rawFilters == nil || len(rawFilters) == 0 {
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
 			"Filter is missing",
 		)
+	}
+	if rawPage == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Query param 'page' is missing")
+	}
+	if rawPageSize == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Query param 'pageSize' is missing")
+	}
+
+	page, parseErr := strconv.Atoi(rawPage)
+	if parseErr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "page must be an integer number")
+	}
+	pageSize, parseErr := strconv.Atoi(rawPageSize)
+	if parseErr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "pageSize must be an integer number")
 	}
 
 	act, e := newBasicActionDTO(ctx)
@@ -362,7 +379,7 @@ func SearchUsers(ctx echo.Context) error {
 
 	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters...", reqMeta)
 
-	dtos, err := DB.Database.SearchUsers(act, rawFilters)
+	dtos, err := DB.Database.SearchUsers(act, rawFilters, page, pageSize)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}

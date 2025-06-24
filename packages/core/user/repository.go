@@ -17,7 +17,7 @@ type creator interface {
 	// Returns user id if error is nil, otherwise returns empty string and error
 	Create(login string, password string) (string, *Error.Status)
 
-	SearchUsers(act *ActionDTO.Basic, rawFilters []string) ([]*UserDTO.Public, *Error.Status)
+	SearchUsers(act *ActionDTO.Basic, rawFilters []string, page int, pageSize int) ([]*UserDTO.Public, *Error.Status)
 }
 
 type seeker interface {
