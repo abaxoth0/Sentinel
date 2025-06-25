@@ -53,8 +53,8 @@ const (
 // Executes given SQL. If returnRow is true then returns resulting row and error,
 // otherwise returns nil and error.
 // Also substitutes query args (see pgx docs for details).
-func(q *query) runSQL(mode queryMode) (pgx.Row, pgx.Rows, *Error.Status) {
-    con, err := driver.getConnection()
+func(q *query) runSQL(conType connectionType, mode queryMode) (pgx.Row, pgx.Rows, *Error.Status) {
+    con, err := driver.getConnection(conType)
 
     if err != nil {
         return nil, nil, err
@@ -110,8 +110,8 @@ func(q *query) runSQL(mode queryMode) (pgx.Row, pgx.Rows, *Error.Status) {
 	return nil, nil, nil
 }
 
-func (q *query) Rows() (pgx.Rows, *Error.Status) {
-	_, rows, err := q.runSQL(rowsMode)
+func (q *query) Rows(conType connectionType) (pgx.Rows, *Error.Status) {
+	_, rows, err := q.runSQL(conType, rowsMode)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +127,8 @@ func (q *query) Rows() (pgx.Rows, *Error.Status) {
 type scanRowFunc = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
-func (q *query) Row() (scanRowFunc, *Error.Status) {
-    row, _, err := q.runSQL(rowMode)
+func (q *query) Row(conType connectionType) (scanRowFunc, *Error.Status) {
+    row, _, err := q.runSQL(conType, rowMode)
     if err != nil {
         return nil, err
     }
@@ -161,14 +161,18 @@ func (q *query) Row() (scanRowFunc, *Error.Status) {
 }
 
 // Wrapper for '*pgxpool.Con.Exec'
-func (q *query) Exec() (*Error.Status) {
-    _, _, err := q.runSQL(execMode)
+func (q *query) Exec(conType connectionType) (*Error.Status) {
+    _, _, err := q.runSQL(conType, execMode)
     return err
 }
 
 // TODO add cache
-func collect[T UserDTO.Any](q *query, collectFunc func(pgx.CollectableRow) (T, error)) ([]T, *Error.Status) {
-    rows, err := q.Rows()
+func collect[T UserDTO.Any](
+	conType connectionType,
+	q *query,
+	collectFunc func(pgx.CollectableRow) (T, error),
+) ([]T, *Error.Status) {
+    rows, err := q.Rows(conType)
     if err != nil {
         return nil, err
     }
@@ -187,8 +191,8 @@ func collect[T UserDTO.Any](q *query, collectFunc func(pgx.CollectableRow) (T, e
 }
 
 // TODO add cache
-func (q *query) CollectBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
-	return collect(q, func (row pgx.CollectableRow) (*UserDTO.Basic, error) {
+func (q *query) CollectBasicUserDTO(conType connectionType) ([]*UserDTO.Basic, *Error.Status) {
+	return collect(conType, q, func (row pgx.CollectableRow) (*UserDTO.Basic, error) {
 		dto := new(UserDTO.Basic)
 
 		var deletedAt sql.NullTime
@@ -212,8 +216,8 @@ func (q *query) CollectBasicUserDTO() ([]*UserDTO.Basic, *Error.Status) {
 }
 
 // TODO add cache
-func (q *query) CollectPublicUserDTO() ([]*UserDTO.Public, *Error.Status) {
-	return collect(q, func (row pgx.CollectableRow) (*UserDTO.Public, error) {
+func (q *query) CollectPublicUserDTO(conType connectionType) ([]*UserDTO.Public, *Error.Status) {
+	return collect(conType, q, func (row pgx.CollectableRow) (*UserDTO.Public, error) {
 		dto := new(UserDTO.Public)
 
 		var deletedAt sql.NullTime
@@ -237,7 +241,7 @@ func (q *query) CollectPublicUserDTO() ([]*UserDTO.Public, *Error.Status) {
 
 // Works same as queryRow, but also creates and returns
 // UserDTO.Basic after scanning resulting row into it.
-func (q *query) BasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
+func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.Basic, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
 		r, err := pbencoding.UnmarshallBasicUserDTO([]byte(cached))
 
@@ -255,7 +259,7 @@ func (q *query) BasicUserDTO(cacheKey string) (*UserDTO.Basic, *Error.Status) {
         }
     }
 
-    scan, err := q.Row()
+    scan, err := q.Row(conType)
 
     if err != nil {
         return nil, err

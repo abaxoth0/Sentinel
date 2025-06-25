@@ -16,7 +16,7 @@ type Migrate struct {
 func (_ Migrate) init() (*migrate.Migrate, error) {
 	dbLogger.Trace("Initializing DB driver for migrations...", nil)
 
-	db := stdlib.OpenDB(*driver.config.ConnConfig)
+	db := stdlib.OpenDB(*driver.primaryConfig.ConnConfig)
 
 	dbDriver, e := postgres.WithInstance(db, &postgres.Config{})
 	if e != nil {

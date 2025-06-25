@@ -65,7 +65,7 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     )
 
     if err = cache.Client.DeleteOnError(
-        query.Exec(),
+        query.Exec(primaryConnection),
         // TODO try to replace that everywhere with cache.client.DeletePattern
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
@@ -179,7 +179,7 @@ func (_ *repository) Drop(filter *ActionDTO.Targeted) *Error.Status {
     )
 
     return cache.Client.DeleteOnError(
-        query.Exec(),
+        query.Exec(primaryConnection),
         cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
         cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
         cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
@@ -219,7 +219,7 @@ func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
         WHERE deleted_at IS NOT NULL;`,
     )
 
-    err = query.Exec()
+    err = query.Exec(primaryConnection)
 
     cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
 

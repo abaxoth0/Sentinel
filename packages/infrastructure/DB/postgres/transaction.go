@@ -16,7 +16,7 @@ func (t *transaction) Exec() *Error.Status {
     ctx, cancel := defaultTimeoutContext()
     defer cancel()
 
-    tx, err := driver.pool.Begin(ctx)
+    tx, err := driver.primaryPool.Begin(ctx)
 
     if err != nil {
         dbLogger.Error("Failed to begin transaction", err.Error(), nil)

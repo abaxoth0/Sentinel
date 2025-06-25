@@ -27,7 +27,7 @@ const (
 func searchUsersSqlEnd(page, pageSize int) string {
 	start := ((page - 1) * pageSize) + 1
 	end := page * pageSize
-	return ")" + searchUsersSqlSelect + strconv.Itoa(start) + " AND " + strconv.Itoa(end) + ";"
+	return ") " + searchUsersSqlSelect + strconv.Itoa(start) + " AND " + strconv.Itoa(end) + ";"
 }
 
 func (s *seeker) SearchUsers(
@@ -61,7 +61,7 @@ func (s *seeker) SearchUsers(
 	}
 
 	if len(rawFilters) == 1 && rawFilters[0] == "null" {
-		dtos, err := newQuery(searchUsersSqlStart + searchUsersSqlEnd(page, pageSize)).CollectPublicUserDTO()
+		dtos, err := newQuery(searchUsersSqlStart + searchUsersSqlEnd(page, pageSize)).CollectPublicUserDTO(replicaConnection)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +110,7 @@ func (s *seeker) SearchUsers(
 
     query := newQuery(searchUsersSqlStart + " WHERE " + strings.Join(conds, " AND ") + searchUsersSqlEnd(page, pageSize), values...)
 
-    dtos, err := query.CollectPublicUserDTO()
+    dtos, err := query.CollectPublicUserDTO(replicaConnection)
     if err != nil {
         return nil, err
     }
@@ -148,7 +148,7 @@ func (s *seeker) findUserBy(
         conditionValue,
     )
 
-    dto, err := query.BasicUserDTO(cacheKey)
+    dto, err := query.BasicUserDTO(replicaConnection, cacheKey)
 
     if err != nil {
         return nil, err
@@ -244,7 +244,7 @@ func (_ *seeker) GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status) {
         act.TargetUID,
     )
 
-    scan, err := query.Row()
+    scan, err := query.Row(replicaConnection)
 
     if err != nil {
         return nil, err

@@ -12,36 +12,27 @@ import (
 )
 
 type connector struct {
-    ctx         context.Context
-    pool        *pgxpool.Pool
-    isConnected bool
-	config 		*pgxpool.Config
+    primaryCtx    context.Context
+    primaryPool   *pgxpool.Pool
+	replicaCtx    context.Context
+    replicaPool   *pgxpool.Pool
+    isConnected   bool
+	primaryConfig *pgxpool.Config
 }
 
 func defaultTimeoutContext() (context.Context, context.CancelFunc) {
     return context.WithTimeout(context.Background(), time.Second * 5)
 }
 
-func (c *connector) Connect() {
-    if c.isConnected {
-        dbLogger.Panic("DB connection failed", "connection already established", nil)
-    }
-
-    c.ctx = context.Background()
-
-    dbLogger.Info("Creating connection pool...", nil)
+func newConfig(user, password, host, port, dbName string) *pgxpool.Config {
+	dbLogger.Trace("Creating connection config...", nil)
 
     conConfig, err := pgxpool.ParseConfig(fmt.Sprintf(
-        "postgres://%s:%s@%s:%s/%s",
-        config.Secret.DatabaseUser,
-        config.Secret.DatabasePassword,
-        config.Secret.DatabaseHost,
-        config.Secret.DatabasePort,
-        config.Secret.DatabaseName,
+        "postgres://%s:%s@%s:%s/%s", user, password, host, port, dbName,
     ))
 
     if err != nil {
-        dbLogger.Fatal("Failed to parse DB connection URI", err.Error(), nil)
+        dbLogger.Fatal("Failed to parse connection URI", err.Error(), nil)
     }
 
 	conConfig.MinConns = 10
@@ -49,17 +40,21 @@ func (c *connector) Connect() {
 	conConfig.MaxConnIdleTime = time.Minute * 5
 	conConfig.MaxConnLifetime = time.Minute * 60
 
-	c.config = conConfig
+	dbLogger.Trace("Creating connection config: OK", nil)
 
-    pool, err := pgxpool.NewWithConfig(c.ctx, conConfig)
+	return conConfig
+}
+
+func createConnectionPool(poolName string, conConfig *pgxpool.Config, ctx context.Context) *pgxpool.Pool {
+	dbLogger.Info("Creating "+poolName+" connection pool...", nil)
+
+    pool, err := pgxpool.NewWithConfig(ctx, conConfig)
 
     if err != nil {
-        dbLogger.Fatal("Failed to create connection pool", err.Error(), nil)
+        dbLogger.Fatal("Failed to create "+poolName+" connection pool", err.Error(), nil)
     }
 
-    dbLogger.Info("Creating connection pool: OK", nil)
-
-    dbLogger.Info("Ping connection...", nil)
+    dbLogger.Info("Ping "+poolName+" connection...", nil)
 
     ctx, cancel := defaultTimeoutContext()
 
@@ -67,19 +62,49 @@ func (c *connector) Connect() {
 
     if err = pool.Ping(ctx); err != nil {
         if err == context.DeadlineExceeded {
-            dbLogger.Fatal("Failed to ping DB", "Ping timeout", nil)
+            dbLogger.Fatal("Failed to ping "+poolName+" DB", "Ping timeout", nil)
         }
 
-        dbLogger.Fatal("Failed to ping DB", err.Error(), nil)
+        dbLogger.Fatal("Failed to ping "+poolName+" DB", err.Error(), nil)
     }
 
-    dbLogger.Info("Ping connection: OK", nil)
+    dbLogger.Info("Ping "+poolName+" connection: OK", nil)
 
-    c.pool = pool
+	dbLogger.Info("Creating "+poolName+" connection pool: OK", nil)
 
-    err = c.postConnection()
+	return pool
+}
 
-    if err != nil {
+func (c *connector) Connect() {
+    if c.isConnected {
+        dbLogger.Panic("DB connection failed", "connection already established", nil)
+    }
+
+    c.primaryCtx = context.Background()
+
+	primaryConnectionConfig := newConfig(
+        config.Secret.PrimaryDatabaseUser,
+        config.Secret.PrimaryDatabasePassword,
+        config.Secret.PrimaryDatabaseHost,
+        config.Secret.PrimaryDatabasePort,
+        config.Secret.PrimaryDatabaseName,
+	)
+
+	replicaConnectionConfig := newConfig(
+        config.Secret.ReplicaDatabaseUser,
+        config.Secret.ReplicaDatabasePassword,
+        config.Secret.ReplicaDatabaseHost,
+        config.Secret.ReplicaDatabasePort,
+        config.Secret.ReplicaDatabaseName,
+	)
+
+	c.primaryCtx = context.Background()
+	c.primaryPool = createConnectionPool("primary", primaryConnectionConfig, c.primaryCtx)
+
+	c.replicaCtx = context.Background()
+	c.replicaPool = createConnectionPool("replica", replicaConnectionConfig, c.replicaCtx)
+
+	if err := c.postConnection(); err != nil {
         dbLogger.Fatal("Post-connection failed", err.Error(), nil)
     }
 
@@ -96,7 +121,7 @@ func (c *connector) Disconnect() error {
     done := make(chan bool)
 
     go func() {
-        c.pool.Close()
+        c.primaryPool.Close()
         close(done)
     }()
 
@@ -113,13 +138,35 @@ func (c *connector) Disconnect() error {
     return nil
 }
 
+type connectionType byte
+
+const (
+	primaryConnection connectionType = 1 << iota
+	replicaConnection
+)
+
 // Don't forget to release connection
-func (c *connector) getConnection() (*pgxpool.Conn, *Error.Status) {
+func (c *connector) getConnection(conType connectionType) (*pgxpool.Conn, *Error.Status) {
     ctx, cancel := defaultTimeoutContext()
+
+	var pool *pgxpool.Pool
+
+	switch conType {
+	case primaryConnection:
+		pool = c.primaryPool
+	case replicaConnection:
+		pool = c.replicaPool
+	default:
+		dbLogger.Panic(
+			"Failed to acquire connection",
+			"Unknown connection type received",
+			nil,
+		)
+	}
 
     defer cancel()
 
-    connection, err := c.pool.Acquire(ctx)
+    connection, err := pool.Acquire(ctx)
 
     if err != nil {
         if err == context.DeadlineExceeded {
@@ -142,6 +189,7 @@ func (c *connector) postConnection() error {
     dbLogger.Info("Post-connection...", nil)
 
     if err := c.exec(
+		primaryConnection,
 		"Verifying that table 'user' exists",
         `CREATE TABLE IF NOT EXISTS "user" (
             id uuid PRIMARY KEY,
@@ -156,6 +204,7 @@ func (c *connector) postConnection() error {
     }
 
     if err := c.exec(
+		primaryConnection,
 		"Verifying that table 'audit_user' exists",
         `CREATE TABLE IF NOT EXISTS "audit_user" (
             id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -177,8 +226,8 @@ func (c *connector) postConnection() error {
     return nil
 }
 
-func (c *connector) exec(logBase string, query string) error {
-    con, err := c.getConnection()
+func (c *connector) exec(conType connectionType, logBase string, query string) error {
+    con, err := c.getConnection(conType)
 
     if err != nil {
         return err
@@ -188,7 +237,7 @@ func (c *connector) exec(logBase string, query string) error {
 
 	dbLogger.Info(logBase + "...", nil)
 
-    if _, e := con.Exec(c.ctx, query); e != nil {
+    if _, e := con.Exec(c.primaryCtx, query); e != nil {
         return errors.New(logBase+": ERROR"+e.Error())
     }
 
