@@ -92,6 +92,7 @@ func(q *query) runSQL(conType connectionType, mode queryMode) (pgx.Row, pgx.Rows
 		if _, e := con.Exec(ctx, q.sql, q.args...); e != nil {
 			return nil, nil, q.toStatusError(e)
 		}
+		return nil, nil, nil
 	case rowMode:
 		return con.QueryRow(ctx, q.sql, q.args...), nil, nil
 	case rowsMode:
