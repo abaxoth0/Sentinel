@@ -48,10 +48,6 @@ func main() {
     // Reserve some time for logger to start up
     time.Sleep(time.Millisecond * 50)
 
-	if steps := *app.Args.MigrateDB; steps != "" {
-		app.MigrateDB(steps)
-	}
-
 	r := app.InitRouter()
 
 	app.EndInit()

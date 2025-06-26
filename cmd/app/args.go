@@ -11,7 +11,6 @@ type appArgs struct {
 	Debug     *bool
 	ShowLogs  *bool
 	TraceLogs *bool
-	MigrateDB *string
 }
 
 var Args = new(appArgs)
@@ -30,12 +29,6 @@ func (a *appArgs) Parse() {
 	})
 	Args.TraceLogs = parser.Flag("t", "trace-logs", &argparse.Options{
 		Help: "Enable trace logs",
-	})
-	Args.MigrateDB = parser.String("M", "migrate-db", &argparse.Options{
-		Help: "Apply DB migrations, valid values:\n"+
-			  "\t\t\tUp - Migrate forward on 1 version\n"+
-			  "\t\t\tDown - Migrate back on 1 version\n"+
-			  "\t\t\tN - Number, if N > 0 then will migrate forward on N versions, if N < 0 then will migrate back on N versions",
 	})
 
 	if err := parser.Parse(os.Args); err != nil {

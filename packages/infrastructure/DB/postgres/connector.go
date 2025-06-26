@@ -100,6 +100,7 @@ func (c *connector) Connect() {
 
 	c.primaryCtx = context.Background()
 	c.primaryPool = createConnectionPool("primary", primaryConnectionConfig, c.primaryCtx)
+	c.primaryConfig = primaryConnectionConfig
 
 	c.replicaCtx = context.Background()
 	c.replicaPool = createConnectionPool("replica", replicaConnectionConfig, c.replicaCtx)

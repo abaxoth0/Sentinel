@@ -1,0 +1,51 @@
+### HTTP ###
+domain: 0.0.0.0
+
+http-port: 8080
+
+http-secured: false
+
+http-allowed-origins:
+  - "http://127.0.0.1:4321"
+
+### DATABASE ###
+db-default-queuery-timeout: 5s
+
+db-max-search-page-size: 100
+
+### AUTH ###
+access-token-ttl: 10m
+
+refresh-token-ttl: 336h # 14 days
+
+### CACHE ###
+cache-socket-timeout: 3s
+
+cache-operation-timeout: 1s
+
+cache-ttl: 0
+
+### DEBUG ####
+debug-mode: true
+
+debug-safe-db-scans: false
+
+log-db-queries: true
+
+### APP ###
+service-id: cb663674-803e-4b06-bfeb-87c5cc86383e
+
+is-login-email: true
+
+user-activation-token-ttl: 24h
+
+show-logs: true
+
+trace-logs: true
+
+### EMAIL ###
+
+smtp-host: smtp.gmail.com
+
+smtp-port: 587
+
