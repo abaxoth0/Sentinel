@@ -25,9 +25,9 @@ type client interface {
     Set(key string, value any) *Error.Status
     Delete(keys ...string) *Error.Status
     FlushAll() *Error.Status
-    // If 'err' is not nil, then deletes cache for each of specified 'keys'.
+    // If 'err' is nil, then deletes cache for each of specified 'keys'.
     // returns 'err'.
-    DeleteOnError(err *Error.Status, keys ...string) *Error.Status
+    DeleteOnNoError(err *Error.Status, keys ...string) *Error.Status
     // Deletes cache entries whose keys match the pattern.
     // When need to delete a lot of entries consider using ProgressiveDeletePattern.
     DeletePattern(pattern string) *Error.Status

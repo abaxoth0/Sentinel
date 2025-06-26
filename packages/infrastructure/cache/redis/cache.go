@@ -168,7 +168,7 @@ func (d *driver) FlushAll() *Error.Status {
     return logAndConvert("Flush All", err)
 }
 
-func (d *driver) DeleteOnError(err *Error.Status, keys ...string) *Error.Status {
+func (d *driver) DeleteOnNoError(err *Error.Status, keys ...string) *Error.Status {
     if err == nil {
         if e := d.Delete(keys...); e != nil {
             return e

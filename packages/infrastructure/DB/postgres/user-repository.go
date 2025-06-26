@@ -64,7 +64,7 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
         uid, login, hashedPassword, rbac.GetRolesNames(authz.Host.DefaultRoles),
     )
 
-    if err = cache.Client.DeleteOnError(
+    if err = cache.Client.DeleteOnNoError(
         query.Exec(primaryConnection),
         // TODO try to replace that everywhere with cache.client.DeletePattern
         cache.KeyBase[cache.UserByLogin] + login,
@@ -76,91 +76,90 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     return uid.String(), nil
 }
 
-func (_ *repository) SoftDelete(filter *ActionDTO.Targeted) *Error.Status {
-    if err := filter.ValidateUIDs(); err != nil {
+func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
+    if err := act.ValidateUIDs(); err != nil {
         return err
     }
 
 	if err := authz.User.SoftDeleteUser(
-		filter.RequesterUID == filter.TargetUID,
-		filter.RequesterRoles,
+		act.RequesterUID == act.TargetUID,
+		act.RequesterRoles,
 	); err != nil {
 		return err
 	}
 
-    user, err := driver.FindUserByID(filter.TargetUID)
+    user, err := driver.FindUserByID(act.TargetUID)
 
     if err != nil {
         return err
     }
 
-    audit := newAudit(deleteOperation, filter, user)
+    audit := newAudit(deleteOperation, act, user)
 
     query := newQuery(
         `UPDATE "user" SET deleted_at = $1
         WHERE id = $2 AND deleted_at IS NULL;`,
         // deleted_at set manualy instead of using NOW()
         // cuz changed_at and deleted_at should be synchronized
-        audit.ChangedAt, filter.TargetUID,
+        audit.ChangedAt, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnError(
+    return cache.Client.DeleteOnNoError(
         execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + filter.TargetUID,
-        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + act.TargetUID,
+        cache.KeyBase[cache.DeletedUserById] + act.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
-func (_ *repository) Restore(filter *ActionDTO.Targeted) *Error.Status {
-    if err := filter.ValidateUIDs(); err != nil {
+func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
+    if err := act.ValidateUIDs(); err != nil {
         return err
     }
 
-	if err := authz.User.RestoreUser(filter.RequesterRoles); err != nil {
+	if err := authz.User.RestoreUser(act.RequesterRoles); err != nil {
 		return err
 	}
 
-    user, err := driver.FindSoftDeletedUserByID(filter.TargetUID)
+    user, err := driver.FindSoftDeletedUserByID(act.TargetUID)
 
     if err != nil {
         return err
     }
 
-    audit := newAudit(restoreOperation, filter, user)
+    audit := newAudit(restoreOperation, act, user)
 
     query := newQuery(
         `UPDATE "user" SET deleted_at = NULL
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
-        filter.TargetUID,
+        act.TargetUID,
     )
 
-    return cache.Client.DeleteOnError(
+    return cache.Client.DeleteOnNoError(
         execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + filter.TargetUID,
-        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + act.TargetUID,
+        cache.KeyBase[cache.DeletedUserById] + act.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
 // TODO add audit (there are some problem with foreign keys)
-func (_ *repository) Drop(filter *ActionDTO.Targeted) *Error.Status {
-    if err := filter.ValidateUIDs(); err != nil {
+func (_ *repository) Drop(act *ActionDTO.Targeted) *Error.Status {
+    if err := act.ValidateUIDs(); err != nil {
         return err
     }
 
-	if err := authz.User.DropUser(filter.RequesterRoles); err != nil {
+	if err := authz.User.DropUser(act.RequesterRoles); err != nil {
 		return err
 	}
 
-    user, err := driver.FindAnyUserByID(filter.TargetUID)
-
+    user, err := driver.FindAnyUserByID(act.TargetUID)
     if err != nil {
         return err
     }
@@ -175,30 +174,30 @@ func (_ *repository) Drop(filter *ActionDTO.Targeted) *Error.Status {
     query := newQuery(
         `DELETE FROM "user"
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
-        filter.TargetUID,
+        act.TargetUID,
     )
 
-    return cache.Client.DeleteOnError(
+    return cache.Client.DeleteOnNoError(
         query.Exec(primaryConnection),
-        cache.KeyBase[cache.DeletedUserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.DeletedUserById] + act.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
 // TODO add audit (this method really cause a lot of problems)
-func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
-    if err := filter.ValidateRequesterUID(); err != nil {
+func (_ *repository) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
+    if err := act.ValidateRequesterUID(); err != nil {
         return err
     }
 
-	if err := authz.User.DropAllSoftDeletedUsers(filter.RequesterRoles); err != nil {
+	if err := authz.User.DropAllSoftDeletedUsers(act.RequesterRoles); err != nil {
 		return err
 	}
 
-    user, err := driver.FindUserByID(filter.RequesterUID)
+    user, err := driver.FindUserByID(act.RequesterUID)
     if err != nil {
         return err
     }
@@ -206,7 +205,7 @@ func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
     // it's not necessary, but may it be here.
     // Some additional security checks won't be a problem.
     for _, role := range user.Roles {
-        if !slices.Contains(filter.RequesterRoles, role) {
+        if !slices.Contains(act.RequesterRoles, role) {
             return Error.NewStatusError(
                 "Your roles differs on server, try to re-logging in",
                 http.StatusConflict,
@@ -226,8 +225,8 @@ func (_ *repository) DropAllSoftDeleted(filter *ActionDTO.Basic) *Error.Status {
     return err
 }
 
-func (r *repository) ChangeLogin(filter *ActionDTO.Targeted, newLogin string) *Error.Status {
-    if err := filter.ValidateUIDs(); err != nil {
+func (r *repository) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.Status {
+    if err := act.ValidateUIDs(); err != nil {
         return err
     }
 
@@ -236,13 +235,13 @@ func (r *repository) ChangeLogin(filter *ActionDTO.Targeted, newLogin string) *E
     }
 
 	if err := authz.User.ChangeUserLogin(
-		filter.RequesterUID == filter.TargetUID,
-		filter.RequesterRoles,
+		act.RequesterUID == act.TargetUID,
+		act.RequesterRoles,
 	); err != nil {
 		return err
 	}
 
-    user, err := driver.FindUserByID(filter.TargetUID)
+    user, err := driver.FindUserByID(act.TargetUID)
 
     if err != nil {
         return err
@@ -259,25 +258,25 @@ func (r *repository) ChangeLogin(filter *ActionDTO.Targeted, newLogin string) *E
         return err
     }
 
-    audit := newAudit(updatedOperation, filter, user)
+    audit := newAudit(updatedOperation, act, user)
 
     query := newQuery(
         `UPDATE "user" SET login = $1
         WHERE id = $2;`,
-        newLogin, filter.TargetUID,
+        newLogin, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnError(
+    return cache.Client.DeleteOnNoError(
         execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + act.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
-func (_ *repository) ChangePassword(filter *ActionDTO.Targeted, newPassword string) *Error.Status {
-    if err := filter.ValidateUIDs(); err != nil {
+func (_ *repository) ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status {
+    if err := act.ValidateUIDs(); err != nil {
         return err
     }
 
@@ -286,13 +285,13 @@ func (_ *repository) ChangePassword(filter *ActionDTO.Targeted, newPassword stri
     }
 
 	if err := authz.User.ChangeUserPassword(
-		filter.RequesterUID == filter.TargetUID,
-		filter.RequesterRoles,
+		act.RequesterUID == act.TargetUID,
+		act.RequesterRoles,
 	); err != nil {
 		return err
 	}
 
-    user, err := driver.FindUserByID(filter.TargetUID)
+    user, err := driver.FindUserByID(act.TargetUID)
     if err != nil {
         return err
     }
@@ -302,30 +301,30 @@ func (_ *repository) ChangePassword(filter *ActionDTO.Targeted, newPassword stri
         return e
     }
 
-    audit := newAudit(updatedOperation, filter, user)
+    audit := newAudit(updatedOperation, act, user)
 
     query := newQuery(
         `UPDATE "user" SET password = $1
         WHERE id = $2;`,
-        hashedPassword, filter.TargetUID,
+        hashedPassword, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnError(
+    return cache.Client.DeleteOnNoError(
         execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + act.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
 }
 
-func (_ *repository) ChangeRoles(filter *ActionDTO.Targeted, newRoles []string) *Error.Status {
-    if err := filter.ValidateUIDs(); err != nil {
+func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status {
+    if err := act.ValidateUIDs(); err != nil {
         return err
     }
 
-    if filter.TargetUID == filter.RequesterUID &&
-       slices.Contains(filter.RequesterRoles, "admin") &&
+    if act.TargetUID == act.RequesterUID &&
+       slices.Contains(act.RequesterRoles, "admin") &&
        !slices.Contains(newRoles, "admin") {
           return Error.NewStatusError(
               "Нельзя снять роль администратора с самого себя",
@@ -333,32 +332,32 @@ func (_ *repository) ChangeRoles(filter *ActionDTO.Targeted, newRoles []string) 
           )
     }
 
-    user, err := driver.FindUserByID(filter.TargetUID)
+    user, err := driver.FindUserByID(act.TargetUID)
 
     if err != nil {
         return err
     }
 
 	if err := authz.User.ChangeUserRoles(
-		filter.RequesterUID == filter.TargetUID,
-		filter.RequesterRoles,
+		act.RequesterUID == act.TargetUID,
+		act.RequesterRoles,
 	); err != nil {
 		return err
 	}
 
-    audit := newAudit(updatedOperation, filter, user)
+    audit := newAudit(updatedOperation, act, user)
 
     query := newQuery(
         `UPDATE "user" SET roles = $1
         WHERE id = $2;`,
-        newRoles, filter.TargetUID,
+        newRoles, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnError(
+    return cache.Client.DeleteOnNoError(
         execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + filter.TargetUID,
+        cache.KeyBase[cache.UserById] + act.TargetUID,
+        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
+        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
         cache.KeyBase[cache.UserByLogin] + user.Login,
         cache.KeyBase[cache.AnyUserByLogin] + user.Login,
     )
