@@ -1,5 +1,7 @@
 cmd/.env
 
+cmd/migrate/.env
+
 # builded project
 cmd/main
 
