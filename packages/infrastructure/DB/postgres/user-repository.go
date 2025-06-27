@@ -6,11 +6,14 @@ import (
 	Error "sentinel/packages/common/errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
+	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	"slices"
+	"strings"
+	"time"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"github.com/golang-jwt/jwt/v5"
@@ -21,13 +24,19 @@ type repository struct {
     //
 }
 
+func invalidateBasicUserDtoCache(old, current *UserDTO.Basic) {
+	invalidator := cache.NewBasicUserDtoInvalidator(old, current)
+	if err := invalidator.Invalidate(); err != nil {
+		dbLogger.Error("Failed to invalidate cache", err.Error(), nil)
+	}
+}
+
 func (_ *repository) checkLogin(login string) *Error.Status {
     if err := user.ValidateLogin(login); err != nil {
         return err
     }
 
     _, err := driver.FindAnyUserByLogin(login)
-
     if err != nil {
         // user wasn't found, hence login is free to use
         if err.Status() == http.StatusNotFound {
@@ -51,7 +60,6 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
     }
 
 	hashedPassword, err := hashPassword(password)
-
     if err != nil {
         return "", nil
     }
@@ -66,7 +74,6 @@ func (r *repository) Create(login string, password string) (string, *Error.Statu
 
     if err = cache.Client.DeleteOnNoError(
         query.Exec(primaryConnection),
-        // TODO try to replace that everywhere with cache.client.DeletePattern
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,
     ); err != nil {
@@ -89,7 +96,6 @@ func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
 	}
 
     user, err := driver.FindUserByID(act.TargetUID)
-
     if err != nil {
         return err
     }
@@ -104,15 +110,15 @@ func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
         audit.ChangedAt, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnNoError(
-        execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + act.TargetUID,
-        cache.KeyBase[cache.DeletedUserById] + act.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    )
+    if err := execWithAudit(&audit, query); err != nil {
+		return err
+	}
+
+	updatedUser := user.Copy()
+	updatedUser.DeletedAt = audit.ChangedAt
+	invalidateBasicUserDtoCache(user, updatedUser)
+
+	return nil
 }
 
 func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
@@ -125,7 +131,6 @@ func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
 	}
 
     user, err := driver.FindSoftDeletedUserByID(act.TargetUID)
-
     if err != nil {
         return err
     }
@@ -137,16 +142,15 @@ func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
         act.TargetUID,
     )
+    if err := execWithAudit(&audit, query); err != nil {
+		return err
+	}
 
-    return cache.Client.DeleteOnNoError(
-        execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + act.TargetUID,
-        cache.KeyBase[cache.DeletedUserById] + act.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    )
+	updatedUser := user.Copy()
+	updatedUser.DeletedAt = time.Time{}
+	invalidateBasicUserDtoCache(user, updatedUser)
+
+	return nil
 }
 
 // TODO add audit (there are some problem with foreign keys)
@@ -176,15 +180,15 @@ func (_ *repository) Drop(act *ActionDTO.Targeted) *Error.Status {
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
         act.TargetUID,
     )
+    if err := query.Exec(primaryConnection); err != nil {
+		return err
+	}
 
-    return cache.Client.DeleteOnNoError(
-        query.Exec(primaryConnection),
-        cache.KeyBase[cache.DeletedUserById] + act.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    )
+	updatedUser := user.Copy()
+	updatedUser.DeletedAt = time.Time{}
+	invalidateBasicUserDtoCache(user, updatedUser)
+
+	return nil
 }
 
 // TODO add audit (this method really cause a lot of problems)
@@ -242,7 +246,6 @@ func (r *repository) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Erro
 	}
 
     user, err := driver.FindUserByID(act.TargetUID)
-
     if err != nil {
         return err
     }
@@ -266,13 +269,15 @@ func (r *repository) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Erro
         newLogin, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnNoError(
-        execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + act.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    )
+    if err := execWithAudit(&audit, query); err != nil {
+		return err
+	}
+
+	updatedUser := user.Copy()
+	updatedUser.Login = newLogin
+	invalidateBasicUserDtoCache(user, updatedUser)
+
+	return nil
 }
 
 func (_ *repository) ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status {
@@ -309,13 +314,15 @@ func (_ *repository) ChangePassword(act *ActionDTO.Targeted, newPassword string)
         hashedPassword, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnNoError(
-        execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + act.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    )
+    if err := execWithAudit(&audit, query); err != nil {
+		return err
+	}
+
+	updatedUser := user.Copy()
+	updatedUser.Password = string(hashedPassword)
+	invalidateBasicUserDtoCache(user, updatedUser)
+
+	return nil
 }
 
 func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status {
@@ -333,7 +340,6 @@ func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Er
     }
 
     user, err := driver.FindUserByID(act.TargetUID)
-
     if err != nil {
         return err
     }
@@ -353,14 +359,15 @@ func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Er
         newRoles, act.TargetUID,
     )
 
-    return cache.Client.DeleteOnNoError(
-        execWithAudit(&audit, query),
-        cache.KeyBase[cache.UserById] + act.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + act.TargetUID,
-        cache.KeyBase[cache.UserRolesById] + act.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    )
+    if err := execWithAudit(&audit, query); err != nil {
+		return err
+	}
+
+	updatedUser := user.Copy()
+	updatedUser.Roles = newRoles
+	invalidateBasicUserDtoCache(user, updatedUser)
+
+	return nil
 }
 
 func (_ *repository) Activate(tk string) *Error.Status {
@@ -388,19 +395,31 @@ func (_ *repository) Activate(tk string) *Error.Status {
     filter := ActionDTO.NewTargeted(user.ID, user.ID, user.Roles)
 
     audit := newAudit(updatedOperation, filter, user)
+	var updatedUser *UserDTO.Basic
 
     for i, role := range user.Roles {
         if role == "unconfirmed_user" {
-            user.Roles[i] = "user"
+			updatedUser = user.Copy()
+            updatedUser.Roles[i] = "user"
             break
         }
     }
+
+	// This should be impossible, but additional check won't be redundant
+	if updatedUser == nil {
+		dbLogger.Error(
+			"Failed to activate user " + user.ID,
+			"User doesn't have role unconfirmed_user: " + strings.Join(user.Roles, ","),
+			nil,
+		)
+		return Error.StatusInternalError
+	}
 
     tx := newTransaction(
         newQuery(
             `UPDATE "user" SET roles = $1
              WHERE login = $2;`,
-             user.Roles, user.Login,
+             updatedUser.Roles, updatedUser.Login,
         ),
         newAuditQuery(&audit),
     )
@@ -408,14 +427,7 @@ func (_ *repository) Activate(tk string) *Error.Status {
         return err
     }
 
-    if err := cache.Client.Delete(
-        cache.KeyBase[cache.UserById] + filter.TargetUID,
-        cache.KeyBase[cache.AnyUserById] + filter.TargetUID,
-        cache.KeyBase[cache.UserByLogin] + user.Login,
-        cache.KeyBase[cache.AnyUserByLogin] + user.Login,
-    ); err != nil {
-        return Error.StatusInternalError
-    }
+	invalidateBasicUserDtoCache(user, updatedUser)
 
     return nil
 }

@@ -32,6 +32,19 @@ type Basic struct {
 	DeletedAt    time.Time `json:"deletedAt"`
 }
 
+// Creates new copy of this DTO, returns non-nil pointer to it
+func (dto *Basic) Copy() *Basic {
+	roles := make([]string, len(dto.Roles))
+	copy(roles, dto.Roles)
+	return &Basic{
+		ID: dto.ID,
+		Login: dto.Login,
+		Password: dto.Password,
+		Roles: roles,
+		DeletedAt: dto.DeletedAt,
+	}
+}
+
 func (dto *Basic) IsDeleted() bool {
     return !dto.DeletedAt.IsZero()
 }
