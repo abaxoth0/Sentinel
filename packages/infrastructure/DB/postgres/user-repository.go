@@ -203,14 +203,19 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 			ids[i] = user.ID
 		}
 		return Error.NewStatusError(
-			"Can't delete already deleted user(-s): " + strings.Join(ids, ", "),
+			util.Ternary(
+				newState == user.DeletedState,
+				"Can't delete already deleted user(-s): " + strings.Join(ids, ", "),
+				"Can't restore non-deleted user(-s): " + strings.Join(ids, ", "),
+			),
 			http.StatusConflict,
 		)
 	}
 
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
+	value := util.Ternary(newState == user.DeletedState, "NOW()", "NULL")
 	err = newQuery(
-		`UPDATE "user" SET deleted_at = NOW() WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
+		`UPDATE "user" SET deleted_at = `+value+` WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
 		UIDs,
 	).Exec(primaryConnection)
 	if err != nil {
