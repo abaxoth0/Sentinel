@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"net/http"
 	Error "sentinel/packages/common/errors"
+	"slices"
 	"strings"
 )
 
 /*
-    IMPORTANT
-    All kind of validation done in methods inside of this module is
-    related to transport layer, which means:
-    1) Validation checks only if value persist and it's not empty, cuz
-       all what transport layer should do - is just be intermediary between
-       user and business logic.
-    2) All other kind of validation must be done on business logic layer
-       e.g. - check if password or login doesn't include some unacceptable symbols
-       or if user ID has correct format.
+   IMPORTANT
+   All kind of validation done in methods inside of this module is
+   related to transport layer, which means:
+   1) Validation checks only if value persist and it's not empty, cuz
+      all what transport layer should do - is just be intermediary between
+      user and business logic.
+   2) All other kind of validation must be done on business logic layer
+      e.g. - check if password or login doesn't include some unacceptable symbols
+      or if user ID has correct format.
 */
 
 func missingRequestBodyFieldValue(field string) *Error.Status {
@@ -44,6 +45,9 @@ var InvalidNewPassword = invalidRequestBodyFieldValue("newPassword")
 
 var MissingRoles = missingRequestBodyFieldValue("roles")
 var InvalidRoles = invalidRequestBodyFieldValue("roles")
+
+var MissingUserIDs = missingRequestBodyFieldValue("IDs")
+var InvalidUserIDs = invalidRequestBodyFieldValue("IDs")
 
 var invalidField map[string]*Error.Status = map[string]*Error.Status{
     "login": InvalidLogin,
@@ -178,3 +182,16 @@ func (b *ChangeRolesBody) Validate() *Error.Status {
     return nil
 }
 
+type UserIDsBody struct {
+	IDs []string `json:"id"`
+}
+
+func (b *UserIDsBody) Validate() *Error.Status {
+	if b.IDs == nil || len(b.IDs) == 0 {
+		return MissingUserIDs
+	}
+	if slices.Contains(b.IDs, "") {
+		return InvalidUserIDs
+	}
+	return nil
+}

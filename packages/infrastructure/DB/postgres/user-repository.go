@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/util"
+	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
@@ -151,6 +153,100 @@ func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil
+}
+
+// TODO add audit
+func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UIDs []string) *Error.Status {
+	if newState != user.DeletedState && newState != user.NotDeletedState {
+		dbLogger.Panic(
+			"Invalid bulkStateUpdate call",
+			"newState must be either user.DeletedState, either user.NotDeletedState",
+			nil,
+		)
+		return Error.StatusInternalError
+	}
+
+    if err := act.ValidateRequesterUID(); err != nil {
+        return err
+    }
+
+	for _, uid := range UIDs {
+		if uid == act.RequesterUID {
+			return Error.NewStatusError(
+				util.Ternary(
+					newState == user.DeletedState,
+					"Can't self-delete in bulk operation",
+					"Can't self-restore in bulk operation",
+				),
+				http.StatusBadRequest,
+			)
+		}
+		if err := validation.UUID(uid); err != nil {
+			return err.ToStatus(
+				"One of user IDs has no value", // empty string or just a bunch of ' '
+				"Invalid user ID format (expected UUID): " + uid,
+			)
+		}
+	}
+
+	cond := util.Ternary(newState == user.DeletedState, "IS NOT", "IS")
+	deletedUsers, err := newQuery(
+		`SELECT id, login, password, roles, deleted_at FROM "user" WHERE id = ANY($1) and deleted_at `+cond+` NULL;`,
+		UIDs,
+	).CollectBasicUserDTO(primaryConnection)
+	if err != Error.StatusNotFound {
+		if err != nil  {
+			return err
+		}
+		ids := make([]string, len(deletedUsers))
+		for i, user := range deletedUsers {
+			ids[i] = user.ID
+		}
+		return Error.NewStatusError(
+			"Can't delete already deleted user(-s): " + strings.Join(ids, ", "),
+			http.StatusConflict,
+		)
+	}
+
+	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
+	err = newQuery(
+		`UPDATE "user" SET deleted_at = NOW() WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
+		UIDs,
+	).Exec(primaryConnection)
+	if err != nil {
+		return err
+	}
+
+	UIDs, logins := make([]string, len(deletedUsers)), make([]string, len(deletedUsers))
+
+	for i, user := range deletedUsers {
+		UIDs[i] = user.ID
+		logins[i] = user.Login
+	}
+
+	if err := cache.BulkInvalidateBasicUserDTO(UIDs, logins); err != nil {
+		dbLogger.Error(
+			"Failed to bulk invaldiate users cache",
+			err.Error(),
+			nil,
+		)
+	}
+
+	return nil
+}
+
+func (_ *repository) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Status {
+	if err := authz.User.SoftDeleteUser(false, act.RequesterRoles); err != nil {
+		return err
+	}
+	return driver.bulkStateUpdate(user.DeletedState, act, UIDs)
+}
+
+func (_ *repository) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status {
+	if err := authz.User.RestoreUser(act.RequesterRoles); err != nil {
+		return err
+	}
+	return driver.bulkStateUpdate(user.NotDeletedState, act, UIDs)
 }
 
 // TODO add audit (there are some problem with foreign keys)

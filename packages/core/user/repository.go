@@ -16,11 +16,11 @@ type Repository interface {
 type creator interface {
 	// Returns user id if error is nil, otherwise returns empty string and error
 	Create(login string, password string) (string, *Error.Status)
-
-	SearchUsers(act *ActionDTO.Basic, rawFilters []string, page int, pageSize int) ([]*UserDTO.Public, *Error.Status)
 }
 
 type seeker interface {
+	SearchUsers(act *ActionDTO.Basic, rawFilters []string, page int, pageSize int) ([]*UserDTO.Public, *Error.Status)
+
 	FindAnyUserByID(string) (*UserDTO.Basic, *Error.Status)
 
 	FindUserByID(string) (*UserDTO.Basic, *Error.Status)
@@ -54,5 +54,9 @@ type deleter interface {
 	Drop(act *ActionDTO.Targeted) *Error.Status
 
 	DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status
+
+	BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Status
+
+	BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status
 }
 

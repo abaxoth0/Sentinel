@@ -157,6 +157,58 @@ func Drop(ctx echo.Context) error {
     return handleUserDeleteUpdate(ctx, DB.Database.Drop, false, "Dropping user")
 }
 
+func BulkSoftDelete(ctx echo.Context) error {
+    reqMeta := request.GetMetadata(ctx)
+
+    controller.Logger.Info("Bulk soft deleting users...", reqMeta)
+
+    act, err := newBasicActionDTO(ctx)
+    if err != nil {
+		controller.Logger.Error("Bulk soft deleting users: FAILED", err.Error(), reqMeta)
+        return err
+    }
+
+	var body datamodel.UserIDsBody
+
+	if e := controller.BindAndValidate(ctx, &body); e != nil {
+		return e
+	}
+
+    if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
+        return controller.ConvertErrorStatusToHTTP(err)
+    }
+
+	controller.Logger.Info("Bulk soft deleting users: OK", reqMeta)
+
+    return ctx.NoContent(http.StatusOK)
+}
+
+func BulkRestore(ctx echo.Context) error {
+    reqMeta := request.GetMetadata(ctx)
+
+    controller.Logger.Info("Bulk restoring users...", reqMeta)
+
+    act, err := newBasicActionDTO(ctx)
+    if err != nil {
+		controller.Logger.Error("Bulk restoring users: FAILED", err.Error(), reqMeta)
+        return err
+    }
+
+	var body datamodel.UserIDsBody
+
+	if e := controller.BindAndValidate(ctx, &body); e != nil {
+		return e
+	}
+
+    if err := DB.Database.BulkRestore(act, body.IDs); err != nil {
+        return controller.ConvertErrorStatusToHTTP(err)
+    }
+
+	controller.Logger.Info("Bulk restoring users: OK", reqMeta)
+
+    return ctx.NoContent(http.StatusOK)
+}
+
 func DropAllDeleted(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
