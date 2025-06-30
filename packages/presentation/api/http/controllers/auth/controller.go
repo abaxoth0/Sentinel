@@ -27,7 +27,7 @@ func Login(ctx echo.Context) error {
 
 	controller.Logger.Info("Authenticating user '"+body.Login+"'...", reqMeta)
 
-    user, err := DB.Database.FindAnyUserByLogin(body.Login)
+    user, err := DB.Database.FindUserByLogin(body.Login)
     if err != nil {
 		controller.Logger.Error("Failed to authenticate user '"+body.Login+"'...", err.Error(), reqMeta)
 
