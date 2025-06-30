@@ -33,6 +33,8 @@ type client interface {
     DeletePattern(pattern string) *Error.Status
     // Do the same as DeletePattern, but more optimized for deleting a large amount of entries
     ProgressiveDeletePattern(pattern string) *Error.Status
+	// Same as Delete, but uses batch processing
+	ProgressiveDelete(keys []string) *Error.Status
 }
 
 var Client client = redis.New()
