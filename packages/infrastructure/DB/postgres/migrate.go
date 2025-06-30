@@ -1,11 +1,12 @@
 package postgres
 
 import (
+	"fmt"
 	"strconv"
 
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -48,6 +49,30 @@ func (m Migrate) step(n int) error {
 			nil,
 		)
 		return err
+	}
+
+	ver, dirty, err := migrator.Version()
+	if err != nil {
+		return err
+	}
+
+	if dirty {
+		dbLogger.Info(
+			fmt.Sprintf("Detected dirty database at version %d. Forcing clean state...", ver),
+			nil,
+		)
+		if err := migrator.Force(int(ver)); err != nil {
+			dbLogger.Panic(
+				fmt.Sprintf("Failed to force clean state at version %d", ver),
+				err.Error(),
+				nil,
+			)
+			return err
+		}
+		dbLogger.Info(
+			fmt.Sprintf("Forced clean state at version %d. ", ver),
+			nil,
+		)
 	}
 
 	dbLogger.Info("Applying migrations... (version change: "+version+")", nil)
