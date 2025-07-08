@@ -10,10 +10,11 @@ type Any interface {
 }
 
 type Public struct {
-    ID           string    `json:"id"`
-	Login        string    `json:"login"`
-	Roles        []string  `json:"roles"`
+    ID           string     `json:"id"`
+	Login        string     `json:"login"`
+	Roles        []string   `json:"roles"`
 	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
+	Version 	 int 	    `json:"version"`
 }
 
 func (dto *Public) IsDeleted() bool {
@@ -30,6 +31,7 @@ type Basic struct {
 	Password     string    `json:"password"`
 	Roles        []string  `json:"roles"`
 	DeletedAt    time.Time `json:"deletedAt"`
+	Version 	 int 	   `json:"version"`
 }
 
 // Creates new copy of this DTO, returns non-nil pointer to it
@@ -60,6 +62,7 @@ type Extended struct {
 	Roles        []string  `json:"roles"`
 	DeletedAt    time.Time `json:"deletedAt"`
     CreatedAt    time.Time `json:"createdAt"`
+	Version 	 int 	   `json:"version"`
 }
 
 func (dto *Extended) IsDeleted() bool {
@@ -86,6 +89,7 @@ type Audit struct {
 	Roles            []string  `json:"roles"`
 	DeletedAt        time.Time `json:"deletedAt"`
     ChangedAt        time.Time `json:"changedAt"`
+	Version 	 	 int 	   `json:"version"`
 }
 
 func (dto *Audit) IsDeleted() bool {
@@ -93,8 +97,10 @@ func (dto *Audit) IsDeleted() bool {
 }
 
 type Payload struct {
-	ID    string   `json:"id"`
-	Login string   `json:"login"`
-	Roles []string `json:"roles"`
+	ID    		string   `json:"id"`
+	Login 		string   `json:"login"`
+	Roles 		[]string `json:"roles"`
+	Version 	int 	 `json:"version"`
+	SessionID 	string 	 `json:"session-id"`
 }
 

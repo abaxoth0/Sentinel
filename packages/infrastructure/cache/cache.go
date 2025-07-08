@@ -14,9 +14,12 @@ import (
 //
 // For example, full cache key must look like that: user_id:2384
 
-const UserKeyPrefix string = "user_"
-const DeletedUserKeyPrefix string = "sd_user_"
-const AnyUserKeyPrefix string = "any_user_"
+const (
+	UserKeyPrefix 		 = "user_"
+	DeletedUserKeyPrefix = "sd_user_"
+	AnyUserKeyPrefix 	 = "any_user_"
+	SessionKeyPrefix 	 = "session_"
+)
 
 type client interface {
     Connect()

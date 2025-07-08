@@ -1,11 +1,17 @@
 package cache
 
-var AnyUserById = "any_user_by_id"
-var UserById = "user_by_id"
-var DeletedUserById = "deleted_user_by_id"
-var UserRolesById = "user_roles_by_id"
-var UserByLogin = "user_by_login"
-var AnyUserByLogin = "any_user_by_login"
+const (
+	AnyUserById = "any_user_by_id"
+	UserById = "user_by_id"
+	DeletedUserById = "deleted_user_by_id"
+	UserRolesById = "user_roles_by_id"
+	UserByLogin = "user_by_login"
+	AnyUserByLogin = "any_user_by_login"
+
+	UserVersionByID = "user_version_by_id"
+
+	SessionByID = "session_by_id"
+)
 
 var KeyBase = map[string]string {
     AnyUserById: AnyUserKeyPrefix + "id:",
@@ -14,5 +20,9 @@ var KeyBase = map[string]string {
     UserRolesById: UserKeyPrefix + "roles:",
     UserByLogin: UserKeyPrefix + "login:",
     AnyUserByLogin: AnyUserKeyPrefix + "login:",
+
+	UserVersionByID: UserKeyPrefix + "version:",
+
+	SessionByID: SessionKeyPrefix + "id:",
 }
 

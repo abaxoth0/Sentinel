@@ -14,6 +14,7 @@ import (
 	datamodel "sentinel/packages/presentation/data"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -29,13 +30,10 @@ func Login(ctx echo.Context) error {
 
     user, err := DB.Database.FindUserByLogin(body.Login)
     if err != nil {
-		controller.Logger.Error("Failed to authenticate user '"+body.Login+"'...", err.Error(), reqMeta)
+		controller.Logger.Error("Failed to authenticate user '"+body.Login, err.Error(), reqMeta)
 
         if err.Side() == Error.ClientSide {
-            return echo.NewHTTPError(
-                authn.InvalidAuthCreditinals.Status(),
-                authn.InvalidAuthCreditinals.Error(),
-            )
+            return controller.ConvertErrorStatusToHTTP(authn.InvalidAuthCreditinals)
         }
         return controller.ConvertErrorStatusToHTTP(err)
     }
@@ -45,10 +43,85 @@ func Login(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
+	// Trying to update existing session
+	if tk, err := controller.GetRefreshToken(ctx); err == nil {
+		ok := true
+
+		controller.Logger.Info("Updating user session...", reqMeta)
+
+		payload, err := UserMapper.PayloadFromClaims(tk.Claims.(jwt.MapClaims))
+		if err != nil {
+			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
+			ok = false
+		}
+
+		accessToken, refreshToken, err := updateSession(ctx, user, payload)
+		if err != nil {
+			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
+			ok = false
+		}
+
+		if ok {
+			controller.Logger.Info("Updating user session: OK", reqMeta)
+
+			ctx.SetCookie(newAuthCookie(refreshToken))
+
+			controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
+
+			return ctx.JSON(
+				http.StatusOK,
+				datamodel.TokenResponseBody{
+					Message: "Пользователь успешно авторизован",
+					AccessToken: accessToken.String(),
+					ExpiresIn: int(accessToken.TTL()) / 1000,
+				},
+			)
+		}
+	}
+
+	deviceID, browser, err := getDeviceIDAndBrowser(ctx)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	// If session with this device is already exists and user tries to login from the same browser
+	// (this is guard against cases when auth cookie was lost for some reasons)
+	session, err := DB.Database.GetSessionByDeviceAndUserID(deviceID, user.ID)
+	if err == nil && session.Browser == browser {
+		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
+		controller.Logger.Info("Updating user session...", reqMeta)
+		accessToken, refreshToken, err := updateSession(ctx, user, &UserDTO.Payload{
+			ID: user.ID,
+			Login: user.Login,
+			Roles: user.Roles,
+			SessionID: session.ID,
+			Version: user.Version,
+		})
+
+		if err == nil {
+			controller.Logger.Info("Updating user session: OK", reqMeta)
+
+			ctx.SetCookie(newAuthCookie(refreshToken))
+
+			controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
+
+			return ctx.JSON(
+				http.StatusOK,
+				datamodel.TokenResponseBody{
+					Message: "Пользователь успешно авторизован",
+					AccessToken: accessToken.String(),
+					ExpiresIn: int(accessToken.TTL()) / 1000,
+				},
+			)
+		}
+	}
+
     payload := &UserDTO.Payload{
         ID: user.ID,
         Login: user.Login,
         Roles: user.Roles,
+		SessionID: uuid.NewString(),
+		Version: user.Version,
     }
 
     accessToken, refreshToken, err := token.NewAuthTokens(payload)
@@ -56,6 +129,21 @@ func Login(ctx echo.Context) error {
 		controller.Logger.Error("Failed to authenticate user '"+body.Login+"'", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
+
+	session, err = createSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
+	if err != nil {
+		controller.Logger.Error("Failed to create session for user " + user.ID, err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	if err := DB.Database.SaveSession(session); err != nil {
+		e := Error.NewStatusError(
+			"Failed to save session",
+			http.StatusInternalServerError,
+		)
+		controller.Logger.Error("Failed to login", err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(e)
+	}
 
     ctx.SetCookie(newAuthCookie(refreshToken))
 
@@ -74,28 +162,38 @@ func Login(ctx echo.Context) error {
 func Logout(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
-    authCookie, err := controller.GetAuthCookie(ctx)
-    if err != nil {
-        return err
+    authCookie, e := controller.GetAuthCookie(ctx)
+    if e != nil {
+        return e
     }
 
-	tk, e := token.ParseSingedToken(authCookie.Value, config.Secret.RefreshTokenPublicKey)
-	if e != nil {
-		controller.Logger.Error("Failed to parse refresh token", e.Error(), reqMeta)
-		return controller.ConvertErrorStatusToHTTP(e)
+	refreshToken, err := controller.GetRefreshToken(ctx)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	uid, er := tk.Claims.GetSubject()
-	if er != nil {
-		controller.Logger.Error("Invalid refresh token claims", er.Error(), reqMeta)
-		return Error.StatusInternalError
+	claims := refreshToken.Claims.(jwt.MapClaims)
+
+	payload, err := UserMapper.PayloadFromClaims(claims)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	controller.Logger.Info("User '"+uid+"' logging out...", reqMeta)
+	act, err := UserMapper.TargetedActionDTOFromClaims(payload.ID, claims)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	controller.Logger.Info("Logoutting user "+payload.ID+"...", reqMeta)
+
+	if err := DB.Database.RevokeSession(act, payload.SessionID); err != nil {
+		controller.Logger.Error("Failed to logout user "+payload.ID, err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
 
     controller.DeleteCookie(ctx, authCookie)
 
-	controller.Logger.Info("User '"+uid+"' logging out: OK", reqMeta)
+	controller.Logger.Info("Logoutting user "+payload.ID+": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -111,17 +209,25 @@ func Refresh(ctx echo.Context) error {
         return controller.HandleTokenError(ctx, err)
     }
 
-    payload, err := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(jwt.MapClaims))
+	payload, err := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(jwt.MapClaims))
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	user, err := DB.Database.FindUserByID(payload.ID)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	controller.Logger.Info("Updating user session...", reqMeta)
+
+	accessToken, refreshToken, err := updateSession(ctx, user, payload)
     if err != nil {
-		controller.Logger.Error("Failed to refresh auth tokens", err.Error(), reqMeta)
+		controller.Logger.Error("Failed to update user session", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    accessToken, refreshToken, err := token.NewAuthTokens(payload)
-    if err != nil {
-		controller.Logger.Error("Failed to refresh auth tokens", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
-    }
+	controller.Logger.Info("Updating user session: OK", reqMeta)
 
     ctx.SetCookie(newAuthCookie(refreshToken))
 

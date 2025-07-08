@@ -8,7 +8,6 @@ import (
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
 	datamodel "sentinel/packages/presentation/data"
-
 	"github.com/labstack/echo/v4"
 )
 

@@ -198,7 +198,8 @@ func (c *connector) postConnection() error {
             password CHAR(60) NOT NULL,
             roles VARCHAR(32)[] NOT NULL,
             deleted_at TIMESTAMP,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+			version INT DEFAULT 1
         );`,
     ); err != nil {
         return err
@@ -216,8 +217,33 @@ func (c *connector) postConnection() error {
             password CHAR(60) NOT NULL,
             roles VARCHAR(32)[] NOT NULL,
             deleted_at TIMESTAMP,
-            changed_at TIMESTAMP NOT NULL
+            changed_at TIMESTAMP NOT NULL,
+			version INT DEFAULT 1
         );`,
+    ); err != nil {
+        return err
+    }
+
+    if err := c.exec(
+		primaryConnection,
+		"Verifying that table 'user_session' exists",
+		`CREATE TABLE IF NOT EXISTS "user_session" (
+			id                  UUID PRIMARY KEY,
+			user_id             UUID REFERENCES "user"(id) ON DELETE CASCADE,
+			user_agent          TEXT NOT NULL,
+			ip_address          INET,
+			device_id           TEXT,
+			device_type         TEXT NOT NULL,
+			os                  TEXT NOT NULL,
+			os_version          TEXT,
+			browser             TEXT NOT NULL,
+			browser_version     TEXT,
+			location            TEXT,
+			created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+			last_used_at        TIMESTAMP,
+			expires_at          TIMESTAMP NOT NULL,
+			revoked             BOOL NOT NULL DEFAULT FALSE
+    	);`,
     ); err != nil {
         return err
     }

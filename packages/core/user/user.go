@@ -14,15 +14,12 @@ type Property core.EntityProperty
 
 const (
     IdProperty Property = "id"
-    LoginProperty Property = "login"
-    RolesProperty Property = "roles"
-    PasswordProperty Property = "password"
-    DeletedAtProperty Property = "deleted_at"
+    LoginProperty 		= "login"
+    RolesProperty 		= "roles"
+    PasswordProperty 	= "password"
+    DeletedAtProperty 	= "deleted_at"
+	VersionProperty 	= "version"
 )
-
-func (p Property) Unwrap() core.EntityProperty {
-	return core.EntityProperty(p)
-}
 
 // Represents user deletion state, might be:
 // deleted (deletedState), not deleted (notDeletedState), any (anyState)

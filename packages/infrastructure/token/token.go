@@ -30,17 +30,20 @@ func (t *SignedToken) TTL() int64 {
 }
 
 const (
-    ServiceIdClaimsKey string = "iss"
-    UserIdClaimsKey string = "sub"
-    IssuedAtClaimsKey string = "iat"
-    ExpiresAtClaimsKey string = "exp"
-    UserRolesClaimsKey string = "roles"
-    UserLoginClaimsKey string = "login"
+    SessionIdClaimsKey 	= "jti"
+    ServiceIdClaimsKey 	= "iss"
+    UserIdClaimsKey 	= "sub"
+    IssuedAtClaimsKey 	= "iat"
+    ExpiresAtClaimsKey 	= "exp"
+    UserRolesClaimsKey 	= "roles"
+    UserLoginClaimsKey 	= "login"
+	VersionClaimsKey 	= "version"
 )
 
 type Claims struct {
-    Roles []string `json:"roles"`
-    Login string `json:"login"`
+    Roles 		[]string `json:"roles"`
+    Login 		string 	 `json:"login"`
+	Version 	int 	 `json:"version"`
 
     jwt.RegisteredClaims
 }
@@ -54,7 +57,9 @@ func newSignedToken(
     claims := Claims{
         Login: payload.Login,
         Roles: payload.Roles,
+		Version: payload.Version,
         RegisteredClaims: jwt.RegisteredClaims{
+			ID: payload.SessionID,
             Issuer:    config.App.ServiceID,
             IssuedAt:  now,
             NotBefore: now,

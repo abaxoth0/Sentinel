@@ -105,7 +105,7 @@ func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
     audit := newAudit(deleteOperation, act, user)
 
     query := newQuery(
-        `UPDATE "user" SET deleted_at = $1
+        `UPDATE "user" SET deleted_at = $1, version = version + 1
         WHERE id = $2 AND deleted_at IS NULL;`,
         // deleted_at set manualy instead of using NOW()
         // cuz changed_at and deleted_at should be synchronized
@@ -118,6 +118,7 @@ func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
 
 	updatedUser := user.Copy()
 	updatedUser.DeletedAt = audit.ChangedAt
+	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil
@@ -140,7 +141,7 @@ func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
     audit := newAudit(restoreOperation, act, user)
 
     query := newQuery(
-        `UPDATE "user" SET deleted_at = NULL
+        `UPDATE "user" SET deleted_at = NULL, version = version + 1
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
         act.TargetUID,
     )
@@ -150,6 +151,7 @@ func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
 
 	updatedUser := user.Copy()
 	updatedUser.DeletedAt = time.Time{}
+	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil
@@ -215,7 +217,7 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
 	value := util.Ternary(newState == user.DeletedState, "NOW()", "NULL")
 	err = newQuery(
-		`UPDATE "user" SET deleted_at = `+value+` WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
+		`UPDATE "user" SET deleted_at = `+value+`, version = version + 1 WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
 		UIDs,
 	).Exec(primaryConnection)
 	if err != nil {
@@ -365,7 +367,7 @@ func (r *repository) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Erro
     audit := newAudit(updatedOperation, act, user)
 
     query := newQuery(
-        `UPDATE "user" SET login = $1
+        `UPDATE "user" SET login = $1, version = version + 1
         WHERE id = $2;`,
         newLogin, act.TargetUID,
     )
@@ -376,6 +378,7 @@ func (r *repository) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Erro
 
 	updatedUser := user.Copy()
 	updatedUser.Login = newLogin
+	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil
@@ -410,7 +413,7 @@ func (_ *repository) ChangePassword(act *ActionDTO.Targeted, newPassword string)
     audit := newAudit(updatedOperation, act, user)
 
     query := newQuery(
-        `UPDATE "user" SET password = $1
+        `UPDATE "user" SET password = $1, version = version + 1
         WHERE id = $2;`,
         hashedPassword, act.TargetUID,
     )
@@ -421,6 +424,7 @@ func (_ *repository) ChangePassword(act *ActionDTO.Targeted, newPassword string)
 
 	updatedUser := user.Copy()
 	updatedUser.Password = string(hashedPassword)
+	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil
@@ -455,7 +459,7 @@ func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Er
     audit := newAudit(updatedOperation, act, user)
 
     query := newQuery(
-        `UPDATE "user" SET roles = $1
+        `UPDATE "user" SET roles = $1, version = version + 1
         WHERE id = $2;`,
         newRoles, act.TargetUID,
     )
@@ -466,6 +470,7 @@ func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Er
 
 	updatedUser := user.Copy()
 	updatedUser.Roles = newRoles
+	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil
@@ -502,6 +507,7 @@ func (_ *repository) Activate(tk string) *Error.Status {
         if role == "unconfirmed_user" {
 			updatedUser = user.Copy()
             updatedUser.Roles[i] = "user"
+			updatedUser.Version++
             break
         }
     }
@@ -518,7 +524,7 @@ func (_ *repository) Activate(tk string) *Error.Status {
 
     tx := newTransaction(
         newQuery(
-            `UPDATE "user" SET roles = $1
+            `UPDATE "user" SET roles = $1, version = version + 1
              WHERE login = $2;`,
              updatedUser.Roles, updatedUser.Login,
         ),

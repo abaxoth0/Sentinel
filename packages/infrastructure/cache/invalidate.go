@@ -3,7 +3,7 @@ package cache
 import Error "sentinel/packages/common/errors"
 
 func BulkInvalidateBasicUserDTO(UIDs, logins []string) *Error.Status {
-	keys := make([]string, 0, len(UIDs) * 4 + len(logins) * 2)
+	keys := make([]string, 0, len(UIDs) * 5 + len(logins) * 2)
 
 	for _, id := range UIDs {
 		keys = append(keys,
@@ -11,6 +11,7 @@ func BulkInvalidateBasicUserDTO(UIDs, logins []string) *Error.Status {
 			KeyBase[UserById] + id,
 			KeyBase[DeletedUserById] + id,
 			KeyBase[UserRolesById] + id,
+			KeyBase[UserVersionByID] + id,
 		)
 	}
 

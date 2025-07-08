@@ -25,6 +25,10 @@ const (
     ServerSide errorSide = "server"
 )
 
+const (
+	Desync int = 490
+)
+
 // Side returns whether the status represents a client or server error.
 //
 // Returns ClientSide for status codes 400-499.

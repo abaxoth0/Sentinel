@@ -264,3 +264,36 @@ func (_ *seeker) GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status) {
     return roles, nil
 }
 
+func (_ *seeker) GetUserVersion(UID string) (int, *Error.Status) {
+	cacheKey := cache.KeyBase[cache.UserVersionByID] + UID
+
+	if cachedVersion, hit := cache.Client.Get(cacheKey); hit {
+		ver, err := strconv.Atoi(cachedVersion)
+		if err != nil {
+			cache.Client.Delete(cacheKey)
+		} else {
+			return ver, nil
+		}
+	}
+
+	query := newQuery(
+		`SELECT version FROM "user" WHERE id = $1 AND deleted_at IS NULL;`,
+		UID,
+	)
+
+	scan, err := query.Row(replicaConnection)
+	if err != nil {
+		return 0, err
+	}
+
+	var version int
+
+	if err := scan(&version); err != nil {
+		return 0, err
+	}
+
+	cache.Client.Set(cacheKey, version)
+
+	return version, nil
+}
+

@@ -34,6 +34,8 @@ type seeker interface {
 	IsLoginAvailable(login string) bool
 
     GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status)
+
+	GetUserVersion(UID string) (int, *Error.Status)
 }
 
 type updater interface {

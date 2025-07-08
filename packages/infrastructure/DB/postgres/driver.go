@@ -8,6 +8,7 @@ type postgers struct {
     connector
     seeker
     repository
+	session
 }
 
 var driver *postgers

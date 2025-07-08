@@ -5,14 +5,17 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"sentinel/packages/common/config"
 	pbencoding "sentinel/packages/common/encoding/protobuf"
 	Error "sentinel/packages/common/errors"
+	SessionDTO "sentinel/packages/core/session/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/cache"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -81,10 +84,12 @@ func(q *query) runSQL(conType connectionType, mode queryMode) (pgx.Row, pgx.Rows
 				args[i] = strconv.FormatInt(a, 10)
 			case int32:
 				args[i] = strconv.FormatInt(int64(a), 10)
+			case time.Time:
+				args[i] = a.String()
 			}
 		}
 
-		dbLogger.Debug("Running query:\n" + q.sql + "\nQuery args: " + strings.Join(args, "; "), nil)
+		dbLogger.Debug("Running query:\n" + q.sql + "\n * Query args: " + strings.Join(args, "; "), nil)
 	}
 
 	switch mode {
@@ -168,7 +173,7 @@ func (q *query) Exec(conType connectionType) (*Error.Status) {
 }
 
 // TODO add cache
-func collect[T UserDTO.Any](
+func collect[T any](
 	conType connectionType,
 	q *query,
 	collectFunc func(pgx.CollectableRow) (T, error),
@@ -261,7 +266,6 @@ func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.
     }
 
     scan, err := q.Row(conType)
-
     if err != nil {
         return nil, err
     }
@@ -277,7 +281,6 @@ func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.
         &dto.Roles,
         &deletedAt,
     )
-
     if err != nil {
         return nil, err
     }
@@ -298,5 +301,51 @@ func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.
 	}
 
     return dto, nil
+}
+
+// TODO add cache
+func (q *query) FullSessionDTO(conType connectionType) (*SessionDTO.Full, *Error.Status) {
+	scan, err := q.Row(conType)
+
+	if err != nil {
+		return nil, err
+	}
+
+	dto := new(SessionDTO.Full)
+
+	var createdAt sql.NullTime
+	var lastUsedAt sql.NullTime
+	var expiresAt sql.NullTime
+	var addr net.IP
+
+	scan(
+		&dto.ID,
+		&dto.UserID,
+		&dto.UserAgent,
+		&addr,
+		&dto.DeviceID,
+		&dto.DeviceType,
+		&dto.OS,
+		&dto.OSVersion,
+		&dto.Browser,
+		&dto.BrowserVersion,
+		&dto.Location,
+		&createdAt,
+		&lastUsedAt,
+		&expiresAt,
+		&dto.Revoked,
+	)
+	if createdAt.Valid {
+		dto.CreatedAt = createdAt.Time
+	}
+	if lastUsedAt.Valid {
+		dto.LastUsedAt = lastUsedAt.Time
+	}
+	if expiresAt.Valid {
+		dto.ExpiresAt = expiresAt.Time
+	}
+	dto.IpAddress = addr.To4().String()
+
+	return dto, nil
 }
 
