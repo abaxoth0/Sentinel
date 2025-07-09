@@ -45,6 +45,7 @@ func Create() *echo.Echo {
 	router.Use(request.Middleware)
     router.Use(middleware.CORSWithConfig(cors))
     router.Use(catchError)
+	router.Use(preventUserDesync)
     // router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))
 
     if config.Debug.Enabled {

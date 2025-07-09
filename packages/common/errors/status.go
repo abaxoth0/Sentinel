@@ -18,15 +18,32 @@ func (e *Status) Status() int {
     return e.status
 }
 
+const (
+	Desync int = 490
+)
+
+var customStatusesTexts map[int]string = map[int]string{
+	Desync: "Data Desynchronization",
+}
+
+// Do the same as http.StatusText(), but also supports custom status codes
+func StatusText(status int) string {
+	text := http.StatusText(status)
+	if text == "" {
+		var ok bool
+		text, ok = customStatusesTexts[status]
+		if !ok {
+			return "Unknown Error"
+		}
+	}
+	return text
+}
+
 type errorSide string
 
 const (
     ClientSide errorSide = "client"
     ServerSide errorSide = "server"
-)
-
-const (
-	Desync int = 490
 )
 
 // Side returns whether the status represents a client or server error.

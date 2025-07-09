@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	Error "sentinel/packages/common/errors"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 
@@ -24,7 +25,7 @@ func handleHttpError(err error, ctx echo.Context) {
         message = e.Message.(string)
     }
 
-    status := http.StatusText(code)
+    status := Error.StatusText(code)
 
 	reqMeta := request.GetMetadata(ctx)
 
