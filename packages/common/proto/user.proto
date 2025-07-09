@@ -10,6 +10,7 @@ message PublicUserDTO {
   string login = 2;
   repeated string roles = 3;
   google.protobuf.Timestamp deleted_at = 4;
+  uint32 version = 5;
 }
 
 message BasicUserDTO {
@@ -18,6 +19,7 @@ message BasicUserDTO {
   string password = 3;
   repeated string roles = 4;
   google.protobuf.Timestamp deleted_at = 5;
+  uint32 version = 6;
 }
 
 message ExtendedUserDTO {
@@ -27,6 +29,7 @@ message ExtendedUserDTO {
   repeated string roles = 4;
   google.protobuf.Timestamp deleted_at = 5;
   google.protobuf.Timestamp created_at = 6;
+  uint32 version = 7;
 }
 
 message AuditUserDTO {
@@ -39,5 +42,6 @@ message AuditUserDTO {
   repeated string roles = 7;
   google.protobuf.Timestamp deleted_at = 8;
   google.protobuf.Timestamp changed_at = 9;
+  uint32 version = 10;
 }
 

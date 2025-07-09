@@ -44,7 +44,9 @@ func Login(ctx echo.Context) error {
     }
 
 	// Trying to update existing session
-	if tk, err := controller.GetRefreshToken(ctx); err == nil {
+	if tk, err := controller.GetRefreshToken(ctx); err != nil {
+		controller.Logger.Error("Failed to get refresh token from request", err.Error(), reqMeta)
+	} else {
 		ok := true
 
 		controller.Logger.Info("Updating user session...", reqMeta)
@@ -55,7 +57,7 @@ func Login(ctx echo.Context) error {
 			ok = false
 		}
 
-		accessToken, refreshToken, err := updateSession(ctx, user, payload)
+		accessToken, refreshToken, err := updateSession(ctx, nil, user, payload)
 		if err != nil {
 			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
 			ok = false
@@ -90,14 +92,14 @@ func Login(ctx echo.Context) error {
 	if err == nil && session.Browser == browser {
 		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
 		controller.Logger.Info("Updating user session...", reqMeta)
-		accessToken, refreshToken, err := updateSession(ctx, user, &UserDTO.Payload{
+
+		accessToken, refreshToken, err := updateSession(ctx, session, user, &UserDTO.Payload{
 			ID: user.ID,
 			Login: user.Login,
 			Roles: user.Roles,
 			SessionID: session.ID,
 			Version: user.Version,
 		})
-
 		if err == nil {
 			controller.Logger.Info("Updating user session: OK", reqMeta)
 
@@ -221,7 +223,7 @@ func Refresh(ctx echo.Context) error {
 
 	controller.Logger.Info("Updating user session...", reqMeta)
 
-	accessToken, refreshToken, err := updateSession(ctx, user, payload)
+	accessToken, refreshToken, err := updateSession(ctx, nil, user, payload)
     if err != nil {
 		controller.Logger.Error("Failed to update user session", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)

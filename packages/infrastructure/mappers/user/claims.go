@@ -78,7 +78,9 @@ func PayloadFromClaims(claims jwt.MapClaims) (*UserDTO.Payload, *Error.Status) {
             ID:    claims[token.UserIdClaimsKey].(string),
             Login: claims[token.UserLoginClaimsKey].(string),
             Roles: roles,
-			Version: int(claims[token.VersionClaimsKey].(float64)),
+			// JWT library uses map[string]interface{} for claims when parsing, and JSON numbers default to float64 in Go.
+			// So it's float64, even if in token.Claims it's uint32.
+			Version: uint32(claims[token.VersionClaimsKey].(float64)),
         }, nil
     })
 }

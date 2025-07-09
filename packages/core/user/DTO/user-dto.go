@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+/*
+	!!!!! ACHTUNG !!!!!
+	If you will change any of this DTOs then don't forget to change protobuf models, (./packages/common/proto/user.proto)
+	cuz they are used for cache, so if you won't updated them this will lead to cache data loss and may lead to undefined behaviour.
+	Also don't forget to update protobuf encoder (./packages/common/encoder/protobuf.go).
+*/
+
 type Any interface {
     IsDeleted() bool
 }
@@ -14,7 +21,7 @@ type Public struct {
 	Login        string     `json:"login"`
 	Roles        []string   `json:"roles"`
 	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
-	Version 	 int 	    `json:"version"`
+	Version 	 uint32	    `json:"version"`
 }
 
 func (dto *Public) IsDeleted() bool {
@@ -31,7 +38,7 @@ type Basic struct {
 	Password     string    `json:"password"`
 	Roles        []string  `json:"roles"`
 	DeletedAt    time.Time `json:"deletedAt"`
-	Version 	 int 	   `json:"version"`
+	Version 	 uint32	   `json:"version"`
 }
 
 // Creates new copy of this DTO, returns non-nil pointer to it
@@ -62,7 +69,7 @@ type Extended struct {
 	Roles        []string  `json:"roles"`
 	DeletedAt    time.Time `json:"deletedAt"`
     CreatedAt    time.Time `json:"createdAt"`
-	Version 	 int 	   `json:"version"`
+	Version 	 uint32	   `json:"version"`
 }
 
 func (dto *Extended) IsDeleted() bool {
@@ -89,7 +96,7 @@ type Audit struct {
 	Roles            []string  `json:"roles"`
 	DeletedAt        time.Time `json:"deletedAt"`
     ChangedAt        time.Time `json:"changedAt"`
-	Version 	 	 int 	   `json:"version"`
+	Version 	 	 uint32	   `json:"version"`
 }
 
 func (dto *Audit) IsDeleted() bool {
@@ -100,7 +107,7 @@ type Payload struct {
 	ID    		string   `json:"id"`
 	Login 		string   `json:"login"`
 	Roles 		[]string `json:"roles"`
-	Version 	int 	 `json:"version"`
+	Version 	uint32	 `json:"version"`
 	SessionID 	string 	 `json:"session-id"`
 }
 

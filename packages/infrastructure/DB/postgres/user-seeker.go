@@ -142,7 +142,7 @@ func (s *seeker) findUserBy(
     }
 
     query := newQuery(
-        `SELECT id, login, password, roles, deleted_at
+        `SELECT id, login, password, roles, deleted_at, version
         FROM "user"
         WHERE ` + string(conditionProperty) + ` = $1;`,
         conditionValue,
@@ -253,9 +253,6 @@ func (_ *seeker) GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status) {
     roles := []string{}
 
     if e := scan(&roles); e != nil {
-        if e == Error.StatusNotFound {
-            return nil, Error.StatusNotFound
-        }
         return nil, e
     }
 
@@ -264,7 +261,7 @@ func (_ *seeker) GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status) {
     return roles, nil
 }
 
-func (_ *seeker) GetUserVersion(UID string) (int, *Error.Status) {
+func (_ *seeker) GetUserVersion(UID string) (uint32, *Error.Status) {
 	cacheKey := cache.KeyBase[cache.UserVersionByID] + UID
 
 	if cachedVersion, hit := cache.Client.Get(cacheKey); hit {
@@ -272,7 +269,7 @@ func (_ *seeker) GetUserVersion(UID string) (int, *Error.Status) {
 		if err != nil {
 			cache.Client.Delete(cacheKey)
 		} else {
-			return ver, nil
+			return uint32(ver), nil
 		}
 	}
 
@@ -286,7 +283,7 @@ func (_ *seeker) GetUserVersion(UID string) (int, *Error.Status) {
 		return 0, err
 	}
 
-	var version int
+	var version uint32
 
 	if err := scan(&version); err != nil {
 		return 0, err

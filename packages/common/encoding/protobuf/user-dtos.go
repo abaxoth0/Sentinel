@@ -54,6 +54,7 @@ func MarshallPublicUserDTO(dto *UserDTO.Public) ([]byte, error) {
 		Login: dto.Login,
 		Roles: dto.Roles,
 		DeletedAt: timestamppb.New(*dto.DeletedAt),
+		Version: dto.Version,
 	})
 }
 
@@ -68,6 +69,7 @@ func UnmarshallPublicUserDTO(rawDTO []byte) (*UserDTO.Public, error) {
 		Login: dto.Login,
 		Roles: dto.Roles,
 		DeletedAt: &deletedAt,
+		Version: dto.Version,
 	}, nil
 }
 
@@ -78,6 +80,7 @@ func MarshallBasicUserDTO(dto *UserDTO.Basic) ([]byte, error) {
 		Password: dto.Password,
 		Roles: dto.Roles,
 		DeletedAt: timestamppb.New(dto.DeletedAt),
+		Version: dto.Version,
 	})
 }
 
@@ -92,6 +95,7 @@ func UnmarshallBasicUserDTO(rawDTO []byte) (*UserDTO.Basic, error) {
 		Password: dto.Password,
 		Roles: dto.Roles,
 		DeletedAt: dto.DeletedAt.AsTime(),
+		Version: dto.Version,
 	}, nil
 }
 
@@ -103,6 +107,7 @@ func MarshallExtendedUserDTO(dto *UserDTO.Extended) ([]byte, error) {
 		Roles: dto.Roles,
 		DeletedAt: timestamppb.New(dto.DeletedAt),
 		CreatedAt: timestamppb.New(dto.CreatedAt),
+		Version: dto.Version,
 	})
 }
 
@@ -118,6 +123,7 @@ func UnmarshallExtendedUserDTO(rawDTO []byte) (*UserDTO.Extended, error) {
 		Roles: dto.Roles,
 		DeletedAt: dto.DeletedAt.AsTime(),
 		CreatedAt: dto.CreatedAt.AsTime(),
+		Version: dto.Version,
 	}, nil
 }
 
@@ -132,6 +138,7 @@ func MarshallAuditUserDTO(dto *UserDTO.Audit) ([]byte, error) {
 		Roles: dto.Roles,
 		DeletedAt: timestamppb.New(dto.DeletedAt),
 		ChangedAt: timestamppb.New(dto.ChangedAt),
+		Version: dto.Version,
 	})
 }
 
@@ -150,6 +157,7 @@ func UnmarshallAuditUserDTO(rawDTO []byte) (*UserDTO.Audit, error) {
 		Roles: dto.Roles,
 		DeletedAt: dto.DeletedAt.AsTime(),
 		ChangedAt: dto.ChangedAt.AsTime(),
+		Version: dto.Version,
 	}, nil
 }
 

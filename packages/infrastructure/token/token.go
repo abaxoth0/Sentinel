@@ -43,7 +43,7 @@ const (
 type Claims struct {
     Roles 		[]string `json:"roles"`
     Login 		string 	 `json:"login"`
-	Version 	int 	 `json:"version"`
+	Version 	uint32 	 `json:"version"`
 
     jwt.RegisteredClaims
 }

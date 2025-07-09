@@ -35,7 +35,7 @@ type seeker interface {
 
     GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status)
 
-	GetUserVersion(UID string) (int, *Error.Status)
+	GetUserVersion(UID string) (uint32, *Error.Status)
 }
 
 type updater interface {

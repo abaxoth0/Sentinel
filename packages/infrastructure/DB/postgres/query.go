@@ -280,6 +280,7 @@ func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.
         &dto.Password,
         &dto.Roles,
         &deletedAt,
+		&dto.Version,
     )
     if err != nil {
         return nil, err

@@ -28,6 +28,7 @@ type PublicUserDTO struct {
 	Login         string                 `protobuf:"bytes,2,opt,name=login,proto3" json:"login,omitempty"`
 	Roles         []string               `protobuf:"bytes,3,rep,name=roles,proto3" json:"roles,omitempty"`
 	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	Version       uint32                 `protobuf:"varint,5,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -90,6 +91,13 @@ func (x *PublicUserDTO) GetDeletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PublicUserDTO) GetVersion() uint32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 type BasicUserDTO struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -97,6 +105,7 @@ type BasicUserDTO struct {
 	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
 	Roles         []string               `protobuf:"bytes,4,rep,name=roles,proto3" json:"roles,omitempty"`
 	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	Version       uint32                 `protobuf:"varint,6,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -166,6 +175,13 @@ func (x *BasicUserDTO) GetDeletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *BasicUserDTO) GetVersion() uint32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 type ExtendedUserDTO struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -174,6 +190,7 @@ type ExtendedUserDTO struct {
 	Roles         []string               `protobuf:"bytes,4,rep,name=roles,proto3" json:"roles,omitempty"`
 	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Version       uint32                 `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -250,6 +267,13 @@ func (x *ExtendedUserDTO) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ExtendedUserDTO) GetVersion() uint32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 type AuditUserDTO struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -261,6 +285,7 @@ type AuditUserDTO struct {
 	Roles         []string               `protobuf:"bytes,7,rep,name=roles,proto3" json:"roles,omitempty"`
 	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
 	ChangedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=changed_at,json=changedAt,proto3" json:"changed_at,omitempty"`
+	Version       uint32                 `protobuf:"varint,10,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -358,25 +383,34 @@ func (x *AuditUserDTO) GetChangedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AuditUserDTO) GetVersion() uint32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 var File_packages_common_proto_user_proto protoreflect.FileDescriptor
 
 const file_packages_common_proto_user_proto_rawDesc = "" +
 	"\n" +
 	" packages/common/proto/user.proto\x12\n" +
-	"user.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x86\x01\n" +
+	"user.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa0\x01\n" +
 	"\rPublicUserDTO\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05login\x18\x02 \x01(\tR\x05login\x12\x14\n" +
 	"\x05roles\x18\x03 \x03(\tR\x05roles\x129\n" +
 	"\n" +
-	"deleted_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\xa1\x01\n" +
+	"deleted_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\rR\aversion\"\xbb\x01\n" +
 	"\fBasicUserDTO\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05login\x18\x02 \x01(\tR\x05login\x12\x1a\n" +
 	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x14\n" +
 	"\x05roles\x18\x04 \x03(\tR\x05roles\x129\n" +
 	"\n" +
-	"deleted_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\"\xdf\x01\n" +
+	"deleted_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\rR\aversion\"\xf9\x01\n" +
 	"\x0fExtendedUserDTO\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05login\x18\x02 \x01(\tR\x05login\x12\x1a\n" +
@@ -385,7 +419,8 @@ const file_packages_common_proto_user_proto_rawDesc = "" +
 	"\n" +
 	"deleted_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xc6\x02\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x18\n" +
+	"\aversion\x18\a \x01(\rR\aversion\"\xe0\x02\n" +
 	"\fAuditUserDTO\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x0fchanged_user_id\x18\x02 \x01(\tR\rchangedUserId\x12\"\n" +
@@ -397,7 +432,9 @@ const file_packages_common_proto_user_proto_rawDesc = "" +
 	"\n" +
 	"deleted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\x129\n" +
 	"\n" +
-	"changed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAtBBZ@github.com/StepanAnanin/Sentinel/packages/common/proto/generatedb\x06proto3"
+	"changed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\x12\x18\n" +
+	"\aversion\x18\n" +
+	" \x01(\rR\aversionBBZ@github.com/StepanAnanin/Sentinel/packages/common/proto/generatedb\x06proto3"
 
 var (
 	file_packages_common_proto_user_proto_rawDescOnce sync.Once

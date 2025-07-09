@@ -212,9 +212,12 @@ func actualizeSession(
 
 func updateSession(
 	ctx echo.Context,
+	session *SessionDTO.Full,
 	user *UserDTO.Basic,
 	payload *UserDTO.Payload,
 ) (*token.AccessToken, *token.RefreshToken, *Error.Status){
+	isSessionSet := session != nil
+
 	if user.Version != payload.Version {
 		payload.ID = user.ID
 		payload.Login = user.Login
@@ -222,9 +225,12 @@ func updateSession(
 		payload.Version = user.Version
 	}
 
-	session, err := DB.Database.GetSessionByID(payload.SessionID)
-	if err != nil {
-		return nil, nil, err
+	if !isSessionSet {
+		var err *Error.Status
+		session, err = DB.Database.GetSessionByID(payload.SessionID)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	accessToken, refreshToken, err := token.NewAuthTokens(payload)
@@ -237,9 +243,13 @@ func updateSession(
 		return nil, nil, err
 	}
 
-	// Check if this session exists in DB
-	if _, err := DB.Database.GetSessionByID(newSession.ID); err != nil {
-		return nil, nil, err
+	// If session was specified in this function args need to ensure that this session is exists in DB.
+	// If it wasn't specified then this session is queried from DB in this function, so there are no need in this check.
+	if isSessionSet {
+		// Check if this session exists in DB
+		if _, err := DB.Database.GetSessionByID(newSession.ID); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	if err := DB.Database.UpdateSession(newSession.ID, newSession); err != nil {
