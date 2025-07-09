@@ -20,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// TODO there are a lot of code duplication, fix that
+
 type executable interface {
     Exec() *Error.Status
 }
@@ -130,40 +132,39 @@ func (q *query) Rows(conType connectionType) (pgx.Rows, *Error.Status) {
 // By default, dests are not validated,
 // but it can be added by setting env variable DEBUG_SAFE_DB_SCANS to true.
 // (works only if app launched in debug mode)
-type scanRowFunc = func(dests ...any) *Error.Status
+type rowScanner = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
-func (q *query) Row(conType connectionType) (scanRowFunc, *Error.Status) {
+func (q *query) Row(conType connectionType) (rowScanner, *Error.Status) {
     row, _, err := q.runSQL(conType, rowMode)
     if err != nil {
         return nil, err
     }
 
     return func (dests ...any) *Error.Status {
-        if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
-            for _, dest := range dests {
-                typeof := reflect.TypeOf(dest)
+		if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
+			for _, dest := range dests {
+				typeof := reflect.TypeOf(dest)
 
-                if typeof.Kind() != reflect.Ptr {
-                    dbLogger.Panic(
-                        "Query scan failed",
-                        "Destination for scanning must be a pointer, but got '"+typeof.String()+"'",
+				if typeof.Kind() != reflect.Ptr {
+					dbLogger.Panic(
+						"Query scan failed",
+						"Destination for scanning must be a pointer, but got '"+typeof.String()+"'",
 						nil,
-                    )
-                }
-            }
-        }
+					)
+				}
+			}
+		}
 
-        if e := row.Scan(dests...); e != nil {
-            if errors.Is(e, pgx.ErrNoRows) {
-                return Error.StatusNotFound
-            }
+		if e := row.Scan(dests...); e != nil {
+			if errors.Is(e, pgx.ErrNoRows) {
+				return Error.StatusNotFound
+			}
+			return q.toStatusError(e)
+		}
 
-            return q.toStatusError(e)
-        }
-
-        return nil
-    }, nil
+		return nil
+	}, nil
 }
 
 // Wrapper for '*pgxpool.Con.Exec'
@@ -184,7 +185,6 @@ func collect[T any](
     }
 
 	dtos, e := pgx.CollectRows(rows, collectFunc)
-
     if e != nil {
 		dbLogger.Error("Failed to collect rows", e.Error(), nil)
         return nil, q.toStatusError(e)
@@ -209,10 +209,10 @@ func (q *query) CollectBasicUserDTO(conType connectionType) ([]*UserDTO.Basic, *
 			&dto.Password,
 			&dto.Roles,
 			&deletedAt,
+			&dto.Version,
 		); err != nil {
 			return nil, err
 		}
-
 		if deletedAt.Valid {
 			dto.DeletedAt = deletedAt.Time
 		}
@@ -233,10 +233,10 @@ func (q *query) CollectPublicUserDTO(conType connectionType) ([]*UserDTO.Public,
 			&dto.Login,
 			&dto.Roles,
 			&deletedAt,
+			&dto.Version,
 		); err != nil {
 			return nil, err
 		}
-
 		if deletedAt.Valid {
 			dto.DeletedAt = &deletedAt.Time
 		}
@@ -270,22 +270,20 @@ func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.
         return nil, err
     }
 
-    dto := new(UserDTO.Basic)
+	dto := new(UserDTO.Basic)
 
-    var deletedAt sql.NullTime
+	var deletedAt sql.NullTime
 
-    err = scan(
-        &dto.ID,
-        &dto.Login,
-        &dto.Password,
-        &dto.Roles,
-        &deletedAt,
+	if err := scan(
+		&dto.ID,
+		&dto.Login,
+		&dto.Password,
+		&dto.Roles,
+		&deletedAt,
 		&dto.Version,
-    )
-    if err != nil {
-        return nil, err
-    }
-
+	); err != nil {
+		return nil, err
+	}
 	if deletedAt.Valid {
 		dto.DeletedAt = deletedAt.Time
 	}
@@ -307,7 +305,6 @@ func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.
 // TODO add cache
 func (q *query) FullSessionDTO(conType connectionType) (*SessionDTO.Full, *Error.Status) {
 	scan, err := q.Row(conType)
-
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +316,7 @@ func (q *query) FullSessionDTO(conType connectionType) (*SessionDTO.Full, *Error
 	var expiresAt sql.NullTime
 	var addr net.IP
 
-	scan(
+	err = scan(
 		&dto.ID,
 		&dto.UserID,
 		&dto.UserAgent,
@@ -336,6 +333,10 @@ func (q *query) FullSessionDTO(conType connectionType) (*SessionDTO.Full, *Error
 		&expiresAt,
 		&dto.Revoked,
 	)
+	if err != nil {
+		return nil, err
+	}
+
 	if createdAt.Valid {
 		dto.CreatedAt = createdAt.Time
 	}
@@ -348,5 +349,48 @@ func (q *query) FullSessionDTO(conType connectionType) (*SessionDTO.Full, *Error
 	dto.IpAddress = addr.To4().String()
 
 	return dto, nil
+}
+
+func (q *query) CollectPublicSessionDTO(conType connectionType) ([]*SessionDTO.Public, *Error.Status) {
+	return collect(conType, q, func (row pgx.CollectableRow) (*SessionDTO.Public, error) {
+		dto := new(SessionDTO.Public)
+
+		var createdAt sql.NullTime
+		var lastUsedAt sql.NullTime
+		var expiresAt sql.NullTime
+		var addr net.IP
+
+		err := row.Scan(
+			&dto.ID,
+			&dto.UserAgent,
+			&addr,
+			&dto.DeviceID,
+			&dto.DeviceType,
+			&dto.OS,
+			&dto.OSVersion,
+			&dto.Browser,
+			&dto.BrowserVersion,
+			&dto.Location,
+			&createdAt,
+			&lastUsedAt,
+			&expiresAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if createdAt.Valid {
+			dto.CreatedAt = createdAt.Time
+		}
+		if lastUsedAt.Valid {
+			dto.LastUsedAt = lastUsedAt.Time
+		}
+		if expiresAt.Valid {
+			dto.ExpiresAt = expiresAt.Time
+		}
+		dto.IpAddress = addr.To4().String()
+
+		return dto, nil
+	})
 }
 

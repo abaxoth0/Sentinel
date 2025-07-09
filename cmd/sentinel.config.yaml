@@ -28,7 +28,7 @@ cache-ttl: 0
 ### DEBUG ####
 debug-mode: true
 
-debug-safe-db-scans: false
+debug-safe-db-scans: true
 
 log-db-queries: true
 

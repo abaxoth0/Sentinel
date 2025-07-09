@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	Error "sentinel/packages/common/errors"
@@ -16,6 +17,7 @@ func catchError(next echo.HandlerFunc) echo.HandlerFunc {
 	return func (ctx echo.Context) error {
 		defer func(){
 			if r := recover(); r != nil {
+				fmt.Println("panic:", r)
 				os.Exit(1)
 			}
 		}()

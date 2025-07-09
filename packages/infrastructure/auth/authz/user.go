@@ -64,6 +64,18 @@ func (u user) SearchUsers(roles []string) *Error.Status {
 	return authorize(searchUsersAction, userResource, roles)
 }
 
+func (u user) Logout(roles []string) *Error.Status {
+	return authorize(logoutUserAction, userResource, roles)
+}
+
+func (u user) GetUserSession(self bool, roles []string) *Error.Status {
+	return authorize(
+		util.Ternary(self, getSelfSessionAction, getSessionAction),
+		userResource,
+		roles,
+	)
+}
+
 func (u user) DropCache(roles []string) *Error.Status {
 	return authorize(dropAction, cacheResource, roles)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -130,9 +131,19 @@ func(d *driver) Set(key string, value any) *Error.Status {
     // Alas, generics can't be used in methods
     // (it can be passed to a struct, but thats kinda strange and
     //  even so i failed to make it works as i want, so using type switch instead)
-    switch value.(type) {
+	switch v := value.(type) {
     case string, bool, []byte, int, int64, float64, time.Time:
         // Type allowed, do nothing and just go forward
+	case uint32:
+		if uint64(v) > uint64(math.MaxInt64) {
+			return logAndConvert("Set: ", fmt.Errorf("value overflows int64: %v", value))
+		}
+		value = int64(v)
+	case uint64:
+		if v > uint64(math.MaxInt64) {
+			return logAndConvert("Set: ", fmt.Errorf("value overflows int64: %v", value))
+		}
+		value = int64(v)
     default:
         return logAndConvert("Set: ", fmt.Errorf("invalid cache value type: %T", value))
     }

@@ -95,3 +95,21 @@ var searchUsersAction = registerAction(
 	rbac.ReadPermission,
 )
 
+var logoutUserAction = registerAction(
+	userEntity,
+	"logout_user",
+	rbac.DeletePermission, // Delete cuz logging out soft deletes session
+)
+
+var getSessionAction = registerAction(
+	userEntity,
+	"get_session",
+	rbac.ReadPermission,
+)
+
+var getSelfSessionAction = registerAction(
+	userEntity,
+	"get_self_session",
+	rbac.SelfReadPermission,
+)
+

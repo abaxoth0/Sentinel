@@ -20,15 +20,19 @@ type Full struct {
 	Revoked 		  bool
 }
 
-type DevicePayload struct {
-	Fingerprint string
-	Name 		string
-	Type 		string
-}
-
-type NetworkPayload struct {
-	UserAgent string
-	IpAddres  string
-	location  string
+type Public struct {
+	ID 				  string	`json:"id"`
+	UserAgent 		  string	`json:"user-agent"`
+	IpAddress 		  string	`json:"ip-address"`
+	DeviceID 		  string	`json:"device-id"`
+	DeviceType 		  string	`json:"device-type"`
+	OS 				  string	`json:"os"`
+	OSVersion		  string	`json:"os-version"`
+	Browser 		  string	`json:"browser"`
+	BrowserVersion	  string	`json:"browser-version"`
+	Location 		  string	`json:"location"`
+	CreatedAt 		  time.Time	`json:"created-at"`
+	LastUsedAt 		  time.Time	`json:"last-used-at"`
+	ExpiresAt 		  time.Time	`json:"expires-at"`
 }
 

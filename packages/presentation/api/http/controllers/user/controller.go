@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
@@ -283,14 +284,14 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBa
 
     uid := ctx.Param("uid")
 
-    filter, e := newTargetedActionDTO(ctx, uid)
+    act, e := newTargetedActionDTO(ctx, uid)
     if e != nil {
         return e
     }
 
     controller.Logger.Trace("Validating user update request...", reqMeta)
 
-    if e := validateUpdateRequestBody(filter, body); e != nil {
+    if e := validateUpdateRequestBody(act, body); e != nil {
         controller.Logger.Error("Invalid user update request", e.Error(), reqMeta)
         return e
     }
@@ -301,11 +302,11 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBa
 
     switch b := body.(type) {
     case *datamodel.ChangeLoginBody:
-        err = DB.Database.ChangeLogin(filter, b.Login)
+        err = DB.Database.ChangeLogin(act, b.Login)
     case *datamodel.ChangePasswordBody:
-        err = DB.Database.ChangePassword(filter, b.NewPassword)
+        err = DB.Database.ChangePassword(act, b.NewPassword)
     case *datamodel.ChangeRolesBody:
-        err = DB.Database.ChangeRoles(filter, b.Roles)
+        err = DB.Database.ChangeRoles(act, b.Roles)
     default:
 		controller.Logger.Panic(
 			"Invalid update call",
@@ -439,5 +440,45 @@ func SearchUsers(ctx echo.Context) error {
 	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters: OK", reqMeta)
 
 	return ctx.JSON(http.StatusOK, dtos)
+}
+
+func GetUserSessions(ctx echo.Context) error {
+	reqMeta := request.GetMetadata(ctx)
+
+	uid := ctx.Param("uid")
+
+	if e := validation.UUID(uid); e != nil {
+		return echo.NewHTTPError(
+			http.StatusBadRequest,
+			e.ToStatus(
+				"User ID is missing in URL path",
+				"User ID has invalid format (expected UUID)",
+			).Error(),
+		)
+	}
+
+	accessToken, err := controller.GetAccessToken(ctx)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	controller.Logger.Info("Getting user sessions...", reqMeta)
+
+	act := ActionDTO.NewTargeted(uid, payload.ID, payload.Roles)
+
+	sessions, err := DB.Database.GetUserSessions(act)
+	if err != nil {
+		controller.Logger.Error("Failed to get user sessions", err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	controller.Logger.Info("Getting user sessions: OK", reqMeta)
+
+	return ctx.JSON(http.StatusOK, sessions)
 }
 

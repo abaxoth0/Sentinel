@@ -5,6 +5,7 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
@@ -210,12 +211,32 @@ func actualizeSession(
 	}, nil
 }
 
+// TODO Review this function, it feels kinda weird
+
+// updates session of given user
 func updateSession(
 	ctx echo.Context,
-	session *SessionDTO.Full,
+	session *SessionDTO.Full, // can be nil
 	user *UserDTO.Basic,
-	payload *UserDTO.Payload,
+	payload *UserDTO.Payload, // from existing token claims
 ) (*token.AccessToken, *token.RefreshToken, *Error.Status){
+	if user == nil {
+		controller.Logger.Panic(
+			"Invalid updateSession call",
+			"user is nil (expected *UserDTO.Basic)",
+			nil,
+		)
+		return nil, nil, Error.StatusInternalError
+	}
+	if payload == nil {
+		controller.Logger.Panic(
+			"Invalid updateSession call",
+			"payload is nil (expected *UserDTO.Payload)",
+			nil,
+		)
+		return nil, nil, Error.StatusInternalError
+	}
+
 	isSessionSet := session != nil
 
 	if user.Version != payload.Version {
@@ -225,9 +246,12 @@ func updateSession(
 		payload.Version = user.Version
 	}
 
+	act := ActionDTO.NewTargeted(payload.ID, payload.ID, payload.Roles)
+
 	if !isSessionSet {
 		var err *Error.Status
-		session, err = DB.Database.GetSessionByID(payload.SessionID)
+
+		session, err = DB.Database.GetSessionByID(act, payload.SessionID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -247,7 +271,7 @@ func updateSession(
 	// If it wasn't specified then this session is queried from DB in this function, so there are no need in this check.
 	if isSessionSet {
 		// Check if this session exists in DB
-		if _, err := DB.Database.GetSessionByID(newSession.ID); err != nil {
+		if _, err := DB.Database.GetSessionByID(act, newSession.ID); err != nil {
 			return nil, nil, err
 		}
 	}
