@@ -20,8 +20,8 @@ type seeker struct {
 }
 
 const (
-	searchUsersSqlStart = `WITH numbered_users AS (SELECT *, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) as row_num FROM "user"`
-	searchUsersSqlSelect = `SELECT id, login, roles, deleted_at FROM numbered_users WHERE row_num BETWEEN `
+	searchUsersSqlStart=`WITH numbered_users AS (SELECT *, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) as row_num FROM "user"`
+	searchUsersSqlSelect=`SELECT id, login, roles, deleted_at, version FROM numbered_users WHERE row_num BETWEEN `
 )
 
 func searchUsersSqlEnd(page, pageSize int) string {
