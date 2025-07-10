@@ -20,8 +20,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// TODO there are a lot of code duplication, fix that
-
 type executable interface {
     Exec() *Error.Status
 }
@@ -132,6 +130,7 @@ func (q *query) Rows(conType connectionType) (pgx.Rows, *Error.Status) {
 // By default, dests are not validated,
 // but it can be added by setting env variable DEBUG_SAFE_DB_SCANS to true.
 // (works only if app launched in debug mode)
+// type rowScanner = func(dests ...any) *Error.Status
 type rowScanner = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
@@ -250,9 +249,6 @@ func (q *query) CollectPublicUserDTO(conType connectionType) ([]*UserDTO.Public,
 func (q *query) BasicUserDTO(conType connectionType, cacheKey string) (*UserDTO.Basic, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
 		r, err := pbencoding.UnmarshallBasicUserDTO([]byte(cached))
-
-        // r, err := json.DecodeString[UserDTO.Basic](cached)
-
         if err == nil {
             return r, nil
         }
