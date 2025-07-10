@@ -183,34 +183,40 @@ func Logout(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	tartedID := payload.ID
+	sessionID := payload.SessionID
 
-	uid := ctx.Param("uid")
-	if uid != "" {
-		if e := validation.UUID(uid); e != nil {
+	if id := ctx.Param("sessionID"); id != "" {
+		if e := validation.UUID(id); e != nil {
 			return e.ToStatus(
 				"User ID is missing", // this is not possible cuz uid already isn't empty stirng, but anyway...
 				"User has invalid format (expected UUID)",
 			)
 		}
-		tartedID = uid
+		sessionID = id
 	}
 
-	act, err := UserMapper.TargetedActionDTOFromClaims(tartedID, claims)
+	user, err := DB.Database.FindUserBySessionID(sessionID)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	controller.Logger.Info("Logoutting user "+tartedID+"...", reqMeta)
-
-	if err := DB.Database.RevokeSession(act, payload.SessionID); err != nil {
-		controller.Logger.Error("Failed to logout user "+tartedID, err.Error(), reqMeta)
+	act, err := UserMapper.TargetedActionDTOFromClaims(user.ID, claims)
+	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-    controller.DeleteCookie(ctx, authCookie)
+	controller.Logger.Info("Logoutting user "+user.ID+"...", reqMeta)
 
-	controller.Logger.Info("Logoutting user "+tartedID+": OK", reqMeta)
+	if err := DB.Database.RevokeSession(act, sessionID); err != nil {
+		controller.Logger.Error("Failed to logout user "+user.ID, err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	if act.TargetUID == act.RequesterUID {
+		controller.DeleteCookie(ctx, authCookie)
+	}
+
+	controller.Logger.Info("Logoutting user "+user.ID+": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }

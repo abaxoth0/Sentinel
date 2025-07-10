@@ -5,6 +5,7 @@ import (
 	ActionDTO "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/auth/authz"
+	"sentinel/packages/infrastructure/cache"
 )
 
 // TODO add cache
@@ -35,14 +36,7 @@ func (_ *session) SaveSession(session *SessionDTO.Full) *Error.Status {
 	return query.Exec(primaryConnection)
 }
 
-func (_ *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
-	if err := authz.User.GetUserSession(
-		act.TargetUID == act.RequesterUID,
-		act.RequesterRoles,
-	); err != nil {
-		return nil, err
-	}
-
+func (_ *session) getSessionByID(sessionID string) (*SessionDTO.Full ,*Error.Status) {
 	query := newQuery(
 		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE id = $1 AND revoked = false;`,
 		sessionID,
@@ -54,6 +48,17 @@ func (_ *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string) (*Se
 	}
 
 	return dto, nil
+}
+
+func (s *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
+	if err := authz.User.GetUserSession(
+		act.TargetUID == act.RequesterUID,
+		act.RequesterRoles,
+	); err != nil {
+		return nil, err
+	}
+
+	return s.getSessionByID(sessionID)
 }
 
 func (_ *session) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status) {
@@ -114,17 +119,27 @@ func (_ *session) UpdateSession(sessionID string, newSession *SessionDTO.Full) *
 	return query.Exec(primaryConnection)
 }
 
-func (_ *session) RevokeSession(act *ActionDTO.Targeted, sessionID string) *Error.Status {
+func (s *session) RevokeSession(act *ActionDTO.Targeted, sessionID string) *Error.Status {
 	if act.RequesterUID != act.TargetUID {
 		if err := authz.User.Logout(act.RequesterRoles); err != nil {
 			return err
 		}
 	}
 
+	if _, err := s.getSessionByID(sessionID); err != nil {
+		return err
+	}
+
 	query := newQuery(
 		`UPDATE "user_session" SET revoked = true WHERE id = $1;`,
 		sessionID,
 	)
+
+	cache.Client.Delete(
+		cache.KeyBase[cache.SessionByID] + sessionID,
+		cache.KeyBase[cache.UserBySessionID] + sessionID,
+	)
+
 	return query.Exec(primaryConnection)
 }
 

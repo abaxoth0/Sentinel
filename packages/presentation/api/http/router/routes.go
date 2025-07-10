@@ -58,7 +58,7 @@ func Create() *echo.Echo {
     authGroup.POST(rootPath, Auth.Login)
     authGroup.PUT(rootPath, Auth.Refresh)
     authGroup.DELETE(rootPath, Auth.Logout)
-	authGroup.DELETE("/:uid", Auth.Logout)
+	authGroup.DELETE("/:sessionID", Auth.Logout)
 
     userGroup := router.Group("/user")
 

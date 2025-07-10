@@ -141,26 +141,30 @@ func (s *seeker) findUserBy(
         }
     }
 
-    query := newQuery(
-        `SELECT id, login, password, roles, deleted_at, version
-        FROM "user"
-        WHERE ` + string(conditionProperty) + ` = $1;`,
-        conditionValue,
-    )
+	dbLogger.Trace("Searching for user with "+string(conditionProperty)+" = "+conditionValue+"...", nil)
+
+	var query *query
+
+	sql := `SELECT id, login, password, roles, deleted_at, version FROM "user" WHERE ` + string(conditionProperty) + ` = $1`
+
+	switch state {
+	case user.NotDeletedState:
+		query = newQuery(sql + " AND deleted_at IS NULL;", conditionValue)
+	case user.DeletedState:
+		query = newQuery(sql + " AND deleted_at IS NOT NULL;", conditionValue)
+	case user.AnyState:
+		query = newQuery(sql + ";", conditionValue)
+	default:
+		dbLogger.Panic("Invalid findUserBy() call", "Unknown user state: " + string(state), nil)
+		return nil, Error.StatusInternalError
+	}
 
     dto, err := query.BasicUserDTO(replicaConnection, cacheKey)
-
     if err != nil {
         return nil, err
     }
 
-    if state == user.NotDeletedState && dto.IsDeleted() {
-        return nil, Error.StatusNotFound
-    }
-
-    if state == user.DeletedState && !dto.IsDeleted() {
-        return nil, Error.StatusNotFound
-    }
+	dbLogger.Trace("Searching for user with "+string(conditionProperty)+" = "+conditionValue+": OK", nil)
 
     return dto, nil
 }
@@ -208,6 +212,19 @@ func (s *seeker) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
         user.NotDeletedState,
         cache.KeyBase[cache.UserByLogin] + login,
     )
+}
+
+func (s *seeker) FindUserBySessionID(sessionID string) (*UserDTO.Basic, *Error.Status) {
+	query := newQuery(
+		`SELECT "user".id, "user".login, "user".password, "user".roles, "user".deleted_at, "user".version
+		FROM "user" INNER JOIN "user_session" ON "user_session".user_id = "user".id
+		WHERE "user_session".id = $1;`,
+		sessionID,
+	)
+
+	cacheKey := cache.KeyBase[cache.UserBySessionID] + sessionID
+
+	return query.BasicUserDTO(replicaConnection, cacheKey)
 }
 
 func (s *seeker) IsLoginAvailable(login string) bool  {

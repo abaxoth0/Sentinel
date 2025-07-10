@@ -7,6 +7,7 @@ const (
 	UserRolesById = "user_roles_by_id"
 	UserByLogin = "user_by_login"
 	AnyUserByLogin = "any_user_by_login"
+	UserBySessionID = "user_by_session_id"
 
 	UserVersionByID = "user_version_by_id"
 
@@ -20,6 +21,7 @@ var KeyBase = map[string]string {
     UserRolesById: UserKeyPrefix + "roles:",
     UserByLogin: UserKeyPrefix + "login:",
     AnyUserByLogin: AnyUserKeyPrefix + "login:",
+	UserBySessionID: SessionKeyPrefix + "session:",
 
 	UserVersionByID: UserKeyPrefix + "version:",
 
