@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
@@ -182,21 +183,34 @@ func Logout(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	act, err := UserMapper.TargetedActionDTOFromClaims(payload.ID, claims)
+	tartedID := payload.ID
+
+	uid := ctx.Param("uid")
+	if uid != "" {
+		if e := validation.UUID(uid); e != nil {
+			return e.ToStatus(
+				"User ID is missing", // this is not possible cuz uid already isn't empty stirng, but anyway...
+				"User has invalid format (expected UUID)",
+			)
+		}
+		tartedID = uid
+	}
+
+	act, err := UserMapper.TargetedActionDTOFromClaims(tartedID, claims)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	controller.Logger.Info("Logoutting user "+payload.ID+"...", reqMeta)
+	controller.Logger.Info("Logoutting user "+tartedID+"...", reqMeta)
 
 	if err := DB.Database.RevokeSession(act, payload.SessionID); err != nil {
-		controller.Logger.Error("Failed to logout user "+payload.ID, err.Error(), reqMeta)
+		controller.Logger.Error("Failed to logout user "+tartedID, err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
     controller.DeleteCookie(ctx, authCookie)
 
-	controller.Logger.Info("Logoutting user "+payload.ID+": OK", reqMeta)
+	controller.Logger.Info("Logoutting user "+tartedID+": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
