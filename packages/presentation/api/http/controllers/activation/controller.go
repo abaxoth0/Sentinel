@@ -7,7 +7,7 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
-	datamodel "sentinel/packages/presentation/data"
+	RequestBody "sentinel/packages/presentation/data/request"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -45,7 +45,7 @@ func Resend(ctx echo.Context) error {
 
 	controller.Logger.Info("Resending activation email...", reqMeta)
 
-    var body datamodel.LoginBody
+    var body RequestBody.UserLogin
 
     if e := controller.BindAndValidate(ctx, &body); e != nil {
 		controller.Logger.Error("Failed to resend activation email", e.Error(), reqMeta)

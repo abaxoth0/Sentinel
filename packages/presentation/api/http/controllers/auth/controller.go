@@ -11,7 +11,8 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
-	datamodel "sentinel/packages/presentation/data"
+	RequestBody "sentinel/packages/presentation/data/request"
+	ResponseBody "sentinel/packages/presentation/data/response"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -19,7 +20,7 @@ import (
 )
 
 func Login(ctx echo.Context) error {
-    var body datamodel.LoginPasswordBody
+    var body RequestBody.LoginAndPassword
     if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
     }
@@ -72,7 +73,7 @@ func Login(ctx echo.Context) error {
 
 			return ctx.JSON(
 				http.StatusOK,
-				datamodel.TokenResponseBody{
+				ResponseBody.Token{
 					Message: "Пользователь успешно авторизован",
 					AccessToken: accessToken.String(),
 					ExpiresIn: int(accessToken.TTL()) / 1000,
@@ -109,7 +110,7 @@ func Login(ctx echo.Context) error {
 
 			return ctx.JSON(
 				http.StatusOK,
-				datamodel.TokenResponseBody{
+				ResponseBody.Token{
 					Message: "Пользователь успешно авторизован",
 					AccessToken: accessToken.String(),
 					ExpiresIn: int(accessToken.TTL()) / 1000,
@@ -153,7 +154,7 @@ func Login(ctx echo.Context) error {
 
     return ctx.JSON(
         http.StatusOK,
-        datamodel.TokenResponseBody{
+        ResponseBody.Token{
             Message: "Пользователь успешно авторизован",
             AccessToken: accessToken.String(),
             ExpiresIn: int(accessToken.TTL()) / 1000,
@@ -237,7 +238,7 @@ func Refresh(ctx echo.Context) error {
 
     return ctx.JSON(
         http.StatusOK,
-        datamodel.TokenResponseBody{
+        ResponseBody.Token{
             Message: "Токены успешно обновлены",
             AccessToken: accessToken.String(),
             ExpiresIn: int(accessToken.TTL()) / 1000,

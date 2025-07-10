@@ -7,13 +7,14 @@ import (
 	"sentinel/packages/common/util"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
-	datamodel "sentinel/packages/presentation/data"
+	RequestBody "sentinel/packages/presentation/data/request"
+
 	"github.com/labstack/echo/v4"
 )
 
 var Logger = logger.NewSource("CONTROLLER", logger.Default)
 
-func BindAndValidate[T datamodel.RequestValidator](ctx echo.Context, dest T) error {
+func BindAndValidate[T RequestBody.Validator](ctx echo.Context, dest T) error {
     reqMeta := request.GetMetadata(ctx)
 
     Logger.Trace("Binding and validating request...", reqMeta)

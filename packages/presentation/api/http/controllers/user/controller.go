@@ -15,7 +15,8 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
-	datamodel "sentinel/packages/presentation/data"
+	RequestBody "sentinel/packages/presentation/data/request"
+	ResponseBody "sentinel/packages/presentation/data/response"
 	"strconv"
 	"strings"
 
@@ -68,7 +69,7 @@ func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, *e
 }
 
 func Create(ctx echo.Context) error {
-    var body datamodel.LoginPasswordBody
+	var body RequestBody.LoginAndPassword
 
     if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
@@ -169,7 +170,7 @@ func BulkSoftDelete(ctx echo.Context) error {
         return err
     }
 
-	var body datamodel.UserIDsBody
+	var body RequestBody.UserIDs
 
 	if e := controller.BindAndValidate(ctx, &body); e != nil {
 		return e
@@ -195,7 +196,7 @@ func BulkRestore(ctx echo.Context) error {
         return err
     }
 
-	var body datamodel.UserIDsBody
+	var body RequestBody.UserIDs
 
 	if e := controller.BindAndValidate(ctx, &body); e != nil {
 		return e
@@ -231,7 +232,7 @@ func DropAllDeleted(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
-func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.UpdateUserRequestBody) *echo.HTTPError {
+func validateUpdateRequestBody(filter *ActionDTO.Targeted, body RequestBody.UpdateUser) *echo.HTTPError {
     // if user tries to update himself
     if filter.RequesterUID == filter.TargetUID {
         if err := body.Validate(); err != nil {
@@ -253,8 +254,8 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
 
     // if user tries to update another user
     if err := body.Validate(); err != nil {
-        if _, ok := body.(*datamodel.ChangePasswordBody); ok {
-            if err == datamodel.MissingPassword || err == datamodel.InvalidPassword {
+        if _, ok := body.(*RequestBody.ChangePassword); ok {
+            if err == RequestBody.ErrorMissingPassword || err == RequestBody.ErrorInvalidPassword {
                 return nil
             }
         }
@@ -268,7 +269,7 @@ func validateUpdateRequestBody(filter *ActionDTO.Targeted, body datamodel.Update
 
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
-func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBase string) error {
+func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string) error {
     reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info(logMessageBase + "...", reqMeta)
@@ -301,11 +302,11 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBa
     var err *Error.Status
 
     switch b := body.(type) {
-    case *datamodel.ChangeLoginBody:
+    case *RequestBody.ChangeLogin:
         err = DB.Database.ChangeLogin(act, b.Login)
-    case *datamodel.ChangePasswordBody:
+    case *RequestBody.ChangePassword:
         err = DB.Database.ChangePassword(act, b.NewPassword)
-    case *datamodel.ChangeRolesBody:
+    case *RequestBody.ChangeRoles:
         err = DB.Database.ChangeRoles(act, b.Roles)
     default:
 		controller.Logger.Panic(
@@ -327,15 +328,15 @@ func update(ctx echo.Context, body datamodel.UpdateUserRequestBody, logMessageBa
 }
 
 func ChangeLogin(ctx echo.Context) error {
-    return update(ctx, new(datamodel.ChangeLoginBody), "Changing user login")
+    return update(ctx, new(RequestBody.ChangeLogin), "Changing user login")
 }
 
 func ChangePassword(ctx echo.Context) error {
-    return update(ctx, new(datamodel.ChangePasswordBody), "Changing user password")
+    return update(ctx, new(RequestBody.ChangePassword), "Changing user password")
 }
 
 func ChangeRoles(ctx echo.Context) error {
-    return update(ctx, new(datamodel.ChangeRolesBody), "Changing user roles")
+    return update(ctx, new(RequestBody.ChangeRoles), "Changing user roles")
 }
 
 func GetRoles(ctx echo.Context) error {
@@ -358,10 +359,7 @@ func GetRoles(ctx echo.Context) error {
 
     controller.Logger.Info("Getting user roles: OK", reqMeta)
 
-    return ctx.JSON(
-        http.StatusOK,
-        datamodel.RolesResponseBody{ Roles: roles },
-    )
+    return ctx.JSON(http.StatusOK, roles)
 }
 
 func IsLoginAvailable(ctx echo.Context) error {
@@ -390,7 +388,7 @@ func IsLoginAvailable(ctx echo.Context) error {
 
     return ctx.JSON(
         http.StatusOK,
-        datamodel.IsLoginAvailableResponseBody{
+        ResponseBody.IsLoginAvailable{
             Available: available,
         },
     )

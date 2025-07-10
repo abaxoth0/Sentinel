@@ -5,7 +5,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
-	datamodel "sentinel/packages/presentation/data"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -42,9 +41,6 @@ func GetAll(ctx echo.Context) error {
 
 	controller.Logger.Info("Getting roles for service '"+serviceID+"': OK", reqMeta)
 
-    return ctx.JSON(
-        http.StatusOK,
-        datamodel.RolesResponseBody{ Roles: roles },
-    )
+    return ctx.JSON(http.StatusOK, roles)
 }
 

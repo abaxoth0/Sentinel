@@ -1,20 +1,20 @@
-package datamodel
+package responsebody
 
-type TokenResponseBody struct {
+type Token struct {
 	Message     string `json:"message"`
 	AccessToken string `json:"accessToken"`
     ExpiresIn   int    `json:"expiresIn"`
 }
 
-type MessageResponseBody struct {
+type Message struct {
 	Message string `json:"message"`
 }
 
-type IsLoginAvailableResponseBody struct {
+type IsLoginAvailable struct {
 	Available bool `json:"available"`
 }
 
-type RolesResponseBody struct {
+type Roles struct {
 	Roles []string `json:"roles"`
 }
 
