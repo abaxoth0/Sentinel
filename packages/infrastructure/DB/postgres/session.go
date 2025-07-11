@@ -36,10 +36,10 @@ func (_ *session) SaveSession(session *SessionDTO.Full) *Error.Status {
 	return query.Exec(primaryConnection)
 }
 
-func (_ *session) getSessionByID(sessionID string) (*SessionDTO.Full ,*Error.Status) {
+func (_ *session) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
 	query := newQuery(
-		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE id = $1 AND revoked = false;`,
-		sessionID,
+		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE id = $1 AND revoked = $2;`,
+		sessionID, revoked,
 	)
 
 	dto, err := query.FullSessionDTO(replicaConnection)
@@ -50,7 +50,7 @@ func (_ *session) getSessionByID(sessionID string) (*SessionDTO.Full ,*Error.Sta
 	return dto, nil
 }
 
-func (s *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
+func (s *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
 	if err := authz.User.GetUserSession(
 		act.TargetUID == act.RequesterUID,
 		act.RequesterRoles,
@@ -58,7 +58,7 @@ func (s *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string) (*Se
 		return nil, err
 	}
 
-	return s.getSessionByID(sessionID)
+	return s.getSessionByID(sessionID, revoked)
 }
 
 func (_ *session) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status) {
@@ -126,7 +126,7 @@ func (s *session) RevokeSession(act *ActionDTO.Targeted, sessionID string) *Erro
 		}
 	}
 
-	if _, err := s.getSessionByID(sessionID); err != nil {
+	if _, err := s.getSessionByID(sessionID, false); err != nil {
 		return err
 	}
 

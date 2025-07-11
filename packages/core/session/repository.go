@@ -18,7 +18,7 @@ type creator interface {
 }
 
 type seeker interface {
-	GetSessionByID(act *ActionDTO.Targeted, sessionID string) (*SessionDTO.Full, *Error.Status)
+	GetSessionByID(act *ActionDTO.Targeted, sessionID string, revoked bool) (*SessionDTO.Full, *Error.Status)
 	GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full, *Error.Status)
 	GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status)
 }

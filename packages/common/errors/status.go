@@ -19,11 +19,13 @@ func (e *Status) Status() int {
 }
 
 const (
-	Desync int = 490
+	Desync int 		= 490
+	SessionRevoked  = 491
 )
 
 var customStatusesTexts map[int]string = map[int]string{
 	Desync: "Data Desynchronization",
+	SessionRevoked: "Your session was revoked",
 }
 
 // Do the same as http.StatusText(), but also supports custom status codes
@@ -96,5 +98,10 @@ var StatusTimeout = NewStatusError(
 var StatusUnauthorized = NewStatusError(
     "Вы не авторизованы",
     http.StatusUnauthorized,
+)
+
+var StatusSessionRevoked = NewStatusError(
+	customStatusesTexts[SessionRevoked],
+	SessionRevoked,
 )
 

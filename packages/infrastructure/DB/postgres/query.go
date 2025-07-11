@@ -86,6 +86,8 @@ func(q *query) runSQL(conType connectionType, mode queryMode) (pgx.Row, pgx.Rows
 				args[i] = strconv.FormatInt(int64(a), 10)
 			case time.Time:
 				args[i] = a.String()
+			case bool:
+				args[i] = strconv.FormatBool(a)
 			}
 		}
 

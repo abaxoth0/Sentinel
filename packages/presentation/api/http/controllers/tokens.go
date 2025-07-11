@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
+	actiondto "sentinel/packages/core/action/DTO"
+	"sentinel/packages/infrastructure/DB"
+	usermapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
 	"strings"
@@ -45,6 +48,17 @@ func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
     if err != nil {
         return nil, err
     }
+
+	payload, err := usermapper.PayloadFromClaims(token.Claims.(jwt.MapClaims))
+	if err != nil {
+		return nil, err
+	}
+
+	act := actiondto.NewTargeted(payload.ID, payload.ID, payload.Roles)
+
+	if _, err := DB.Database.GetSessionByID(act, payload.SessionID, true); err == nil {
+		return nil, Error.StatusSessionRevoked
+	}
 
 	Logger.Trace("Getting access token from the request: OK", reqMeta)
 

@@ -27,6 +27,13 @@ func handleHttpError(err error, ctx echo.Context) {
 
     status := Error.StatusText(code)
 
+	if code == Error.SessionRevoked {
+		ctx.Response().Header().Set("X-Session-Revoked", "true")
+		if authCookie, err := controller.GetAuthCookie(ctx); err == nil {
+			controller.DeleteCookie(ctx, authCookie)
+		}
+	}
+
 	reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Error(message, status, reqMeta)
