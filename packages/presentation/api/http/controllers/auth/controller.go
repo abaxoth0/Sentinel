@@ -49,39 +49,45 @@ func Login(ctx echo.Context) error {
 	if tk, err := controller.GetRefreshToken(ctx); err != nil {
 		controller.Logger.Error("Failed to get refresh token from request", err.Error(), reqMeta)
 	} else {
-		ok := true
-
 		controller.Logger.Info("Updating user session...", reqMeta)
 
 		payload, err := UserMapper.PayloadFromClaims(tk.Claims.(jwt.MapClaims))
 		if err != nil {
 			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
-			ok = false
+			goto regularLogin
+		}
+
+		if payload.ID != user.ID {
+			controller.Logger.Error(
+				"Failed to update user session. Switch to regular login process",
+				"Already logged-in user tries to login as another user",
+				reqMeta,
+			)
+			goto regularLogin
 		}
 
 		accessToken, refreshToken, err := updateSession(ctx, nil, user, payload)
 		if err != nil {
 			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
-			ok = false
+			goto regularLogin
 		}
 
-		if ok {
-			controller.Logger.Info("Updating user session: OK", reqMeta)
+		controller.Logger.Info("Updating user session: OK", reqMeta)
 
-			ctx.SetCookie(newAuthCookie(refreshToken))
+		ctx.SetCookie(newAuthCookie(refreshToken))
 
-			controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
+		controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 
-			return ctx.JSON(
-				http.StatusOK,
-				ResponseBody.Token{
-					Message: "Пользователь успешно авторизован",
-					AccessToken: accessToken.String(),
-					ExpiresIn: int(accessToken.TTL()) / 1000,
-				},
-			)
-		}
+		return ctx.JSON(
+			http.StatusOK,
+			ResponseBody.Token{
+				Message: "Пользователь успешно авторизован",
+				AccessToken: accessToken.String(),
+				ExpiresIn: int(accessToken.TTL()) / 1000,
+			},
+		)
 	}
+	regularLogin:
 
 	deviceID, browser, err := getDeviceIDAndBrowser(ctx)
 	if err != nil {
@@ -93,6 +99,7 @@ func Login(ctx echo.Context) error {
 	session, err := DB.Database.GetSessionByDeviceAndUserID(deviceID, user.ID)
 	if err == nil && session.Browser == browser {
 		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
+		controller.Logger.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
 		controller.Logger.Info("Updating user session...", reqMeta)
 
 		accessToken, refreshToken, err := updateSession(ctx, session, user, &UserDTO.Payload{
