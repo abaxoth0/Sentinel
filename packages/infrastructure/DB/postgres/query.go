@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net"
 	"reflect"
 	"sentinel/packages/common/config"
@@ -18,23 +17,36 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type executable interface {
-    Exec() *Error.Status
-}
-
 type query struct {
-    sql string
-    args []any
+	prepared 	bool
+    sql 		string
+    args 		[]any
+	// nil by default, can be initialized via query.prepare()
+	con 		*pgxpool.Conn
+	// nil by default, can be initialized via query.prepare()
+	ctx 		context.Context
+	// nil by default, can be initialized via query.prepare()
+	cancel		context.CancelFunc
 }
 
 func newQuery(sql string, args ...any) *query {
-    return &query{sql, args}
+    return &query{
+		sql: sql,
+		args: args,
+	}
 }
 
-func (q *query) toStatusError(err error) *Error.Status {
-    defer dbLogger.Debug("Failed query: " + q.sql, nil)
+// Used to clear resources acquired for query (context, connection).
+func (q *query) free() {
+	q.con.Release()
+	q.cancel()
+}
+
+func convertQueryError(err error, sql string) *Error.Status {
+    defer dbLogger.Debug("Failed query: " + sql, nil)
 
     if err == context.DeadlineExceeded {
         dbLogger.Error("Query failed", "Query timeout", nil)
@@ -45,29 +57,26 @@ func (q *query) toStatusError(err error) *Error.Status {
     return Error.StatusInternalError
 }
 
-type queryMode int
+// Prepares query for execution by acquiring connection and creating contex.
+// Also initializes q.free(), which is used to release connection and close context.
+//
+// Will cause panic if query was already prepared.
+func(q *query) prepare(conType connectionType) (err *Error.Status) {
+	if q.prepared {
+		dbLogger.Panic("Failed to prepare query", "Query was already prepared", nil)
+		return Error.StatusInternalError
+	}
 
-const (
-	execMode queryMode = iota
-	rowsMode
-	rowMode
-)
-
-// Executes given SQL. If returnRow is true then returns resulting row and error,
-// otherwise returns nil and error.
-// Also substitutes query args (see pgx docs for details).
-func(q *query) runSQL(conType connectionType, mode queryMode) (pgx.Row, pgx.Rows, *Error.Status) {
     con, err := driver.getConnection(conType)
-
     if err != nil {
-        return nil, nil, err
+        return err
     }
-
-    defer con.Release()
 
     ctx, cancel := defaultTimeoutContext()
 
-    defer cancel()
+	q.con = con
+	q.ctx = ctx
+	q.cancel = cancel
 
 	if config.Debug.Enabled && config.Debug.LogDbQueries {
 		args := make([]string, len(q.args))
@@ -91,56 +100,43 @@ func(q *query) runSQL(conType connectionType, mode queryMode) (pgx.Row, pgx.Rows
 			}
 		}
 
-		dbLogger.Debug("Running query:\n" + q.sql + "\n * Query args: " + strings.Join(args, "; "), nil)
+		dbLogger.Debug("Preparing query:\n" + q.sql + "\n * Query args: " + strings.Join(args, "; "), nil)
 	}
 
-	switch mode {
-	case execMode:
-		if _, e := con.Exec(ctx, q.sql, q.args...); e != nil {
-			return nil, nil, q.toStatusError(e)
-		}
-		return nil, nil, nil
-	case rowMode:
-		return con.QueryRow(ctx, q.sql, q.args...), nil, nil
-	case rowsMode:
-		r, e := con.Query(ctx, q.sql, q.args...)
-		if e != nil {
-			return nil, nil, q.toStatusError(e)
-		}
-		return nil, r, nil
-	}
+	q.prepared = true
 
-	dbLogger.Panic(
-		"Failed to execute SQL",
-		fmt.Sprintf("Unexpected query mode: %v", mode),
-		nil,
-	)
-	return nil, nil, nil
+	return nil
 }
 
 func (q *query) Rows(conType connectionType) (pgx.Rows, *Error.Status) {
-	_, rows, err := q.runSQL(conType, rowsMode)
-	if err != nil {
+	if err := q.prepare(conType); err != nil {
 		return nil, err
 	}
+	defer q.free()
 
-	return rows, nil
+	r, err := q.con.Query(q.ctx, q.sql, q.args...)
+	if err != nil {
+		return nil, convertQueryError(err, q.sql)
+	}
+
+	return r, nil
 }
 
 // Scans a row into the given destinations.
 // All dests must be pointers.
-// By default, dests are not validated,
-// but it can be added by setting env variable DEBUG_SAFE_DB_SCANS to true.
+// By default, dests validation is disabled,
+// to enable this add "debug-safe-db-scans: true" to the config.
 // (works only if app launched in debug mode)
-// type rowScanner = func(dests ...any) *Error.Status
 type rowScanner = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
 func (q *query) Row(conType connectionType) (rowScanner, *Error.Status) {
-    row, _, err := q.runSQL(conType, rowMode)
-    if err != nil {
+    if err := q.prepare(conType); err != nil{
         return nil, err
     }
+	defer q.free()
+
+	row := q.con.QueryRow(q.ctx, q.sql, q.args...)
 
     return func (dests ...any) *Error.Status {
 		if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
@@ -161,7 +157,7 @@ func (q *query) Row(conType connectionType) (rowScanner, *Error.Status) {
 			if errors.Is(e, pgx.ErrNoRows) {
 				return Error.StatusNotFound
 			}
-			return q.toStatusError(e)
+			return convertQueryError(e, q.sql)
 		}
 
 		return nil
@@ -170,8 +166,16 @@ func (q *query) Row(conType connectionType) (rowScanner, *Error.Status) {
 
 // Wrapper for '*pgxpool.Con.Exec'
 func (q *query) Exec(conType connectionType) (*Error.Status) {
-    _, _, err := q.runSQL(conType, execMode)
-    return err
+    if err := q.prepare(conType); err != nil {
+		return err
+	}
+	defer q.free()
+
+	if _, err := q.con.Exec(q.ctx, q.sql, q.args...); err != nil {
+		return convertQueryError(err, q.sql)
+	}
+
+    return nil
 }
 
 // TODO add cache
@@ -188,7 +192,7 @@ func collect[T any](
 	dtos, e := pgx.CollectRows(rows, collectFunc)
     if e != nil {
 		dbLogger.Error("Failed to collect rows", e.Error(), nil)
-        return nil, q.toStatusError(e)
+        return nil, convertQueryError(e, q.sql)
     }
 	if len(dtos) == 0 {
 		return nil, Error.StatusNotFound

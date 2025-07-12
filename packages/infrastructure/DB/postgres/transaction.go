@@ -1,7 +1,10 @@
 package postgres
 
 import (
+	"errors"
 	Error "sentinel/packages/common/errors"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type transaction struct {
@@ -23,11 +26,15 @@ func (t *transaction) Exec() *Error.Status {
         return Error.StatusInternalError
     }
 
-    defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			dbLogger.Error("Rollback failed (non-critical)", err.Error(), nil)
+		}
+	}()
 
     for _, query := range t.queries {
         if _, err := tx.Exec(ctx, query.sql, query.args...); err != nil {
-            return query.toStatusError(err)
+            return convertQueryError(err, query.sql)
         }
     }
 
