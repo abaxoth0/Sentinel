@@ -296,3 +296,41 @@ func Verify(ctx echo.Context) error {
     return ctx.JSON(http.StatusOK, payload)
 }
 
+func RevokeAllUserSessions(ctx echo.Context) error {
+	reqMeta := request.GetMetadata(ctx)
+
+	uid := ctx.Param("uid")
+	if uid != "" {
+		if e := validation.UUID(uid); e != nil {
+			return e.ToStatus(
+				"User ID is missing", // this is not possible cuz uid already isn't empty stirng, but anyway...
+				"User has invalid format (expected UUID)",
+			)
+		}
+	}
+
+	controller.Logger.Info("Revoking all sessions of user "+uid+"...", reqMeta)
+
+	act, err := controller.NewTargetedActionDTO(ctx, uid)
+	if err != nil {
+		controller.Logger.Error("Failed to revoking all sessions of user "+uid, err.Error(), reqMeta)
+		return err
+	}
+
+	if err := DB.Database.RevokeAllUserSessions(act); err != nil {
+		controller.Logger.Error("Failed to revoking all sessions of user "+uid, err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	if act.TargetUID == act.RequesterUID {
+		authCookie, err := controller.GetAuthCookie(ctx)
+		if err == nil {
+			controller.DeleteCookie(ctx, authCookie)
+		}
+	}
+
+	controller.Logger.Info("Revoking all sessions of user "+uid+": OK", reqMeta)
+
+	return ctx.NoContent(http.StatusOK)
+}
+

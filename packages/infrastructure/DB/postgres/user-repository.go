@@ -104,15 +104,21 @@ func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
 
     audit := newAudit(deleteOperation, act, user)
 
-    query := newQuery(
+    updateQuery := newQuery(
         `UPDATE "user" SET deleted_at = $1, version = version + 1
         WHERE id = $2 AND deleted_at IS NULL;`,
         // deleted_at set manualy instead of using NOW()
         // cuz changed_at and deleted_at should be synchronized
         audit.ChangedAt, act.TargetUID,
     )
+	sessionsDeleteQuery := newQuery(revokeAllUserSessionsSQL, act.TargetUID)
 
-    if err := execWithAudit(&audit, query); err != nil {
+	// TODO add cache for collect query methods and then change order of this operations.
+	//		(place it at the very end, after invalidateBasicUserDtoCache())
+	if err := driver.DeleteUserSessionsCache(user.ID); err != nil {
+		dbLogger.Error("Failed to delete user sessions cache", err.Error(), nil)
+	}
+    if err := execTransactionWithAudit(&audit, updateQuery, sessionsDeleteQuery); err != nil {
 		return err
 	}
 
@@ -145,7 +151,7 @@ func (_ *repository) Restore(act *ActionDTO.Targeted) *Error.Status {
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
         act.TargetUID,
     )
-    if err := execWithAudit(&audit, query); err != nil {
+    if err := execTransactionWithAudit(&audit, query); err != nil {
 		return err
 	}
 
@@ -204,14 +210,13 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 		for i, user := range deletedUsers {
 			ids[i] = user.ID
 		}
-		return Error.NewStatusError(
-			util.Ternary(
-				newState == user.DeletedState,
-				"Can't delete already deleted user(-s): " + strings.Join(ids, ", "),
-				"Can't restore non-deleted user(-s): " + strings.Join(ids, ", "),
-			),
-			http.StatusConflict,
-		)
+		var message string
+		if newState == user.DeletedState {
+			message = "Can't delete already deleted user(-s): " + strings.Join(ids, ", ")
+		} else {
+			message = "Can't restore non-deleted user(-s): " + strings.Join(ids, ", ")
+		}
+		return Error.NewStatusError(message, http.StatusConflict)
 	}
 
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
@@ -372,7 +377,7 @@ func (r *repository) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Erro
         newLogin, act.TargetUID,
     )
 
-    if err := execWithAudit(&audit, query); err != nil {
+    if err := execTransactionWithAudit(&audit, query); err != nil {
 		return err
 	}
 
@@ -418,7 +423,7 @@ func (_ *repository) ChangePassword(act *ActionDTO.Targeted, newPassword string)
         hashedPassword, act.TargetUID,
     )
 
-    if err := execWithAudit(&audit, query); err != nil {
+    if err := execTransactionWithAudit(&audit, query); err != nil {
 		return err
 	}
 
@@ -464,7 +469,7 @@ func (_ *repository) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Er
         newRoles, act.TargetUID,
     )
 
-    if err := execWithAudit(&audit, query); err != nil {
+    if err := execTransactionWithAudit(&audit, query); err != nil {
 		return err
 	}
 

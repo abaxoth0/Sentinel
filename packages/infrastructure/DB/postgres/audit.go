@@ -51,7 +51,7 @@ func newAuditQuery(dto *UserDTO.Audit) *query {
     )
 }
 
-func execWithAudit(dto *UserDTO.Audit, queries ...*query) *Error.Status {
+func execTransactionWithAudit(dto *UserDTO.Audit, queries ...*query) *Error.Status {
     queries = append(queries, newAuditQuery(dto))
 
     return newTransaction(queries...).Exec()

@@ -1,7 +1,9 @@
 package postgres
 
 import (
+	"net/http"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -61,17 +63,10 @@ func (s *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string, revo
 	return s.getSessionByID(sessionID, revoked)
 }
 
-func (_ *session) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status) {
-	if err := authz.User.GetUserSession(
-		act.TargetUID == act.RequesterUID,
-		act.RequesterRoles,
-	); err != nil {
-		return nil, err
-	}
-
+func (_ *session) getUserSessions(UID string) ([]*SessionDTO.Public, *Error.Status) {
 	query := newQuery(
 		`SELECT id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at FROM "user_session" WHERE user_id = $1 AND revoked = false;`,
-		act.TargetUID,
+		UID,
 	)
 
 	sessions, err := query.CollectPublicSessionDTO(replicaConnection)
@@ -80,6 +75,16 @@ func (_ *session) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public
 	}
 
 	return sessions, nil
+}
+
+func (s *session) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status) {
+	if err := authz.User.GetUserSession(
+		act.TargetUID == act.RequesterUID,
+		act.RequesterRoles,
+		); err != nil {
+		return nil, err
+	}
+	return s.getUserSessions(act.TargetUID)
 }
 
 func (_ *session) GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full ,*Error.Status) {
@@ -141,5 +146,75 @@ func (s *session) RevokeSession(act *ActionDTO.Targeted, sessionID string) *Erro
 	)
 
 	return query.Exec(primaryConnection)
+}
+
+func (s *session) deleteSessionsCache(sessions []*SessionDTO.Public) *Error.Status {
+	cacheKeys := make([]string, 0, len(sessions) * 2)
+
+	for _, session := range sessions {
+		cacheKeys = append(cacheKeys, cache.KeyBase[cache.SessionByID] + session.ID)
+		cacheKeys = append(cacheKeys, cache.KeyBase[cache.UserBySessionID] + session.ID)
+	}
+
+	return cache.Client.Delete(cacheKeys...)
+}
+
+const revokeAllUserSessionsSQL = `UPDATE "user_session" SET revoked = true WHERE user_id = $1;`
+
+func (s *session) RevokeAllUserSessions(act *ActionDTO.Targeted) *Error.Status {
+	if act.RequesterUID != act.TargetUID {
+		if err := authz.User.Logout(act.RequesterRoles); err != nil {
+			return err
+		}
+	}
+
+	sessions, err := s.getUserSessions(act.TargetUID)
+	if err != nil {
+		return err
+	}
+
+	query := newQuery(revokeAllUserSessionsSQL, act.TargetUID)
+
+	if err := query.Exec(primaryConnection); err != nil {
+		return err
+	}
+
+	if err := s.deleteSessionsCache(sessions); err != nil {
+		dbLogger.Error("Failed to delete sessions cache for user "+act.TargetUID, err.Error(), nil)
+	}
+
+	return nil
+}
+
+// Invalidates sessions cache of user with specified ID
+func (s *session) DeleteUserSessionsCache(UID string) *Error.Status {
+	dbLogger.Trace("Deleting sessions cache for user "+UID+"...", nil)
+
+	if e := validation.UUID(UID); e != nil {
+		errMessage := "User ID must be a valid UUID: " + UID
+
+		dbLogger.Error("Failed to delete sessions cache for user "+UID, errMessage, nil)
+
+		return Error.NewStatusError(errMessage, http.StatusBadRequest)
+	}
+
+	sessions, err := s.getUserSessions(UID)
+	if err != nil {
+		if err == Error.StatusNotFound {
+			dbLogger.Trace("Failed to delete sessions cache for user: "+UID+": User has no sessions", nil)
+			return nil
+		}
+		dbLogger.Error("Failed to delete sessions cache for user "+UID, err.Error(), nil)
+		return err
+	}
+
+	if err := s.deleteSessionsCache(sessions); err != nil {
+		dbLogger.Error("Failed to delete sessions cache for user "+UID, err.Error(), nil)
+		return err
+	}
+
+	dbLogger.Trace("Deleting sessions cache for user: "+UID+":OK", nil)
+
+	return nil
 }
 

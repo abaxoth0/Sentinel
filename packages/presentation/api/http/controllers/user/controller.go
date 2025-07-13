@@ -25,49 +25,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func newActionDTO[T ActionDTO.Any](
-	ctx echo.Context,
-	uid string,
-	mapFunc func (uid string, claims jwt.MapClaims) (T, *Error.Status),
-) (T, *echo.HTTPError) {
-	var zero T
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Trace("Retrieving access token from the request...", reqMeta)
-
-    accessToken, err := controller.GetAccessToken(ctx)
-    if err != nil {
-        controller.Logger.Error("Failed to retrieve valid access token from the request", err.Error(), reqMeta)
-        return zero, controller.HandleTokenError(ctx, err)
-    }
-
-    controller.Logger.Trace("Retrieving access token from the request: OK", reqMeta)
-    controller.Logger.Trace("Creating action DTO from token claims...", reqMeta)
-
-	// claims can be trusted if token is valid
-	act, err := mapFunc(uid, accessToken.Claims.(jwt.MapClaims))
-    if err != nil {
-        controller.Logger.Error("Failed to create action DTO from token claims", err.Error(), reqMeta)
-        return zero, controller.ConvertErrorStatusToHTTP(err)
-    }
-
-    controller.Logger.Trace("Creating action DTO from token claims: OK", reqMeta)
-
-    return act, nil
-}
-
-func newBasicActionDTO(ctx echo.Context) (*ActionDTO.Basic, *echo.HTTPError) {
-	return newActionDTO(ctx, "", func (_ string, claims jwt.MapClaims) (*ActionDTO.Basic, *Error.Status) {
-		return UserMapper.BasicActionDTOFromClaims(claims)
-	})
-}
-
-func newTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, *echo.HTTPError) {
-	return newActionDTO(ctx, uid, func (id string, claims jwt.MapClaims) (*ActionDTO.Targeted, *Error.Status) {
-		return UserMapper.TargetedActionDTOFromClaims(id, claims)
-	})
-}
-
 func Create(ctx echo.Context) error {
 	var body RequestBody.LoginAndPassword
 
@@ -132,7 +89,7 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool, logMess
         uid = ctx.Param("uid")
     }
 
-    act, err := newTargetedActionDTO(ctx, uid)
+    act, err := controller.NewTargetedActionDTO(ctx, uid)
     if err != nil {
 		controller.Logger.Error(logMessageBase + ": FAILED", err.Error(), reqMeta)
         return err
@@ -148,7 +105,12 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool, logMess
 }
 
 func SoftDelete(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
+	err := handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Restore(ctx echo.Context) error {
@@ -164,7 +126,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 
     controller.Logger.Info("Bulk soft deleting users...", reqMeta)
 
-    act, err := newBasicActionDTO(ctx)
+    act, err := controller.NewBasicActionDTO(ctx)
     if err != nil {
 		controller.Logger.Error("Bulk soft deleting users: FAILED", err.Error(), reqMeta)
         return err
@@ -190,7 +152,7 @@ func BulkRestore(ctx echo.Context) error {
 
     controller.Logger.Info("Bulk restoring users...", reqMeta)
 
-    act, err := newBasicActionDTO(ctx)
+    act, err := controller.NewBasicActionDTO(ctx)
     if err != nil {
 		controller.Logger.Error("Bulk restoring users: FAILED", err.Error(), reqMeta)
         return err
@@ -216,7 +178,7 @@ func DropAllDeleted(ctx echo.Context) error {
 
     controller.Logger.Info("Dropping all soft deleted user...", reqMeta)
 
-    act, err := newTargetedActionDTO(ctx, "")
+    act, err := controller.NewTargetedActionDTO(ctx, "")
     if err != nil {
         return err
     }
@@ -285,7 +247,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 
     uid := ctx.Param("uid")
 
-    act, e := newTargetedActionDTO(ctx, uid)
+    act, e := controller.NewTargetedActionDTO(ctx, uid)
     if e != nil {
         return e
     }
@@ -342,7 +304,7 @@ func ChangeRoles(ctx echo.Context) error {
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
 
-    filter, e := newTargetedActionDTO(ctx, uid)
+    filter, e := controller.NewTargetedActionDTO(ctx, uid)
     if e != nil {
         return e
     }
@@ -423,7 +385,7 @@ func SearchUsers(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "pageSize must be an integer number")
 	}
 
-	act, e := newBasicActionDTO(ctx)
+	act, e := controller.NewBasicActionDTO(ctx)
 	if e != nil {
 		return e
 	}

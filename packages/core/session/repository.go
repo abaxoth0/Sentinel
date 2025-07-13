@@ -29,5 +29,6 @@ type updater interface {
 
 type deleter interface {
 	RevokeSession(act *ActionDTO.Targeted, sessionID string) *Error.Status
+	RevokeAllUserSessions(act *ActionDTO.Targeted) *Error.Status
 }
 

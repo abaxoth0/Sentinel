@@ -21,7 +21,7 @@ var KeyBase = map[string]string {
     UserRolesById: UserKeyPrefix + "roles:",
     UserByLogin: UserKeyPrefix + "login:",
     AnyUserByLogin: AnyUserKeyPrefix + "login:",
-	UserBySessionID: SessionKeyPrefix + "session:",
+	UserBySessionID: UserKeyPrefix + "session:",
 
 	UserVersionByID: UserKeyPrefix + "version:",
 
