@@ -6,13 +6,13 @@
 
 -   Cache: Redis
 
--   Transport: HTTP (lib: echo `github.com/labstack/echo`)
+-   Transport: HTTP (lib: [echo](https://github.com/labstack/echo))
 
 -   API architecture: REST
 
 -   Data presentation format: JSON
 
--   Authorization method: RBAC - Role-Based Access Control (lib: SentinelRBAC `github.com/abaxoth0/SentinelRBAC`)
+-   Authorization method: RBAC - Role-Based Access Control (lib: [SentinelRBAC](https://github.com/abaxoth0/SentinelRBAC))
 
 -   Password hashing method: bcrypt (ed25519)
 
