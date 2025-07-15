@@ -1,0 +1,1348 @@
+basePath: /
+definitions:
+  requestbody.ChangePassword:
+    properties:
+      newPassword:
+        example: your-new-password
+        type: string
+      password:
+        example: your-password
+        type: string
+    type: object
+  requestbody.ChangeRoles:
+    properties:
+      password:
+        example: your-password
+        type: string
+      roles:
+        example:
+        - user
+        - moderator
+        items:
+          type: string
+        type: array
+    type: object
+  requestbody.LoginAndPassword:
+    properties:
+      login:
+        example: admin@mail.com
+        type: string
+      password:
+        example: your-password
+        type: string
+    type: object
+  requestbody.UserLogin:
+    properties:
+      login:
+        example: admin@mail.com
+        type: string
+    type: object
+  requestbody.UserPassword:
+    properties:
+      password:
+        example: your-password
+        type: string
+    type: object
+  requestbody.UserRoles:
+    properties:
+      roles:
+        example:
+        - user
+        - moderator
+        items:
+          type: string
+        type: array
+    type: object
+  requestbody.UsersIDs:
+    properties:
+      id:
+        example:
+        - cef85e5a-5a5f-42d0-81bd-1650391c0e82
+        - 9bc87af1-5f92-4d8c-bf41-7ade642c5a91
+        items:
+          type: string
+        type: array
+    type: object
+  responsebody.Error:
+    properties:
+      error:
+        example: Error
+        type: string
+      message:
+        example: Something went wrong
+        type: string
+    type: object
+  responsebody.IsLoginAvailable:
+    properties:
+      available:
+        example: true
+        type: boolean
+    type: object
+  responsebody.Token:
+    properties:
+      accessToken:
+        example: eyJhbGciOi...
+        type: string
+      expiresIn:
+        example: 600
+        type: integer
+      message:
+        example: hello
+        type: string
+    type: object
+  userdto.Payload:
+    properties:
+      id:
+        example: d529a8d2-1eb4-4bce-82aa-e62095dbc653
+        type: string
+      login:
+        example: admin@mail.com
+        type: string
+      roles:
+        example:
+        - user
+        - moderator
+        items:
+          type: string
+        type: array
+      session-id:
+        example: 35b92582-7694-4958-9751-1fef710cb94d
+        type: string
+      version:
+        example: 7
+        type: integer
+    type: object
+  userdto.Public:
+    properties:
+      deletedAt:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      version:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: Authentication/Authorization Service
+  title: Sentinel
+  version: "1.0"
+paths:
+  /auth:
+    delete:
+      consumes:
+      - application/json
+      description: Logout endpoint
+      operationId: logout
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Revoke user session
+      tags:
+      - auth
+    get:
+      consumes:
+      - application/json
+      description: Verify that user is logged-in
+      operationId: verify
+      parameters:
+      - description: Access token in Token Bearer format
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/userdto.Payload'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Verifies user authentication
+      tags:
+      - auth
+    post:
+      consumes:
+      - application/json
+      description: Login endpoint
+      operationId: login
+      parameters:
+      - description: User credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.LoginAndPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responsebody.Token'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Login into the service
+      tags:
+      - auth
+    put:
+      consumes:
+      - application/json
+      description: Create new access and refresh tokens and update current session
+        info
+      operationId: refresh
+      parameters:
+      - description: Refresh Token (sent as HTTP-Only cookie in actual requests)
+        in: header
+        name: X-Refresh-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Refreshes auth tokens
+      tags:
+      - auth
+  /auth/{sessionID}:
+    delete:
+      consumes:
+      - application/json
+      description: Logout endpoint
+      operationId: logout
+      parameters:
+      - description: ID of session that should be revoked
+        in: path
+        name: sessionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Revoke user session
+      tags:
+      - auth
+  /auth/sessions/{uid}:
+    delete:
+      consumes:
+      - application/json
+      description: Revoke all existing non-revoked sessions
+      operationId: revoke-all-user-sessions
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Revokes all user sessions
+      tags:
+      - auth
+  /cache:
+    delete:
+      consumes:
+      - application/json
+      description: Delete all cache. Only users with "admin" role can do that, even
+        if they have enough permission to do that
+      operationId: drop-cache
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Flush cache
+      tags:
+      - cache
+  /roles/{serviceID}:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all roles that exists in the specified service
+      operationId: get-all-roles
+      parameters:
+      - description: ID of the service which roles you want to get
+        in: path
+        name: serviceID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Get all service roles
+      tags:
+      - roles
+  /user:
+    delete:
+      consumes:
+      - application/json
+      description: Bulk user soft delete. All sessions of soft deleted users will
+        be revoked
+      operationId: bulk-soft-delete-users
+      parameters:
+      - description: Users IDs
+        in: body
+        name: usersIDs
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.UsersIDs'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Soft delete several users
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Registration endpoint
+      operationId: create-new-user
+      parameters:
+      - description: User credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.LoginAndPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Create new user
+      tags:
+      - user
+    put:
+      consumes:
+      - application/json
+      description: Bulk restore soft deleted users
+      operationId: bulk-restore-users
+      parameters:
+      - description: Users IDs
+        in: body
+        name: usersIDs
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.UsersIDs'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Restore several soft deleted users
+      tags:
+      - user
+  /user/{uid}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete user. All sessions of soft deleted user will be revoked
+      operationId: soft-delete-user
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Soft delete user
+      tags:
+      - user
+  /user/{uid}/drop:
+    delete:
+      consumes:
+      - application/json
+      description: Hard delete user. Only soft deleted users can be hard deleted
+      operationId: hard-delete-user
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Hard delete user
+      tags:
+      - user
+  /user/{uid}/login:
+    patch:
+      consumes:
+      - application/json
+      description: Change user login
+      operationId: change-user-login
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      - description: New user login
+        in: body
+        name: newLogin
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.UserLogin'
+      - description: New user login and password (required if user tries to change
+          his own login)
+        in: body
+        name: newLoginAndPassword
+        schema:
+          $ref: '#/definitions/requestbody.LoginAndPassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Change user login
+      tags:
+      - user
+  /user/{uid}/password:
+    patch:
+      consumes:
+      - application/json
+      description: Change user password
+      operationId: change-user-password
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      - description: New user password
+        in: body
+        name: newPassword
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.UserPassword'
+      - description: Both new and current user passwords (required if user tries to
+          change his own login)
+        in: body
+        name: newAndCurrentPassword
+        schema:
+          $ref: '#/definitions/requestbody.ChangePassword'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Change user password
+      tags:
+      - user
+  /user/{uid}/restore:
+    put:
+      consumes:
+      - application/json
+      description: Restore soft delete user
+      operationId: restore-soft-delete-user
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Restore soft delete user
+      tags:
+      - user
+  /user/{uid}/roles:
+    get:
+      consumes:
+      - application/json
+      description: Get user roles
+      operationId: get-user-roles
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Get user roles
+      tags:
+      - user
+    patch:
+      consumes:
+      - application/json
+      description: Change user roles
+      operationId: change-user-roles
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      - description: New user roles
+        in: body
+        name: newRoles
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.UserRoles'
+      - description: New user roles and password (required if user tries to change
+          his own login)
+        in: body
+        name: newRolesAndPassword
+        schema:
+          $ref: '#/definitions/requestbody.ChangeRoles'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Change user roles
+      tags:
+      - user
+  /user/{uid}/sessions:
+    get:
+      consumes:
+      - application/json
+      description: Get all active user sessions
+      operationId: get-user-sessions
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/userdto.Public'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Get user sessions
+      tags:
+      - user
+  /user/activate/{token}:
+    get:
+      consumes:
+      - application/json
+      description: Activate user
+      operationId: activate
+      parameters:
+      - description: Activation token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Activate user
+      tags:
+      - activation
+  /user/activate/resend:
+    put:
+      consumes:
+      - application/json
+      description: Create and send new activation token to user
+      operationId: resend-activation-token
+      parameters:
+      - description: Login of not activated user to whom token should be sent
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.UserLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Resend activation token
+      tags:
+      - activation
+  /user/drop/all:
+    delete:
+      consumes:
+      - application/json
+      description: Hard delete all soft deleted users
+      operationId: drop-all-deleted-users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Drop all delete users
+      tags:
+      - user
+  /user/login/available:
+    get:
+      consumes:
+      - application/json
+      description: Check is login free to use
+      operationId: check-login
+      parameters:
+      - description: The login you want to check
+        in: query
+        name: login
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responsebody.IsLoginAvailable'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Check login availability
+      tags:
+      - user
+  /user/search:
+    get:
+      consumes:
+      - application/json
+      description: Search users with pagination
+      operationId: search-users
+      parameters:
+      - description: Search filter
+        in: query
+        name: filter
+        required: true
+        type: string
+      - description: Search page
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Elements per page
+        in: query
+        name: pageSize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/userdto.Public'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Users search
+      tags:
+      - user
+securityDefinitions:
+  BearerAuth:
+    description: 'Bearer token format: Bearer <YOUR_TOKEN>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

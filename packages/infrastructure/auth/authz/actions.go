@@ -113,3 +113,9 @@ var getSelfSessionAction = registerAction(
 	rbac.SelfReadPermission,
 )
 
+var accessAPIDocs = registerAction(
+	userEntity,
+	"access_api_docs",
+	rbac.ReadPermission,
+)
+

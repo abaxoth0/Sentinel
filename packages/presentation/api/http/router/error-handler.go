@@ -5,6 +5,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
+	responsebody "sentinel/packages/presentation/data/response"
 
 	"github.com/labstack/echo/v4"
 )
@@ -25,7 +26,7 @@ func handleHttpError(err error, ctx echo.Context) {
         message = e.Message.(string)
     }
 
-    status := Error.StatusText(code)
+    statusText := Error.StatusText(code)
 
 	if code == Error.SessionRevoked {
 		ctx.Response().Header().Set("X-Session-Revoked", "true")
@@ -36,11 +37,11 @@ func handleHttpError(err error, ctx echo.Context) {
 
 	reqMeta := request.GetMetadata(ctx)
 
-    controller.Logger.Error(message, status, reqMeta)
+    controller.Logger.Error(message, statusText, reqMeta)
 
-    ctx.JSON(code, map[string]string{
-        "error": status,
-        "message": message,
-    })
+	ctx.JSON(code, responsebody.Error{
+		Error: statusText,
+		Message: message,
+	})
 }
 

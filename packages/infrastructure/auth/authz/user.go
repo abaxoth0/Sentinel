@@ -80,3 +80,7 @@ func (u user) DropCache(roles []string) *Error.Status {
 	return authorize(dropAction, cacheResource, roles)
 }
 
+func (u user) AccessAPIDocs(roles []string) *Error.Status {
+	return authorize(accessAPIDocs, docsResource, roles)
+}
+

@@ -25,6 +25,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// @Summary 		Create new user
+// @Description 	Registration endpoint
+// @ID 				create-new-user
+// @Tags			user
+// @Param 			credentials body requestbody.LoginAndPassword true "User credentials"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,500 	{object} 	responsebody.Error
+// @Router			/user [post]
 func Create(ctx echo.Context) error {
 	var body RequestBody.LoginAndPassword
 
@@ -78,7 +88,7 @@ type updater = func (*ActionDTO.Targeted) *Error.Status
 // if omitUid is true, then uid will be set to empty string,
 // otherwise uid will be taken from path params (in this case uid must be a valid UUID).
 // If you want to change other user properties then use 'update' isntead.
-func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool, logMessageBase string) error {
+func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessageBase string) error {
     reqMeta := request.GetMetadata(ctx)
 
     controller.Logger.Info(logMessageBase + "...", reqMeta)
@@ -104,23 +114,78 @@ func handleUserDeleteUpdate(ctx echo.Context, upd updater, omitUid bool, logMess
     return ctx.NoContent(http.StatusOK)
 }
 
+// @Summary 		Soft delete user
+// @Description 	Soft delete user. All sessions of soft deleted user will be revoked
+// @ID 				soft-delete-user
+// @Tags			user
+// @Param 			uid path string true "User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid} [delete]
+// @Security		BearerAuth
 func SoftDelete(ctx echo.Context) error {
-	err := handleUserDeleteUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return handleUserStateUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
 }
 
+// @Summary 		Restore soft delete user
+// @Description 	Restore soft delete user
+// @ID 				restore-soft-delete-user
+// @Tags			user
+// @Param 			uid path string true "User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/restore [put]
+// @Security		BearerAuth
 func Restore(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.Restore, false, "Restoring user")
+    return handleUserStateUpdate(ctx, DB.Database.Restore, false, "Restoring user")
 }
 
+// @Summary 		Hard delete user
+// @Description 	Hard delete user. Only soft deleted users can be hard deleted
+// @ID 				hard-delete-user
+// @Tags			user
+// @Param 			uid path string true "User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/drop [delete]
+// @Security		BearerAuth
 func Drop(ctx echo.Context) error {
-    return handleUserDeleteUpdate(ctx, DB.Database.Drop, false, "Dropping user")
+    return handleUserStateUpdate(ctx, DB.Database.Drop, false, "Dropping user")
 }
 
+// @Summary 		Soft delete several users
+// @Description 	Bulk user soft delete. All sessions of soft deleted users will be revoked
+// @ID 				bulk-soft-delete-users
+// @Tags			user
+// @Param 			usersIDs body requestbody.UsersIDs true "Users IDs"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user [delete]
+// @Security		BearerAuth
 func BulkSoftDelete(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -132,7 +197,7 @@ func BulkSoftDelete(ctx echo.Context) error {
         return err
     }
 
-	var body RequestBody.UserIDs
+	var body RequestBody.UsersIDs
 
 	if e := controller.BindAndValidate(ctx, &body); e != nil {
 		return e
@@ -147,6 +212,21 @@ func BulkSoftDelete(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
+// @Summary 		Restore several soft deleted users
+// @Description 	Bulk restore soft deleted users
+// @ID 				bulk-restore-users
+// @Tags			user
+// @Param 			usersIDs body requestbody.UsersIDs true "Users IDs"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user [put]
+// @Security		BearerAuth
 func BulkRestore(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -158,7 +238,7 @@ func BulkRestore(ctx echo.Context) error {
         return err
     }
 
-	var body RequestBody.UserIDs
+	var body RequestBody.UsersIDs
 
 	if e := controller.BindAndValidate(ctx, &body); e != nil {
 		return e
@@ -173,6 +253,20 @@ func BulkRestore(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
+// @Summary 		Drop all delete users
+// @Description 	Hard delete all soft deleted users
+// @ID 				drop-all-deleted-users
+// @Tags			user
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/drop/all [delete]
+// @Security		BearerAuth
 func DropAllDeleted(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -289,18 +383,84 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
     return ctx.NoContent(http.StatusOK)
 }
 
+// @Summary 		Change user login
+// @Description 	Change user login
+// @ID 				change-user-login
+// @Tags			user
+// @Param 			uid 					path 	string 								true 	"User ID"
+// @Param 			newLogin 				body 	requestbody.UserLogin	 			true 	"New user login"
+// @Param 			newLoginAndPassword 	body 	requestbody.LoginAndPassword		false 	"New user login and password (required if user tries to change his own login)"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/login [patch]
+// @Security		BearerAuth
 func ChangeLogin(ctx echo.Context) error {
     return update(ctx, new(RequestBody.ChangeLogin), "Changing user login")
 }
 
+// @Summary 		Change user password
+// @Description 	Change user password
+// @ID 				change-user-password
+// @Tags			user
+// @Param 			uid 					path 	string 							true 	"User ID"
+// @Param 			newPassword 			body 	requestbody.UserPassword 		true 	"New user password"
+// @Param 			newAndCurrentPassword 	body 	requestbody.ChangePassword		false 	"Both new and current user passwords (required if user tries to change his own login)"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/password [patch]
+// @Security		BearerAuth
 func ChangePassword(ctx echo.Context) error {
     return update(ctx, new(RequestBody.ChangePassword), "Changing user password")
 }
 
+// @Summary 		Change user roles
+// @Description 	Change user roles
+// @ID 				change-user-roles
+// @Tags			user
+// @Param 			uid 					path 	string 							true 	"User ID"
+// @Param 			newRoles 				body 	requestbody.UserRoles	 		true 	"New user roles"
+// @Param 			newRolesAndPassword 	body 	requestbody.ChangeRoles			false 	"New user roles and password (required if user tries to change his own login)"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/roles [patch]
+// @Security		BearerAuth
 func ChangeRoles(ctx echo.Context) error {
     return update(ctx, new(RequestBody.ChangeRoles), "Changing user roles")
 }
 
+// @Summary 		Get user roles
+// @Description 	Get user roles
+// @ID 				get-user-roles
+// @Tags			user
+// @Param 			uid	path string true "User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200				{array}		string
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/roles [get]
+// @Security		BearerAuth
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
 
@@ -324,6 +484,20 @@ func GetRoles(ctx echo.Context) error {
     return ctx.JSON(http.StatusOK, roles)
 }
 
+// @Summary 		Check login availability
+// @Description 	Check is login free to use
+// @ID 				check-login
+// @Tags			user
+// @Param 			login query string true "The login you want to check"
+// @Accept			json
+// @Produce			json
+// @Success			200				{object}	responsebody.IsLoginAvailable
+// @Failure			400,401,500		{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/login/available [get]
 func IsLoginAvailable(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -356,6 +530,23 @@ func IsLoginAvailable(ctx echo.Context) error {
     )
 }
 
+// @Summary 		Users search
+// @Description 	Search users with pagination
+// @ID 				search-users
+// @Tags			user
+// @Param 			filter 		query 	string 	true 	"Search filter"
+// @Param 			page 		query 	int 	true 	"Search page"
+// @Param 			pageSize 	query 	int 	true 	"Elements per page"
+// @Accept			json
+// @Produce			json
+// @Success			200				{object}	[]userdto.Public
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/search [get]
+// @Security		BearerAuth
 func SearchUsers(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -402,6 +593,21 @@ func SearchUsers(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, dtos)
 }
 
+// @Summary 		Get user sessions
+// @Description 	Get all active user sessions
+// @ID 				get-user-sessions
+// @Tags			user
+// @Param 			uid path string true "User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200				{object}	[]userdto.Public
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid}/sessions [get]
+// @Security		BearerAuth
 func GetUserSessions(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

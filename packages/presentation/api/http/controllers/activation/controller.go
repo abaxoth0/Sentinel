@@ -18,6 +18,16 @@ var tokenIsMissing = echo.NewHTTPError(
     "Token is missing",
 )
 
+// @Summary 		Activate user
+// @Description 	Activate user
+// @ID 				activate
+// @Tags			activation
+// @Param 			token path string true "Activation token"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,500	{object} responsebody.Error
+// @Router			/user/activate/{token} [get]
 func Activate(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -40,6 +50,16 @@ func Activate(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
+// @Summary 		Resend activation token
+// @Description 	Create and send new activation token to user
+// @ID 				resend-activation-token
+// @Tags			activation
+// @Param 			login body requestbody.UserLogin true "Login of not activated user to whom token should be sent"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,500	{object} responsebody.Error
+// @Router			/user/activate/resend [put]
 func Resend(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

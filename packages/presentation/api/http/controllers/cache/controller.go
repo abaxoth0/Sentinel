@@ -12,6 +12,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// @Summary 		Flush cache
+// @Description 	Delete all cache. Only users with "admin" role can do that, even if they have enough permission to do that
+// @ID 				drop-cache
+// @Tags			cache
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/cache [delete]
+// @Security		BearerAuth
 func Drop(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

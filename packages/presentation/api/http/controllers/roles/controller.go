@@ -15,6 +15,17 @@ var serviceIdIsNotSpecified = echo.NewHTTPError(
     "Service ID is not specified",
 )
 
+
+// @Summary 		Get all service roles
+// @Description 	Get list of all roles that exists in the specified service
+// @ID 				get-all-roles
+// @Tags			roles
+// @Param 			serviceID path string true "ID of the service which roles you want to get"
+// @Accept			json
+// @Produce			json
+// @Success			200 			{array} 	string
+// @Failure			400,401,500 	{object} 	responsebody.Error
+// @Router			/roles/{serviceID} [get]
 func GetAll(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

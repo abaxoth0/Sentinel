@@ -9,6 +9,16 @@ import (
 
 var mainLogger = logger.NewSource("MAIN", logger.Default)
 
+// @title 						Sentinel
+// @version 					1.0
+// @description 				Authentication/Authorization Service
+// @BasePath 					/
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description 				Bearer token format: Bearer <YOUR_TOKEN>
+// @license.name 				AGPL-3.0 (With additional terms, see NOTICE file)
+// @license.url					https://www.gnu.org/licenses/agpl-3.0.html
 func main() {
 	app.Args.Parse()
 

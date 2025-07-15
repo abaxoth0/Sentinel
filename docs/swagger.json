@@ -1,0 +1,2042 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Authentication/Authorization Service",
+        "title": "Sentinel",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/auth": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verify that user is logged-in",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verifies user authentication",
+                "operationId": "verify",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Access token in Token Bearer format",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/userdto.Payload"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Create new access and refresh tokens and update current session info",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refreshes auth tokens",
+                "operationId": "refresh",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Refresh Token (sent as HTTP-Only cookie in actual requests)",
+                        "name": "X-Refresh-Token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Login endpoint",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login into the service",
+                "operationId": "login",
+                "parameters": [
+                    {
+                        "description": "User credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.LoginAndPassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Token"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Logout endpoint",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke user session",
+                "operationId": "logout",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/sessions/{uid}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke all existing non-revoked sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revokes all user sessions",
+                "operationId": "revoke-all-user-sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/{sessionID}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Logout endpoint",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke user session",
+                "operationId": "logout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID of session that should be revoked",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/cache": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete all cache. Only users with \"admin\" role can do that, even if they have enough permission to do that",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cache"
+                ],
+                "summary": "Flush cache",
+                "operationId": "drop-cache",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/roles/{serviceID}": {
+            "get": {
+                "description": "Get list of all roles that exists in the specified service",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roles"
+                ],
+                "summary": "Get all service roles",
+                "operationId": "get-all-roles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID of the service which roles you want to get",
+                        "name": "serviceID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bulk restore soft deleted users",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Restore several soft deleted users",
+                "operationId": "bulk-restore-users",
+                "parameters": [
+                    {
+                        "description": "Users IDs",
+                        "name": "usersIDs",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UsersIDs"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Registration endpoint",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Create new user",
+                "operationId": "create-new-user",
+                "parameters": [
+                    {
+                        "description": "User credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.LoginAndPassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bulk user soft delete. All sessions of soft deleted users will be revoked",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Soft delete several users",
+                "operationId": "bulk-soft-delete-users",
+                "parameters": [
+                    {
+                        "description": "Users IDs",
+                        "name": "usersIDs",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UsersIDs"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/activate/resend": {
+            "put": {
+                "description": "Create and send new activation token to user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "activation"
+                ],
+                "summary": "Resend activation token",
+                "operationId": "resend-activation-token",
+                "parameters": [
+                    {
+                        "description": "Login of not activated user to whom token should be sent",
+                        "name": "login",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UserLogin"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/activate/{token}": {
+            "get": {
+                "description": "Activate user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "activation"
+                ],
+                "summary": "Activate user",
+                "operationId": "activate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Activation token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/drop/all": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hard delete all soft deleted users",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Drop all delete users",
+                "operationId": "drop-all-deleted-users",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/login/available": {
+            "get": {
+                "description": "Check is login free to use",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Check login availability",
+                "operationId": "check-login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The login you want to check",
+                        "name": "login",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.IsLoginAvailable"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Search users with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Users search",
+                "operationId": "search-users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search filter",
+                        "name": "filter",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Search page",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Elements per page",
+                        "name": "pageSize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/userdto.Public"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft delete user. All sessions of soft deleted user will be revoked",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Soft delete user",
+                "operationId": "soft-delete-user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}/drop": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hard delete user. Only soft deleted users can be hard deleted",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Hard delete user",
+                "operationId": "hard-delete-user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}/login": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change user login",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Change user login",
+                "operationId": "change-user-login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New user login",
+                        "name": "newLogin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UserLogin"
+                        }
+                    },
+                    {
+                        "description": "New user login and password (required if user tries to change his own login)",
+                        "name": "newLoginAndPassword",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.LoginAndPassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}/password": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change user password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Change user password",
+                "operationId": "change-user-password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New user password",
+                        "name": "newPassword",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UserPassword"
+                        }
+                    },
+                    {
+                        "description": "Both new and current user passwords (required if user tries to change his own login)",
+                        "name": "newAndCurrentPassword",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.ChangePassword"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}/restore": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restore soft delete user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Restore soft delete user",
+                "operationId": "restore-soft-delete-user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get user roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user roles",
+                "operationId": "get-user-roles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Change user roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Change user roles",
+                "operationId": "change-user-roles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New user roles",
+                        "name": "newRoles",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UserRoles"
+                        }
+                    },
+                    {
+                        "description": "New user roles and password (required if user tries to change his own login)",
+                        "name": "newRolesAndPassword",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.ChangeRoles"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{uid}/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all active user sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user sessions",
+                "operationId": "get-user-sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "uid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/userdto.Public"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "490": {
+                        "description": "User data desynchronization",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Token-Refresh-Required": {
+                                "type": "string",
+                                "description": "Set to 'true' when token refresh is required"
+                            }
+                        }
+                    },
+                    "491": {
+                        "description": "Session revoked",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        },
+                        "headers": {
+                            "X-Session-Revoked": {
+                                "type": "string",
+                                "description": "Set to 'true' if current user session was revoked"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "requestbody.ChangePassword": {
+            "type": "object",
+            "properties": {
+                "newPassword": {
+                    "type": "string",
+                    "example": "your-new-password"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "your-password"
+                }
+            }
+        },
+        "requestbody.ChangeRoles": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "your-password"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "user",
+                        "moderator"
+                    ]
+                }
+            }
+        },
+        "requestbody.LoginAndPassword": {
+            "type": "object",
+            "properties": {
+                "login": {
+                    "type": "string",
+                    "example": "admin@mail.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "your-password"
+                }
+            }
+        },
+        "requestbody.UserLogin": {
+            "type": "object",
+            "properties": {
+                "login": {
+                    "type": "string",
+                    "example": "admin@mail.com"
+                }
+            }
+        },
+        "requestbody.UserPassword": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "your-password"
+                }
+            }
+        },
+        "requestbody.UserRoles": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "user",
+                        "moderator"
+                    ]
+                }
+            }
+        },
+        "requestbody.UsersIDs": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "cef85e5a-5a5f-42d0-81bd-1650391c0e82",
+                        "9bc87af1-5f92-4d8c-bf41-7ade642c5a91"
+                    ]
+                }
+            }
+        },
+        "responsebody.Error": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Something went wrong"
+                }
+            }
+        },
+        "responsebody.IsLoginAvailable": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "responsebody.Token": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOi..."
+                },
+                "expiresIn": {
+                    "type": "integer",
+                    "example": 600
+                },
+                "message": {
+                    "type": "string",
+                    "example": "hello"
+                }
+            }
+        },
+        "userdto.Payload": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "d529a8d2-1eb4-4bce-82aa-e62095dbc653"
+                },
+                "login": {
+                    "type": "string",
+                    "example": "admin@mail.com"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "user",
+                        "moderator"
+                    ]
+                },
+                "session-id": {
+                    "type": "string",
+                    "example": "35b92582-7694-4958-9751-1fef710cb94d"
+                },
+                "version": {
+                    "type": "integer",
+                    "example": 7
+                }
+            }
+        },
+        "userdto.Public": {
+            "type": "object",
+            "properties": {
+                "deletedAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "login": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Bearer token format: Bearer \u003cYOUR_TOKEN\u003e",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

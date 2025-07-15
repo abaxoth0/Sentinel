@@ -20,6 +20,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// @Summary 		Login into the service
+// @Description 	Login endpoint
+// @ID 				login
+// @Tags			auth
+// @Param 			credentials body requestbody.LoginAndPassword true "User credentials"
+// @Accept			json
+// @Produce			json
+// @Success			200 			{object} 	responsebody.Token
+// @Failure			400,401,500 	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/auth [post]
 func Login(ctx echo.Context) error {
     var body RequestBody.LoginAndPassword
     if err := controller.BindAndValidate(ctx, &body); err != nil {
@@ -170,6 +184,20 @@ func Login(ctx echo.Context) error {
     )
 }
 
+// @Summary 		Revoke user session
+// @Description 	Logout endpoint
+// @ID 				logout
+// @Tags			auth
+// @Param 			sessionID path string true "ID of session that should be revoked"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,500 	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Router			/auth [delete]
+// @Router			/auth/{sessionID} [delete]
+// @Security		BearerAuth
 func Logout(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -228,6 +256,18 @@ func Logout(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
+// @Summary 		Refreshes auth tokens
+// @Description 	Create new access and refresh tokens and update current session info
+// @ID 				refresh
+// @Tags			auth
+// @Param 			X-Refresh-Token header string true "Refresh Token (sent as HTTP-Only cookie in actual requests)"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,500 	{object} 	responsebody.Error
+// @Failure			491 			{object} 	responsebody.Error		"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 		"Set to 'true' if current user session was revoked"
+// @Router			/auth [put]
 func Refresh(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -273,6 +313,21 @@ func Refresh(ctx echo.Context) error {
     )
 }
 
+// @Summary 		Verifies user authentication
+// @Description 	Verify that user is logged-in
+// @ID 				verify
+// @Tags			auth
+// @Param 			Authorization header string true "Access token in Token Bearer format"
+// @Accept			json
+// @Produce			json
+// @Success			200 			{object} 	userdto.Payload
+// @Failure			400,401,500 	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/auth [get]
+// @Security		BearerAuth
 func Verify(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -296,6 +351,21 @@ func Verify(ctx echo.Context) error {
     return ctx.JSON(http.StatusOK, payload)
 }
 
+// @Summary 		Revokes all user sessions
+// @Description 	Revoke all existing non-revoked sessions
+// @ID 				revoke-all-user-sessions
+// @Tags			auth
+// @Param 			uid path string true "User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/auth/sessions/{uid} [delete]
+// @Security		BearerAuth
 func RevokeAllUserSessions(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

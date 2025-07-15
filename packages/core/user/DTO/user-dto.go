@@ -103,11 +103,12 @@ func (dto *Audit) IsDeleted() bool {
     return !dto.DeletedAt.IsZero()
 }
 
+// swagger:model UserPayload
 type Payload struct {
-	ID    		string   `json:"id"`
-	Login 		string   `json:"login"`
-	Roles 		[]string `json:"roles"`
-	Version 	uint32	 `json:"version"`
-	SessionID 	string 	 `json:"session-id"`
+	ID    		string   `json:"id" example:"d529a8d2-1eb4-4bce-82aa-e62095dbc653"`
+	Login 		string   `json:"login" example:"admin@mail.com"`
+	Roles 		[]string `json:"roles" example:"user,moderator"`
+	Version 	uint32	 `json:"version" example:"7"`
+	SessionID 	string 	 `json:"session-id" example:"35b92582-7694-4958-9751-1fef710cb94d"`
 }
 

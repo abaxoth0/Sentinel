@@ -86,8 +86,9 @@ type UpdateUser interface {
     Validator
 }
 
+// swagger:model UserPasswordRequest
 type UserPassword struct {
-    Password string
+	Password string `json:"password" example:"your-password"`
 }
 
 func (b *UserPassword) GetPassword() string {
@@ -98,16 +99,18 @@ func (b *UserPassword) Validate() *Error.Status {
     return validateStr("password", b.Password)
 }
 
+// swagger:model UserLoginRequest
 type UserLogin struct {
-	Login string `json:"login"`
+	Login string `json:"login" example:"admin@mail.com"`
 }
 
 func (b *UserLogin) Validate() *Error.Status {
     return validateStr("login", b.Login)
 }
 
+// swagger:model UserRolesRequest
 type UserRoles struct {
-    Roles []string `json:"roles"`
+	Roles []string `json:"roles" example:"user,moderator"`
 }
 
 func (b *UserRoles) Validate() *Error.Status {
@@ -122,6 +125,7 @@ func (b *UserRoles) Validate() *Error.Status {
     return nil
 }
 
+// swagger:model UserLoginAndPasswordRequest
 type LoginAndPassword struct {
     UserLogin 		`json:",inline"`
     UserPassword 	`json:",inline"`
@@ -137,9 +141,10 @@ func (b *LoginAndPassword) Validate() *Error.Status {
     return nil
 }
 
+// swagger:model UserChangePasswordRequest
 type ChangePassword struct {
-    UserPassword 			`json:",inline"`
-    NewPassword string 	`json:"newPassword"`
+    UserPassword 		`json:",inline"`
+	NewPassword string 	`json:"newPassword" example:"your-new-password"`
 }
 
 func (b *ChangePassword) Validate() *Error.Status {
@@ -152,6 +157,7 @@ func (b *ChangePassword) Validate() *Error.Status {
     return nil
 }
 
+// swagger:model UserChangeLoginRequest
 type ChangeLogin struct {
     UserLogin 		`json:",inline"`
     UserPassword 	`json:",inline"`
@@ -167,6 +173,7 @@ func (b *ChangeLogin) Validate() *Error.Status {
     return nil
 }
 
+// swagger:model UserChangeRolesRequest
 type ChangeRoles struct {
     UserRoles 		`json:",inline"`
     UserPassword 	`json:",inline"`
@@ -182,11 +189,12 @@ func (b *ChangeRoles) Validate() *Error.Status {
     return nil
 }
 
-type UserIDs struct {
-	IDs []string `json:"id"`
+// swagger:model UsersIDsRequest
+type UsersIDs struct {
+	IDs []string `json:"id" example:"cef85e5a-5a5f-42d0-81bd-1650391c0e82,9bc87af1-5f92-4d8c-bf41-7ade642c5a91"`
 }
 
-func (b *UserIDs) Validate() *Error.Status {
+func (b *UsersIDs) Validate() *Error.Status {
 	if b.IDs == nil || len(b.IDs) == 0 {
 		return ErrorMissingUserIDs
 	}

@@ -2,10 +2,12 @@ package router
 
 import (
 	"net/http"
+	_ "sentinel/docs"
 	"sentinel/packages/common/config"
 	Activation "sentinel/packages/presentation/api/http/controllers/activation"
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
 	Cache "sentinel/packages/presentation/api/http/controllers/cache"
+	Docs "sentinel/packages/presentation/api/http/controllers/docs"
 	Roles "sentinel/packages/presentation/api/http/controllers/roles"
 	User "sentinel/packages/presentation/api/http/controllers/user"
 	"sentinel/packages/presentation/api/http/request"
@@ -87,6 +89,10 @@ func Create() *echo.Echo {
     cacheGroup := router.Group("/cache")
 
     cacheGroup.DELETE(rootPath, Cache.Drop)
+
+	docsGroup := router.Group("/docs")
+
+	docsGroup.GET("/*", Docs.Swagger)
 
     return router
 }

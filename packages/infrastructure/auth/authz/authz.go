@@ -12,8 +12,11 @@ import (
 
 var authzLogger = logger.NewSource("AUTHZ", logger.Default)
 
-var userResource *rbac.Resource
-var cacheResource *rbac.Resource
+var (
+	userResource 	*rbac.Resource
+	cacheResource	*rbac.Resource
+	docsResource	*rbac.Resource
+)
 
 var userEntity = rbac.NewEntity("user")
 
@@ -21,14 +24,14 @@ var schema *rbac.Schema
 var Host *rbac.Host
 
 func Init() {
-	authzLogger.Info("Loading Host configuration...", nil)
+	authzLogger.Info("Loading configuration file...", nil)
 
 	h, e := rbac.LoadHost("RBAC.json")
 	if e != nil {
-        authzLogger.Fatal("Failed to load Host configuration", e.Error(), nil)
+        authzLogger.Fatal("Failed to load configuration file", e.Error(), nil)
 	}
 
-	authzLogger.Info("Loading Host configuration: OK", nil)
+	authzLogger.Info("Loading configuration file: OK", nil)
 	authzLogger.Info("Getting schema for this service...", nil)
 
     Host = &h
@@ -59,6 +62,8 @@ func Init() {
 
 		return roles
 	})())
+
+	docsResource = rbac.NewResource("docs", schema.Roles)
 
 	authzLogger.Info("Initializing resources: OK", nil)
 }
