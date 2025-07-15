@@ -126,6 +126,7 @@ func (_ *repository) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
 	updatedUser.DeletedAt = audit.ChangedAt
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
+	driver.DeleteUserSessionsCache(user.ID)
 
 	return nil
 }
@@ -201,7 +202,7 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 	deletedUsers, err := newQuery(
 		`SELECT id, login, password, roles, deleted_at FROM "user" WHERE id = ANY($1) and deleted_at `+cond+` NULL;`,
 		UIDs,
-	).CollectBasicUserDTO(primaryConnection)
+	).CollectBasicUserDTO(replicaConnection)
 	if err != Error.StatusNotFound {
 		if err != nil  {
 			return err
@@ -210,13 +211,16 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 		for i, user := range deletedUsers {
 			ids[i] = user.ID
 		}
-		var message string
-		if newState == user.DeletedState {
-			message = "Can't delete already deleted user(-s): " + strings.Join(ids, ", ")
-		} else {
-			message = "Can't restore non-deleted user(-s): " + strings.Join(ids, ", ")
+		return newUsersStateConflictError(newState, ids)
+	}
+	if len(deletedUsers) != len(UIDs) {
+		ids := make([]string, 0, len(UIDs) - len(deletedUsers))
+		for _, user := range deletedUsers {
+			if !slices.Contains(UIDs, user.ID) {
+				ids = append(ids, user.ID)
+			}
 		}
-		return Error.NewStatusError(message, http.StatusConflict)
+		return newUsersStateConflictError(newState, ids)
 	}
 
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
@@ -231,9 +235,12 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 
 	UIDs, logins := make([]string, len(deletedUsers)), make([]string, len(deletedUsers))
 
-	for i, user := range deletedUsers {
-		UIDs[i] = user.ID
-		logins[i] = user.Login
+	for i, deletedUser := range deletedUsers {
+		UIDs[i] = deletedUser.ID
+		logins[i] = deletedUser.Login
+		if newState == user.DeletedState {
+			driver.DeleteUserSessionsCache(deletedUser.ID)
+		}
 	}
 
 	if err := cache.BulkInvalidateBasicUserDTO(UIDs, logins); err != nil {
@@ -251,7 +258,11 @@ func (_ *repository) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.
 	if err := authz.User.SoftDeleteUser(false, act.RequesterRoles); err != nil {
 		return err
 	}
-	return driver.bulkStateUpdate(user.DeletedState, act, UIDs)
+	if err := driver.bulkStateUpdate(user.DeletedState, act, UIDs); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (_ *repository) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status {
