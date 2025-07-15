@@ -198,20 +198,13 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 		}
 	}
 
-	cond := util.Ternary(newState == user.DeletedState, "IS NOT", "IS")
+	cond := util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
 	deletedUsers, err := newQuery(
-		`SELECT id, login, password, roles, deleted_at FROM "user" WHERE id = ANY($1) and deleted_at `+cond+` NULL;`,
+		`SELECT id, login, password, roles, deleted_at, version FROM "user" WHERE id = ANY($1) and deleted_at `+cond+` NULL;`,
 		UIDs,
 	).CollectBasicUserDTO(replicaConnection)
-	if err != Error.StatusNotFound {
-		if err != nil  {
-			return err
-		}
-		ids := make([]string, len(deletedUsers))
-		for i, user := range deletedUsers {
-			ids[i] = user.ID
-		}
-		return newUsersStateConflictError(newState, ids)
+	if err != nil {
+		return err
 	}
 	if len(deletedUsers) != len(UIDs) {
 		ids := make([]string, 0, len(UIDs) - len(deletedUsers))
@@ -220,7 +213,13 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 				ids = append(ids, user.ID)
 			}
 		}
-		return newUsersStateConflictError(newState, ids)
+		var message string
+		if newState == user.DeletedState {
+			message = "Can't delete already deleted user(-s): " + strings.Join(ids, ", ")
+		} else {
+			message = "Can't restore non-deleted user(-s): " + strings.Join(ids, ", ")
+		}
+		return Error.NewStatusError(message, http.StatusConflict)
 	}
 
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
@@ -239,7 +238,13 @@ func (_ *repository) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, 
 		UIDs[i] = deletedUser.ID
 		logins[i] = deletedUser.Login
 		if newState == user.DeletedState {
-			driver.DeleteUserSessionsCache(deletedUser.ID)
+			dbLogger.Trace("Revoking sessions of user "+deletedUser.ID+"...", nil)
+			// TODO find more optimal solution, cuz this one cause a lot of DB queries
+			err := driver.RevokeAllUserSessions(act.ToTargeted(deletedUser.ID))
+			if err != nil && err != Error.StatusNotFound {
+				dbLogger.Error("Failed to revoke sessions of user "+deletedUser.ID, err.Error(), nil)
+			}
+			dbLogger.Trace("Revoking sessions of user "+deletedUser.ID+": OK", nil)
 		}
 	}
 

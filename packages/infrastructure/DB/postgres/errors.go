@@ -3,8 +3,6 @@ package postgres
 import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
-	"sentinel/packages/core/user"
-	"strings"
 )
 
 var loginAlreadyInUse = Error.NewStatusError(
@@ -26,14 +24,4 @@ var activationNotFound = Error.NewStatusError(
     "Activation token wasn't found",
     http.StatusNotFound,
 )
-
-func newUsersStateConflictError(newState user.State, ids []string) *Error.Status {
-	var message string
-	if newState == user.DeletedState {
-		message = "Can't delete already deleted user(-s): " + strings.Join(ids, ", ")
-	} else {
-		message = "Can't restore non-deleted user(-s): " + strings.Join(ids, ", ")
-	}
-	return Error.NewStatusError(message, http.StatusConflict)
-}
 

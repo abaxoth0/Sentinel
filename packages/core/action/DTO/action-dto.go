@@ -31,6 +31,13 @@ func (dto *Basic) ValidateRequesterUID() *Error.Status {
     return nil
 }
 
+func (dto *Basic) ToTargeted(targetUID string) *Targeted {
+	return &Targeted{
+		TargetUID: targetUID,
+		Basic: *dto,
+	}
+}
+
 type Targeted struct {
 	TargetUID string
     Basic
