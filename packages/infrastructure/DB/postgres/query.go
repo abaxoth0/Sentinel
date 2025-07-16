@@ -9,6 +9,7 @@ import (
 	"sentinel/packages/common/config"
 	pbencoding "sentinel/packages/common/encoding/protobuf"
 	Error "sentinel/packages/common/errors"
+	LocationDTO "sentinel/packages/core/location/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/cache"
@@ -93,10 +94,16 @@ func(q *query) prepare(conType connectionType) (err *Error.Status) {
 				args[i] = strconv.FormatInt(a, 10)
 			case int32:
 				args[i] = strconv.FormatInt(int64(a), 10)
+			case float32:
+				args[i] = strconv.FormatFloat(float64(a), 'f', 8, 32)
+			case float64:
+				args[i] = strconv.FormatFloat(float64(a), 'f', 11, 64)
 			case time.Time:
 				args[i] = a.String()
 			case bool:
 				args[i] = strconv.FormatBool(a)
+			case net.IP:
+				args[i] = a.To4().String()
 			}
 		}
 
@@ -329,7 +336,6 @@ func (q *query) FullSessionDTO(conType connectionType) (*SessionDTO.Full, *Error
 		&dto.OSVersion,
 		&dto.Browser,
 		&dto.BrowserVersion,
-		&dto.Location,
 		&createdAt,
 		&lastUsedAt,
 		&expiresAt,
@@ -372,7 +378,6 @@ func (q *query) CollectPublicSessionDTO(conType connectionType) ([]*SessionDTO.P
 			&dto.OSVersion,
 			&dto.Browser,
 			&dto.BrowserVersion,
-			&dto.Location,
 			&createdAt,
 			&lastUsedAt,
 			&expiresAt,
@@ -394,5 +399,45 @@ func (q *query) CollectPublicSessionDTO(conType connectionType) ([]*SessionDTO.P
 
 		return dto, nil
 	})
+}
+
+func (q *query) FullLocationDTO(conType connectionType) (*LocationDTO.Full, *Error.Status) {
+	scan, err := q.Row(conType)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := new(LocationDTO.Full)
+
+	var createdAt sql.NullTime
+	var deletedAt sql.NullTime
+	var addr net.IP
+
+	err = scan(
+		&dto.ID,
+		&addr,
+		&dto.SessionID,
+		&dto.Country,
+		&dto.Region,
+		&dto.City,
+		&dto.Latitude,
+		&dto.Longitude,
+		&dto.ISP,
+		&deletedAt,
+		&createdAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if createdAt.Valid {
+		dto.CreatedAt = createdAt.Time
+	}
+	if deletedAt.Valid {
+		dto.DeletedAt = deletedAt.Time
+	}
+	dto.IP = addr
+
+	return dto, nil
 }
 

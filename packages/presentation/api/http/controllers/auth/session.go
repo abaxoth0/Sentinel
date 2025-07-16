@@ -142,7 +142,6 @@ func createSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (
 		OSVersion: osVersion,
 		Browser: ua.Name,
 		BrowserVersion: ua.Version,
-		Location: "...", // how to get?
 		CreatedAt: now,
 		LastUsedAt: now,
 		ExpiresAt: now.Add(ttl),
@@ -204,7 +203,6 @@ func actualizeSession(
 		OSVersion: osVersion,
 		Browser: session.Browser,
 		BrowserVersion: ua.Version,
-		Location: "...", // how to get?
 		CreatedAt: session.CreatedAt,
 		LastUsedAt: now,
 		ExpiresAt: now.Add(ttl),
@@ -277,6 +275,11 @@ func updateSession(
 	}
 
 	if err := DB.Database.UpdateSession(newSession.ID, newSession); err != nil {
+		return nil, nil, err
+	}
+
+	if err := updateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
+		controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), nil)
 		return nil, nil, err
 	}
 

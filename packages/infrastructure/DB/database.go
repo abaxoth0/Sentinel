@@ -1,6 +1,7 @@
 package DB
 
 import (
+	"sentinel/packages/core/location"
 	"sentinel/packages/core/session"
 	"sentinel/packages/core/user"
 	"sentinel/packages/infrastructure/DB/postgres"
@@ -10,6 +11,7 @@ type database interface {
 	connector
 	user.Repository
 	session.Repository
+	location.Repository
 }
 
 type connector interface {

@@ -5,6 +5,7 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
@@ -166,8 +167,21 @@ func Login(ctx echo.Context) error {
 			"Failed to save session",
 			http.StatusInternalServerError,
 		)
-		controller.Logger.Error("Failed to login", err.Error(), reqMeta)
+		controller.Logger.Error("Failed to save session", err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(e)
+	}
+
+	act := ActionDTO.NewTargeted(user.ID, user.ID, user.Roles)
+
+	if err := updateLocation(act, session.ID, session.IpAddress); err != nil {
+		controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), reqMeta)
+
+		e := DB.Database.RevokeSession(act, session.ID)
+		if e != nil {
+			controller.Logger.Error("Failed to revoke session " + session.ID, err.Error(), reqMeta)
+			return controller.ConvertErrorStatusToHTTP(e)
+		}
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
     ctx.SetCookie(newAuthCookie(refreshToken))

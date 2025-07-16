@@ -30,7 +30,11 @@ debug-mode: true
 
 debug-safe-db-scans: true
 
-log-db-queries: true
+debug-log-db-queries: true
+
+# If not empty then this IP will be used to get all users location.
+# Designed for debugging, cuz location provider will return error if IP is local, e.g. 127.0.0.1
+debug-location-ip: 8.8.8.8
 
 ### APP ###
 service-id: cb663674-803e-4b06-bfeb-87c5cc86383e

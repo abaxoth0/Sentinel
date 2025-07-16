@@ -13,7 +13,6 @@ type Full struct {
 	OSVersion		  string
 	Browser 		  string
 	BrowserVersion	  string
-	Location 		  string
 	CreatedAt 		  time.Time
 	LastUsedAt 		  time.Time
 	ExpiresAt 		  time.Time
@@ -30,7 +29,6 @@ type Public struct {
 	OSVersion		  string	`json:"os-version"`
 	Browser 		  string	`json:"browser"`
 	BrowserVersion	  string	`json:"browser-version"`
-	Location 		  string	`json:"location"`
 	CreatedAt 		  time.Time	`json:"created-at"`
 	LastUsedAt 		  time.Time	`json:"last-used-at"`
 	ExpiresAt 		  time.Time	`json:"expires-at"`

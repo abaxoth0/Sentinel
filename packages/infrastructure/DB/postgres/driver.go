@@ -9,6 +9,7 @@ type postgers struct {
     seeker
     repository
 	session
+	location
 }
 
 var driver *postgers

@@ -247,7 +247,25 @@ func (c *connector) postConnection() error {
     ); err != nil {
         return err
     }
-
+    if err := c.exec(
+		primaryConnection,
+		"Verifying that table 'location' exists",
+		`CREATE TABLE IF NOT EXISTS location (
+ 	       id          UUID PRIMARY KEY,
+ 	       ip          INET NOT NULL,
+ 	       session_id  UUID REFERENCES "user_session"(id) ON DELETE SET NULL,
+ 	       country     VARCHAR(2) NOT NULL,
+ 	       region      VARCHAR(3),
+ 	       city        VARCHAR(100),
+ 	       latitude    REAL,
+ 	       longitude   REAL,
+ 	       isp         VARCHAR(100),
+ 	       deleted_at  TIMESTAMPTZ,
+ 	       created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+ 	   );`,
+	); err != nil {
+	return err
+	}
     dbLogger.Info("Post-connection: OK", nil)
 
     return nil

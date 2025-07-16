@@ -72,9 +72,12 @@ func (c *cacheConfig) TTL() time.Duration {
 }
 
 type debugConfig struct {
-    Enabled           bool `yaml:"debug-mode" validate:"exists"`
-    SafeDatabaseScans bool `yaml:"debug-safe-db-scans" validate:"exists"`
-	LogDbQueries	  bool `yaml:"log-db-queries" validate:"exists"`
+    Enabled           	bool 	`yaml:"debug-mode" validate:"exists"`
+    SafeDatabaseScans 	bool 	`yaml:"debug-safe-db-scans" validate:"exists"`
+	LogDbQueries	  	bool 	`yaml:"debug-log-db-queries" validate:"exists"`
+	// If not empty then this IP will be used to get all users location.
+	// Designed for debugging, cuz location provider will return error if IP is local, e.g. 127.0.0.1
+	LocationIP			string 	`yaml:"debug-location-ip"`
 }
 
 type appConfig struct {

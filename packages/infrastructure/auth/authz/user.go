@@ -84,3 +84,10 @@ func (u user) AccessAPIDocs(roles []string) *Error.Status {
 	return authorize(accessAPIDocs, docsResource, roles)
 }
 
+func (u user) GetSessionLocation(roles []string) *Error.Status {
+	return authorize(getSessionLocation, userResource, roles)
+}
+
+func (u user) DeleteLocation(roles []string) *Error.Status {
+	return authorize(getSessionLocation, userResource, roles)
+}

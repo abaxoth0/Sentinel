@@ -17,8 +17,8 @@ type session struct {
 
 func (_ *session) SaveSession(session *SessionDTO.Full) *Error.Status {
 	query := newQuery(
-		`INSERT INTO "user_session" (id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);`,
+		`INSERT INTO "user_session" (id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`,
 		session.ID,
 		session.UserID,
 		session.UserAgent,
@@ -29,7 +29,6 @@ func (_ *session) SaveSession(session *SessionDTO.Full) *Error.Status {
 		session.OSVersion,
 		session.Browser,
 		session.BrowserVersion,
-		session.Location,
 		session.CreatedAt,
 		session.LastUsedAt,
 		session.ExpiresAt,
@@ -40,7 +39,7 @@ func (_ *session) SaveSession(session *SessionDTO.Full) *Error.Status {
 
 func (_ *session) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
 	query := newQuery(
-		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE id = $1 AND revoked = $2;`,
+		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE id = $1 AND revoked = $2;`,
 		sessionID, revoked,
 	)
 
@@ -65,7 +64,7 @@ func (s *session) GetSessionByID(act *ActionDTO.Targeted, sessionID string, revo
 
 func (_ *session) getUserSessions(UID string) ([]*SessionDTO.Public, *Error.Status) {
 	query := newQuery(
-		`SELECT id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at FROM "user_session" WHERE user_id = $1 AND revoked = false;`,
+		`SELECT id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at FROM "user_session" WHERE user_id = $1 AND revoked = false;`,
 		UID,
 	)
 
@@ -89,7 +88,7 @@ func (s *session) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public
 
 func (_ *session) GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full ,*Error.Status) {
 	query := newQuery(
-		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, location, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE device_id = $1 AND user_id = $2 AND revoked = false;`,
+		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE device_id = $1 AND user_id = $2 AND revoked = false;`,
 		deviceID,
 		UID,
 	)
@@ -105,8 +104,8 @@ func (_ *session) GetSessionByDeviceAndUserID(deviceID string, UID string) (*Ses
 func (_ *session) UpdateSession(sessionID string, newSession *SessionDTO.Full) *Error.Status {
 	query := newQuery(
 		`UPDATE "user_session" SET
-		user_id = $1, user_agent = $2, ip_address = $3, device_id = $4, device_type = $5, os = $6, os_version = $7, browser = $8, browser_version = $9, location = $10, last_used_at = $11, expires_at = $12
-		WHERE id = $13 AND revoked = false;`,
+		user_id = $1, user_agent = $2, ip_address = $3, device_id = $4, device_type = $5, os = $6, os_version = $7, browser = $8, browser_version = $9, last_used_at = $10, expires_at = $11
+		WHERE id = $12 AND revoked = false;`,
 		newSession.UserID,
 		newSession.UserAgent,
 		newSession.IpAddress,
@@ -116,7 +115,6 @@ func (_ *session) UpdateSession(sessionID string, newSession *SessionDTO.Full) *
 		newSession.OSVersion,
 		newSession.Browser,
 		newSession.BrowserVersion,
-		newSession.Location,
 		newSession.LastUsedAt,
 		newSession.ExpiresAt,
 		sessionID,

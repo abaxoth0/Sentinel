@@ -119,3 +119,15 @@ var accessAPIDocs = registerAction(
 	rbac.ReadPermission,
 )
 
+var getSessionLocation = registerAction(
+	userEntity,
+	"get_session_location",
+	rbac.ReadPermission,
+)
+
+var deleteLocation = registerAction(
+	userEntity,
+	"delete_location",
+	rbac.DeletePermission,
+)
+
