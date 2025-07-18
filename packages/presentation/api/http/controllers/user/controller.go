@@ -82,7 +82,7 @@ func Create(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
-type updater = func (*ActionDTO.Targeted) *Error.Status
+type updater = func (*ActionDTO.UserTargeted) *Error.Status
 
 // Updates user's state (deletion status).
 // if omitUid is true, then uid will be set to empty string,
@@ -288,7 +288,7 @@ func DropAllDeleted(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
-func validateUpdateRequestBody(filter *ActionDTO.Targeted, body RequestBody.UpdateUser) *echo.HTTPError {
+func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.UpdateUser) *echo.HTTPError {
     // if user tries to update himself
     if filter.RequesterUID == filter.TargetUID {
         if err := body.Validate(); err != nil {
@@ -635,7 +635,7 @@ func GetUserSessions(ctx echo.Context) error {
 
 	controller.Logger.Info("Getting user sessions...", reqMeta)
 
-	act := ActionDTO.NewTargeted(uid, payload.ID, payload.Roles)
+	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
 	sessions, err := DB.Database.GetUserSessions(act)
 	if err != nil {

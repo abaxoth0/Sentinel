@@ -8,7 +8,7 @@ import (
 	controller "sentinel/packages/presentation/api/http/controllers"
 )
 
-func updateLocation(act *ActionDTO.Targeted, sessionID string, ip string) *Error.Status {
+func updateLocation(act *ActionDTO.UserTargeted, sessionID string, ip string) *Error.Status {
 	controller.Logger.Trace("Updating location for session "+sessionID+"...", nil)
 
 	location, err := DB.Database.GetLocationBySessionID(act, sessionID)

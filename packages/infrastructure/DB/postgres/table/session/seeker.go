@@ -24,7 +24,7 @@ func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Fu
 	return dto, nil
 }
 
-func (m *Manager) GetSessionByID(act *ActionDTO.Targeted, sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
+func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
 	if err := authz.User.GetUserSession(
 		act.TargetUID == act.RequesterUID,
 		act.RequesterRoles,
@@ -49,7 +49,7 @@ func (m *Manager) getUserSessions(UID string) ([]*SessionDTO.Public, *Error.Stat
 	return sessions, nil
 }
 
-func (m *Manager) GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status) {
+func (m *Manager) GetUserSessions(act *ActionDTO.UserTargeted) ([]*SessionDTO.Public, *Error.Status) {
 	if err := authz.User.GetUserSession(
 		act.TargetUID == act.RequesterUID,
 		act.RequesterRoles,

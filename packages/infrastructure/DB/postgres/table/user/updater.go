@@ -28,7 +28,7 @@ func invalidateBasicUserDtoCache(old, current *UserDTO.Basic) {
 	}
 }
 
-func (m *Manager) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.Status {
+func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
     }
@@ -80,7 +80,7 @@ func (m *Manager) ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.S
 	return nil
 }
 
-func (m *Manager) ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status {
+func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
     }
@@ -126,7 +126,7 @@ func (m *Manager) ChangePassword(act *ActionDTO.Targeted, newPassword string) *E
 	return nil
 }
 
-func (m *Manager) ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status {
+func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
     }
@@ -194,7 +194,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
         )
     }
 
-    filter := ActionDTO.NewTargeted(user.ID, user.ID, user.Roles)
+    filter := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
     auditUserDTO := audit.NewUser(audit.UpdatedOperation, filter, user)
 	var updatedUser *UserDTO.Basic

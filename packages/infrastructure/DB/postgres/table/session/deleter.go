@@ -13,11 +13,11 @@ import (
 	"sentinel/packages/infrastructure/cache"
 )
 
-func NewRevokeAllUserSessionsQuery(act *ActionDTO.Targeted) *query.Query {
+func NewRevokeAllUserSessionsQuery(act *ActionDTO.UserTargeted) *query.Query {
 	return query.New(revokeAllUserSessionsSQL, act.TargetUID)
 }
 
-func (m *Manager) RevokeSession(act *ActionDTO.Targeted, sessionID string) *Error.Status {
+func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *Error.Status {
 	if act.RequesterUID != act.TargetUID {
 		if err := authz.User.Logout(act.RequesterRoles); err != nil {
 			return err
@@ -54,7 +54,7 @@ func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Public) *Error.Stat
 
 const revokeAllUserSessionsSQL = `UPDATE "user_session" SET revoked = true WHERE user_id = $1;`
 
-func (m *Manager) RevokeAllUserSessions(act *ActionDTO.Targeted) *Error.Status {
+func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Status {
 	if act.RequesterUID != act.TargetUID {
 		if err := authz.User.Logout(act.RequesterRoles); err != nil {
 			return err

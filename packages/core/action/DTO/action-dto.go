@@ -31,20 +31,20 @@ func (dto *Basic) ValidateRequesterUID() *Error.Status {
     return nil
 }
 
-func (dto *Basic) ToTargeted(targetUID string) *Targeted {
-	return &Targeted{
+func (dto *Basic) ToUserTargeted(targetUID string) *UserTargeted {
+	return &UserTargeted{
 		TargetUID: targetUID,
 		Basic: *dto,
 	}
 }
 
-type Targeted struct {
+type UserTargeted struct {
 	TargetUID string
     Basic
 }
 
-func NewTargeted(targetdUID string, requesterUID string, requestedRoles []string) *Targeted {
-    return &Targeted{
+func NewUserTargeted(targetdUID string, requesterUID string, requestedRoles []string) *UserTargeted {
+    return &UserTargeted{
         TargetUID: targetdUID,
         Basic: Basic{
             RequesterUID: requesterUID,
@@ -53,7 +53,7 @@ func NewTargeted(targetdUID string, requesterUID string, requestedRoles []string
     }
 }
 
-func (dto *Targeted) ValidateTargetUID() *Error.Status {
+func (dto *UserTargeted) ValidateTargetUID() *Error.Status {
     if err := validation.UUID(dto.TargetUID); err != nil {
         return err.ToStatus(
             "Target user ID is not specified",
@@ -63,7 +63,7 @@ func (dto *Targeted) ValidateTargetUID() *Error.Status {
     return nil
 }
 
-func (dto *Targeted) ValidateUIDs() *Error.Status {
+func (dto *UserTargeted) ValidateUIDs() *Error.Status {
     if err := dto.ValidateTargetUID(); err != nil {
         return err
     }

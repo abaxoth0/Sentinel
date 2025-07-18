@@ -18,9 +18,9 @@ type creator interface {
 }
 
 type seeker interface {
-	GetSessionByID(act *ActionDTO.Targeted, sessionID string, revoked bool) (*SessionDTO.Full, *Error.Status)
+	GetSessionByID(act *ActionDTO.UserTargeted, sessionID string, revoked bool) (*SessionDTO.Full, *Error.Status)
 	GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full, *Error.Status)
-	GetUserSessions(act *ActionDTO.Targeted) ([]*SessionDTO.Public, *Error.Status)
+	GetUserSessions(act *ActionDTO.UserTargeted) ([]*SessionDTO.Public, *Error.Status)
 }
 
 type updater interface {
@@ -28,8 +28,8 @@ type updater interface {
 }
 
 type deleter interface {
-	RevokeSession(act *ActionDTO.Targeted, sessionID string) *Error.Status
-	RevokeAllUserSessions(act *ActionDTO.Targeted) *Error.Status
+	RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *Error.Status
+	RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Status
 	DeleteUserSessionsCache(UID string) *Error.Status
 }
 

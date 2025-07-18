@@ -263,7 +263,7 @@ func (m *Manager) IsLoginAvailable(login string) bool  {
     return true
 }
 
-func (_ *Manager) GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status) {
+func (_ *Manager) GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status) {
     if err := act.ValidateTargetUID(); err != nil {
         return nil, err
     }

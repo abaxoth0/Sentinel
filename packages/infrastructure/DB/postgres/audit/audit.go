@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func NewUser(operation Operation, act *ActionDTO.Targeted, user *UserDTO.Basic) UserDTO.Audit {
+func NewUser(operation Operation, act *ActionDTO.UserTargeted, user *UserDTO.Basic) UserDTO.Audit {
     return UserDTO.Audit{
         ChangedUserID: act.TargetUID,
         ChangedByUserID: act.RequesterUID,

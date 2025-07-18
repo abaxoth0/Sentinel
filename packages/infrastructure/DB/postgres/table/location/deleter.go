@@ -10,7 +10,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 )
 
-func (l *Manager) deleteLocation(id string, act *ActionDTO.Targeted, drop bool) *Error.Status {
+func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bool) *Error.Status {
 	if act.TargetUID != act.RequesterUID {
 		if err := authz.User.DeleteLocation(act.RequesterRoles); err != nil {
 			return err
@@ -45,11 +45,11 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.Targeted, drop bool) 
 	return executor.Exec(connection.Primary, stateUpdateQuery)
 }
 
-func (l *Manager) SoftDeleteLocation(id string, act *ActionDTO.Targeted) *Error.Status {
+func (l *Manager) SoftDeleteLocation(id string, act *ActionDTO.UserTargeted) *Error.Status {
 	return l.deleteLocation(id, act, false)
 }
 
-func (l *Manager) DropLocation(id string, act *ActionDTO.Targeted) *Error.Status {
+func (l *Manager) DropLocation(id string, act *ActionDTO.UserTargeted) *Error.Status {
 	return l.deleteLocation(id, act, true)
 }
 

@@ -18,8 +18,8 @@ type creator interface {
 }
 
 type seeker interface {
-	GetLocationByID(act *ActionDTO.Targeted, id string) (*LocationDTO.Full, *Error.Status)
-	GetLocationBySessionID(act *ActionDTO.Targeted, id string) (*LocationDTO.Full, *Error.Status)
+	GetLocationByID(act *ActionDTO.UserTargeted, id string) (*LocationDTO.Full, *Error.Status)
+	GetLocationBySessionID(act *ActionDTO.UserTargeted, id string) (*LocationDTO.Full, *Error.Status)
 }
 
 type updater interface {
@@ -27,7 +27,7 @@ type updater interface {
 }
 
 type deleter interface {
-	SoftDeleteLocation(id string, act *ActionDTO.Targeted) *Error.Status
-	DropLocation(id string, act *ActionDTO.Targeted) *Error.Status
+	SoftDeleteLocation(id string, act *ActionDTO.UserTargeted) *Error.Status
+	DropLocation(id string, act *ActionDTO.UserTargeted) *Error.Status
 }
 

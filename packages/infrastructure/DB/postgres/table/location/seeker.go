@@ -25,7 +25,7 @@ func (_ *Manager) getLocationByID(id string) (*LocationDTO.Full, *Error.Status) 
 	return dto, nil
 }
 
-func (l *Manager) GetLocationByID(act *ActionDTO.Targeted, id string) (*LocationDTO.Full, *Error.Status) {
+func (l *Manager) GetLocationByID(act *ActionDTO.UserTargeted, id string) (*LocationDTO.Full, *Error.Status) {
 	// TODO add self targeted action? (e.g. banned_user won't be able to see his sessions)
 	//		(for all this kind of actions)
 	if act.TargetUID != act.RequesterUID {
@@ -37,7 +37,7 @@ func (l *Manager) GetLocationByID(act *ActionDTO.Targeted, id string) (*Location
 	return l.getLocationByID(id)
 }
 
-func (l *Manager) GetLocationBySessionID(act *ActionDTO.Targeted, sessionID string) (*LocationDTO.Full, *Error.Status) {
+func (l *Manager) GetLocationBySessionID(act *ActionDTO.UserTargeted, sessionID string) (*LocationDTO.Full, *Error.Status) {
 	// TODO add self targeted action? (e.g. banned_user won't be able to see his sessions)
 	//		(for all this kind of actions)
 	if act.TargetUID != act.RequesterUID {

@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-func (m *Manager) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
+func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
     }
@@ -65,7 +65,7 @@ func (m *Manager) SoftDelete(act *ActionDTO.Targeted) *Error.Status {
 	return nil
 }
 
-func (m *Manager) Restore(act *ActionDTO.Targeted) *Error.Status {
+func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
     }
@@ -178,7 +178,7 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 		if newState == user.DeletedState {
 			userLogger.Trace("Revoking sessions of user "+deletedUser.ID+"...", nil)
 			// TODO find more optimal solution, cuz this one cause a lot of DB queries
-			err := m.session.RevokeAllUserSessions(act.ToTargeted(deletedUser.ID))
+			err := m.session.RevokeAllUserSessions(act.ToUserTargeted(deletedUser.ID))
 			if err != nil && err != Error.StatusNotFound {
 				userLogger.Error("Failed to revoke sessions of user "+deletedUser.ID, err.Error(), nil)
 			}
@@ -216,7 +216,7 @@ func (m *Manager) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status
 }
 
 // TODO add auditUserDTO (there are some problem with foreign keys)
-func (m *Manager) Drop(act *ActionDTO.Targeted) *Error.Status {
+func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
     }

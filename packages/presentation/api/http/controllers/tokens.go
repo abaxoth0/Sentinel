@@ -54,7 +54,7 @@ func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 		return nil, err
 	}
 
-	act := actiondto.NewTargeted(payload.ID, payload.ID, payload.Roles)
+	act := actiondto.NewUserTargeted(payload.ID, payload.ID, payload.Roles)
 
 	if _, err := DB.Database.GetSessionByID(act, payload.SessionID, true); err == nil {
 		return nil, Error.StatusSessionRevoked

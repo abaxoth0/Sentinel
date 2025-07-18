@@ -35,27 +35,27 @@ type seeker interface {
 
 	IsLoginAvailable(login string) bool
 
-    GetRoles(act *ActionDTO.Targeted) ([]string, *Error.Status)
+    GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status)
 
 	GetUserVersion(UID string) (uint32, *Error.Status)
 }
 
 type updater interface {
-	ChangeLogin(act *ActionDTO.Targeted, newLogin string) *Error.Status
+	ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Error.Status
 
-	ChangePassword(act *ActionDTO.Targeted, newPassword string) *Error.Status
+	ChangePassword(act *ActionDTO.UserTargeted, newPassword string) *Error.Status
 
-	ChangeRoles(act *ActionDTO.Targeted, newRoles []string) *Error.Status
+	ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *Error.Status
 
 	Activate(token string) *Error.Status
 }
 
 type deleter interface {
-	SoftDelete(act *ActionDTO.Targeted) *Error.Status
+	SoftDelete(act *ActionDTO.UserTargeted) *Error.Status
 
-	Restore(act *ActionDTO.Targeted) *Error.Status
+	Restore(act *ActionDTO.UserTargeted) *Error.Status
 
-	Drop(act *ActionDTO.Targeted) *Error.Status
+	Drop(act *ActionDTO.UserTargeted) *Error.Status
 
 	DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status
 

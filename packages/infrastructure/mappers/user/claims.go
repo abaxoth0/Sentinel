@@ -31,7 +31,7 @@ func convertToStrSlice(input []any) ([]string, error) {
 
 type claimsMapper[T any] func(claims jwt.MapClaims, roles []string) (*T, *Error.Status)
 
-func mapFromClaims[T ActionDTO.Targeted | ActionDTO.Basic | UserDTO.Payload](
+func mapFromClaims[T ActionDTO.UserTargeted | ActionDTO.Basic | UserDTO.Payload](
     claims jwt.MapClaims,
     mapper claimsMapper[T],
 ) (*T, *Error.Status) {
@@ -48,9 +48,9 @@ func mapFromClaims[T ActionDTO.Targeted | ActionDTO.Basic | UserDTO.Payload](
     return mapper(claims, roles)
 }
 
-func TargetedActionDTOFromClaims(targetUID string, claims jwt.MapClaims) (*ActionDTO.Targeted, *Error.Status) {
-	return mapFromClaims(claims, func(claims jwt.MapClaims, roles []string) (*ActionDTO.Targeted, *Error.Status) {
-        return ActionDTO.NewTargeted(
+func TargetedActionDTOFromClaims(targetUID string, claims jwt.MapClaims) (*ActionDTO.UserTargeted, *Error.Status) {
+	return mapFromClaims(claims, func(claims jwt.MapClaims, roles []string) (*ActionDTO.UserTargeted, *Error.Status) {
+        return ActionDTO.NewUserTargeted(
             targetUID,
             claims[token.UserIdClaimsKey].(string),
             roles,

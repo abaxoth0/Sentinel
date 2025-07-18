@@ -121,8 +121,8 @@ func NewBasicActionDTO(ctx echo.Context) (*ActionDTO.Basic, *echo.HTTPError) {
 	})
 }
 
-func NewTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.Targeted, *echo.HTTPError) {
-	return newActionDTO(ctx, uid, func (id string, claims jwt.MapClaims) (*ActionDTO.Targeted, *Error.Status) {
+func NewTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.UserTargeted, *echo.HTTPError) {
+	return newActionDTO(ctx, uid, func (id string, claims jwt.MapClaims) (*ActionDTO.UserTargeted, *Error.Status) {
 		return UserMapper.TargetedActionDTOFromClaims(id, claims)
 	})
 }

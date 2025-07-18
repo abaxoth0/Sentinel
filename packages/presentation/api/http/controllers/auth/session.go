@@ -244,7 +244,7 @@ func updateSession(
 		payload.Version = user.Version
 	}
 
-	act := ActionDTO.NewTargeted(payload.ID, payload.ID, payload.Roles)
+	act := ActionDTO.NewUserTargeted(payload.ID, payload.ID, payload.Roles)
 
 	if !isSessionSet {
 		var err *Error.Status

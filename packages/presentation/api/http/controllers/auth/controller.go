@@ -171,7 +171,7 @@ func Login(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(e)
 	}
 
-	act := ActionDTO.NewTargeted(user.ID, user.ID, user.Roles)
+	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
 	if err := updateLocation(act, session.ID, session.IpAddress); err != nil {
 		controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), reqMeta)
