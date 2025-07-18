@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"sentinel/packages/common/logger"
 	"strconv"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -10,14 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
+var migrationLogger = logger.NewSource("MIGRATION", logger.Default)
+
 type Migrate struct {
 	//
 }
 
 func (_ Migrate) init() (*migrate.Migrate, error) {
-	dbLogger.Trace("Initializing DB driver for migrations...", nil)
+	migrationLogger.Trace("Initializing DB driver for migrations...", nil)
 
-	db := stdlib.OpenDB(*driver.primaryConfig.ConnConfig)
+	db := stdlib.OpenDB(*driver.PrimaryConfig.ConnConfig)
 
 	dbDriver, e := postgres.WithInstance(db, &postgres.Config{})
 	if e != nil {
@@ -33,7 +36,7 @@ func (_ Migrate) init() (*migrate.Migrate, error) {
 		return nil, err
 	}
 
-	dbLogger.Trace("Initializing DB driver for migrations: OK", nil)
+	migrationLogger.Trace("Initializing DB driver for migrations: OK", nil)
 
 	return m, nil
 }
@@ -43,7 +46,7 @@ func (m Migrate) step(n int) error {
 
 	migrator, err := m.init()
 	if err != nil {
-		dbLogger.Fatal(
+		migrationLogger.Fatal(
 			"Failed to apply migrations",
 			err.Error(),
 			nil,
@@ -57,33 +60,33 @@ func (m Migrate) step(n int) error {
 	}
 
 	if dirty {
-		dbLogger.Info(
+		migrationLogger.Info(
 			fmt.Sprintf("Detected dirty database at version %d. Forcing clean state...", ver),
 			nil,
 		)
 		if err := migrator.Force(int(ver)); err != nil {
-			dbLogger.Panic(
+			migrationLogger.Panic(
 				fmt.Sprintf("Failed to force clean state at version %d", ver),
 				err.Error(),
 				nil,
 			)
 			return err
 		}
-		dbLogger.Info(
+		migrationLogger.Info(
 			fmt.Sprintf("Forced clean state at version %d. ", ver),
 			nil,
 		)
 	}
 
-	dbLogger.Info("Applying migrations... (version change: "+version+")", nil)
+	migrationLogger.Info("Applying migrations... (version change: "+version+")", nil)
 
 	err = migrator.Steps(n)
 	if err != nil && err != migrate.ErrNoChange {
-		dbLogger.Error("Failed to apply migrations", err.Error(), nil)
+		migrationLogger.Error("Failed to apply migrations", err.Error(), nil)
 		return err
 	}
 
-	dbLogger.Info("Migrations applied (version change: "+version+")", nil)
+	migrationLogger.Info("Migrations applied (version change: "+version+")", nil)
 
 	return nil
 }

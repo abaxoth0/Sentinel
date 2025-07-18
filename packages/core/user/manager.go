@@ -6,7 +6,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 )
 
-type Repository interface {
+type Manager interface {
 	creator
 	seeker
 	updater

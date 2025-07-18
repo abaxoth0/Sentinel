@@ -6,7 +6,7 @@ import (
 	LocationDTO "sentinel/packages/core/location/DTO"
 )
 
-type Repository interface {
+type Manager interface {
 	creator
 	seeker
 	updater

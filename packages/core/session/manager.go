@@ -6,7 +6,7 @@ import (
 	SessionDTO "sentinel/packages/core/session/DTO"
 )
 
-type Repository interface {
+type Manager interface {
 	creator
 	seeker
 	updater
@@ -30,5 +30,6 @@ type updater interface {
 type deleter interface {
 	RevokeSession(act *ActionDTO.Targeted, sessionID string) *Error.Status
 	RevokeAllUserSessions(act *ActionDTO.Targeted) *Error.Status
+	DeleteUserSessionsCache(UID string) *Error.Status
 }
 

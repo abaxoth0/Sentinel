@@ -1,26 +1,26 @@
-package postgres
+package dberrors
 
 import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
 )
 
-var loginAlreadyInUse = Error.NewStatusError(
+var LoginAlreadyInUse = Error.NewStatusError(
     "Login already in use",
     http.StatusConflict,
 )
 
-var invalidActivationTokenFormat = Error.NewStatusError(
+var InvalidActivationTokenFormat = Error.NewStatusError(
     "invalid activation token format. (UUID expected)",
     http.StatusUnprocessableEntity,
 )
 
-var activationTokenExpired = Error.NewStatusError(
+var ActivationTokenExpired = Error.NewStatusError(
     "Токен активации истёк. Запросите повторную активацию аккаунта.",
     http.StatusGone,
 )
 
-var activationNotFound = Error.NewStatusError(
+var ActivationNotFound = Error.NewStatusError(
     "Activation token wasn't found",
     http.StatusNotFound,
 )

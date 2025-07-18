@@ -9,9 +9,9 @@ import (
 
 type database interface {
 	connector
-	user.Repository
-	session.Repository
-	location.Repository
+	user.Manager
+	session.Manager
+	location.Manager
 }
 
 type connector interface {
@@ -19,7 +19,7 @@ type connector interface {
 	Disconnect() error
 }
 
-// Implemets all entities "Repository" interfaces
+// Implemets "Manager" interface of each entity
 var Database database = postgres.InitDriver()
 
 type migrate interface {

@@ -1,29 +1,21 @@
-package postgres
+package audit
 
 import (
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/util"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
+	"sentinel/packages/infrastructure/DB/postgres/connection"
+	"sentinel/packages/infrastructure/DB/postgres/query"
+	"sentinel/packages/infrastructure/DB/postgres/transaction"
 	"time"
 )
 
-/*
-   Audit is using for storing users modifications histories.
-   It works pretty simple, - before any user modification in DB
-   row, that will be modified should be stored into audit_user with
-   new property: changed_at
-*/
-
-var deleteOperation = "D"
-var updatedOperation = "U"
-var restoreOperation = "R"
-
-func newAudit(operation string, act *ActionDTO.Targeted, user *UserDTO.Basic) UserDTO.Audit {
+func NewUser(operation Operation, act *ActionDTO.Targeted, user *UserDTO.Basic) UserDTO.Audit {
     return UserDTO.Audit{
         ChangedUserID: act.TargetUID,
         ChangedByUserID: act.RequesterUID,
-        Operation: operation,
+        Operation: string(operation),
         Login: user.Login,
         Password: user.Password,
         Roles: user.Roles,
@@ -32,10 +24,10 @@ func newAudit(operation string, act *ActionDTO.Targeted, user *UserDTO.Basic) Us
     }
 }
 
-func newAuditQuery(dto *UserDTO.Audit) *query {
+func NewUserQuery(dto *UserDTO.Audit) *query.Query {
     var deletedAt = util.Ternary(dto.IsDeleted(), &dto.DeletedAt, nil)
 
-    return newQuery(
+    return query.New(
         `INSERT INTO "audit_user"
         (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at)
         VALUES
@@ -51,9 +43,9 @@ func newAuditQuery(dto *UserDTO.Audit) *query {
     )
 }
 
-func execTransactionWithAudit(dto *UserDTO.Audit, queries ...*query) *Error.Status {
-    queries = append(queries, newAuditQuery(dto))
+func ExecTxWithAuditUser(dto *UserDTO.Audit, queries ...*query.Query) *Error.Status {
+    queries = append(queries, NewUserQuery(dto))
 
-    return newTransaction(queries...).Exec()
+    return transaction.New(queries...).Exec(connection.Primary)
 }
 
