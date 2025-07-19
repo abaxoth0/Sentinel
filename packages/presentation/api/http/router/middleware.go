@@ -29,13 +29,18 @@ func setTokenRefreshRequiredHeader(ctx echo.Context) {
 	ctx.Response().Header().Set("X-Token-Refresh-Required", "true")
 }
 
+// Without this user won't be able to refresh auth tokens, login or logout on desync
+var skipSyncCheckEndpoints map[string]bool = map[string]bool{
+	http.MethodPut + "/auth": true, // Refresh auth tokens endpoint
+	http.MethodPost + "/auth": true, // Login endpoint
+	http.MethodDelete + "/auth": true, // Logout endpoint
+}
+
 func preventUserDesync(next echo.HandlerFunc) echo.HandlerFunc {
 	return func (ctx echo.Context) error {
 		req := ctx.Request()
 
-		// "PUT /auth" is token refresh endpoint (TODO?: move it to a package-scoped variable?)
-		// Without this condition user won't be able to refresh auth tokens on data desync
-		if req.URL.Path == "/auth" && req.Method == http.MethodPut {
+		if skipSyncCheckEndpoints[req.Method+req.URL.Path] {
 			return next(ctx)
 		}
 
