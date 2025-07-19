@@ -48,7 +48,7 @@ type Disruptor[T any] struct {
 }
 
 func NewDisruptor[T any]() *Disruptor[T] {
-	// Check if buffer size if power of two
+	// If is not power of two
 	if BufferSize&(BufferSize - 1) != 0 {
 		panic(fmt.Sprintf("invalid disruptor buffer size - %d: it must be a power of two", BufferSize))
 	}

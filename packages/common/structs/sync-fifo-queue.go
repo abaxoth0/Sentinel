@@ -90,7 +90,7 @@ func (q *SyncFifoQueue[T]) Pop() (T, bool) {
 
 // Pops n elements from the queue.
 // If n is greater then queue size, then to prevent panic n will be equated to the queue size.
-// If queue is empty - returns nil and false.
+// If queue is empty - returns zero value of T and false.
 func (q *SyncFifoQueue[T]) PopN(n int) ([]T, bool) {
     q.mut.Lock()
     defer q.mut.Unlock()

@@ -12,13 +12,13 @@ type Task interface {
 }
 
 type WorkerPool struct {
-	canceled   atomic.Bool
-    queue      *SyncFifoQueue[Task]
-    ctx        context.Context
-    cancel     context.CancelFunc
-    wg         *sync.WaitGroup
-	workerOnce sync.Once
-	batchSize  int
+	canceled   	atomic.Bool
+    queue      	*SyncFifoQueue[Task]
+    ctx        	context.Context
+    cancel     	context.CancelFunc
+    wg         	*sync.WaitGroup
+	once 		sync.Once
+	batchSize  	int
 }
 
 // Creates new worker pool with specified waiter and parent context.
@@ -37,7 +37,7 @@ func NewWorkerPool(ctx context.Context, batchSize int) *WorkerPool {
 // Starts worker pool.
 // Will process tasks in batches if 'batch' is true
 func (wp *WorkerPool) Start(workerCount int) {
-	wp.workerOnce.Do(func() {
+	wp.once.Do(func() {
 		for range workerCount {
 			go wp.work()
 		}
@@ -73,19 +73,11 @@ func (wp *WorkerPool) work() {
 
 func (wp *WorkerPool) process(tasks []Task) {
 	wp.wg.Add(1)
+	defer wp.wg.Done()
 
-	if wp.batchSize == 1 {
-		tasks[0].Process()
-		wp.wg.Done()
-		return
+	for _, task := range tasks {
+		task.Process()
 	}
-
-	go func() {
-		defer wp.wg.Done()
-		for _, task := range tasks {
-			task.Process()
-		}
-	}()
 }
 
 func (wp *WorkerPool) IsCanceled() bool {
