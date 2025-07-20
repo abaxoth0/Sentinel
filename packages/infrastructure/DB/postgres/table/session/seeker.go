@@ -8,6 +8,7 @@ import (
 	"sentinel/packages/infrastructure/DB/postgres/executor"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
+	"sentinel/packages/infrastructure/cache"
 )
 
 func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
@@ -16,7 +17,14 @@ func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Fu
 		sessionID, revoked,
 	)
 
-	dto, err := executor.FullSessionDTO(connection.Replica, selectQuery)
+	var cacheKey string
+	if revoked {
+		cacheKey = cache.KeyBase[cache.RevokedSessionByID] + sessionID
+	} else {
+		cacheKey = cache.KeyBase[cache.SessionByID] + sessionID
+	}
+
+	dto, err := executor.FullSessionDTO(connection.Replica, selectQuery, cacheKey)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +32,7 @@ func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Fu
 	return dto, nil
 }
 
-func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
+func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
 	if err := authz.User.GetUserSession(
 		act.TargetUID == act.RequesterUID,
 		act.RequesterRoles,
@@ -32,7 +40,18 @@ func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string, 
 		return nil, err
 	}
 
-	return m.getSessionByID(sessionID, revoked)
+	return m.getSessionByID(sessionID, false)
+}
+
+func (m *Manager) GetRevokedSessionByID(act *ActionDTO.UserTargeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
+	if err := authz.User.GetUserSession(
+		act.TargetUID == act.RequesterUID,
+		act.RequesterRoles,
+	); err != nil {
+		return nil, err
+	}
+
+	return m.getSessionByID(sessionID, true)
 }
 
 func (m *Manager) getUserSessions(UID string) ([]*SessionDTO.Public, *Error.Status) {
@@ -66,7 +85,11 @@ func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*Ses
 		UID,
 	)
 
-	dto, err := executor.FullSessionDTO(connection.Replica, selectQuery)
+	dto, err := executor.FullSessionDTO(
+		connection.Replica,
+		selectQuery,
+		cache.KeyBase[cache.SessionByDeviceAndUserID] + deviceID + "|" + UID,
+	)
 	if err != nil {
 		return nil, err
 	}

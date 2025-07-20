@@ -249,7 +249,7 @@ func updateSession(
 	if !isSessionSet {
 		var err *Error.Status
 
-		session, err = DB.Database.GetSessionByID(act, payload.SessionID, false)
+		session, err = DB.Database.GetSessionByID(act, payload.SessionID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -269,7 +269,7 @@ func updateSession(
 	// If it wasn't specified then this session is queried from DB in this function, so there are no need in this check.
 	if isSessionSet {
 		// Check if this session exists in DB
-		if _, err := DB.Database.GetSessionByID(act, newSession.ID, false); err != nil {
+		if _, err := DB.Database.GetSessionByID(act, newSession.ID); err != nil {
 			return nil, nil, err
 		}
 	}

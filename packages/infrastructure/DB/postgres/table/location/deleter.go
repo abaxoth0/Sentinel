@@ -8,6 +8,7 @@ import (
 	"sentinel/packages/infrastructure/DB/postgres/executor"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
+	"sentinel/packages/infrastructure/cache"
 )
 
 func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bool) *Error.Status {
@@ -42,7 +43,19 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bo
 		)
 	}
 
-	return executor.Exec(connection.Primary, stateUpdateQuery)
+	if err := executor.Exec(connection.Primary, stateUpdateQuery); err != nil {
+		return err
+	}
+
+	err = cache.Client.Delete(
+		cache.KeyBase[cache.LocationByID] + id,
+		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,
+	)
+	if err != nil {
+		locationLogger.Error("Failed to delete cache", err.Error(), nil)
+	}
+
+	return nil
 }
 
 func (l *Manager) SoftDeleteLocation(id string, act *ActionDTO.UserTargeted) *Error.Status {

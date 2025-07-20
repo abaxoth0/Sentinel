@@ -98,9 +98,8 @@ func BasicUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Us
             return r, nil
         }
 
-        // if json decoding failed thats mean more likely it was invalid,
-        // so deleting it from cache to prevent futher cache errors.
-        // if it keep repeating even after this, then smth really went wrong.
+        // If decoding failed thats mean more likely cached data was invalid,
+        // so need to delete it from cache to prevent errors in future.
         if e := cache.Client.Delete(cacheKey); e != nil {
             return nil, e
         }
@@ -131,11 +130,7 @@ func BasicUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Us
 
 	cached, e := pbencoding.MarshallBasicUserDTO(dto)
 	if e != nil {
-		executorLogger.Error(
-			"Failed to encode basic user DTO",
-			e.Error(),
-			nil,
-		)
+		executorLogger.Error("Failed to encode basic user DTO", e.Error(), nil)
 	} else {
     	cache.Client.Set(cacheKey, cached)
 	}
@@ -143,8 +138,20 @@ func BasicUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Us
     return dto, nil
 }
 
-// TODO add cache
-func FullSessionDTO(conType connection.Type, q *query.Query) (*SessionDTO.Full, *Error.Status) {
+func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*SessionDTO.Full, *Error.Status) {
+	if cached, hit := cache.Client.Get(cacheKey); hit {
+		r, err := pbencoding.UnmarshallFullSessionDTO([]byte(cached))
+		if err == nil {
+			return r, nil
+		}
+
+        // If decoding failed thats mean more likely cached data was invalid,
+        // so need to delete it from cache to prevent same errors in future.
+        if e := cache.Client.Delete(cacheKey); e != nil {
+            return nil, e
+        }
+	}
+
 	scan, err := Row(conType, q)
 	if err != nil {
 		return nil, err
@@ -187,6 +194,13 @@ func FullSessionDTO(conType connection.Type, q *query.Query) (*SessionDTO.Full, 
 		dto.ExpiresAt = expiresAt.Time
 	}
 	dto.IpAddress = addr.To4().String()
+
+	cached, e := pbencoding.MarshallFullSessionDTO(dto)
+	if e != nil {
+		executorLogger.Error("Failed to encode full session DTO", e.Error(), nil)
+	} else {
+    	cache.Client.Set(cacheKey, cached)
+	}
 
 	return dto, nil
 }
@@ -233,7 +247,20 @@ func CollectPublicSessionDTO(conType connection.Type, query *query.Query) ([]*Se
 	})
 }
 
-func FullLocationDTO(conType connection.Type, q *query.Query) (*LocationDTO.Full, *Error.Status) {
+func FullLocationDTO(conType connection.Type, q *query.Query, cacheKey string) (*LocationDTO.Full, *Error.Status) {
+	if cached, hit := cache.Client.Get(cacheKey); hit {
+		r, err := pbencoding.UnmarshallFullLocationDTO([]byte(cached))
+		if err == nil {
+			return r, nil
+		}
+
+        // If decoding failed thats mean more likely cached data was invalid,
+        // so need to delete it from cache to prevent same errors in future.
+        if e := cache.Client.Delete(cacheKey); e != nil {
+            return nil, e
+        }
+	}
+
 	scan, err := Row(conType, q)
 	if err != nil {
 		return nil, err
@@ -269,6 +296,13 @@ func FullLocationDTO(conType connection.Type, q *query.Query) (*LocationDTO.Full
 		dto.DeletedAt = deletedAt.Time
 	}
 	dto.IP = addr
+
+	cached, e := pbencoding.MarshallFullLocationDTO(dto)
+	if e != nil {
+		executorLogger.Error("Failed to encode full location DTO", e.Error(), nil)
+	} else {
+    	cache.Client.Set(cacheKey, cached)
+	}
 
 	return dto, nil
 }

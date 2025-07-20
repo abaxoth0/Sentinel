@@ -15,10 +15,12 @@ import (
 // For example, full cache key must look like that: user_id:2384
 
 const (
-	UserKeyPrefix 		 = "user_"
-	DeletedUserKeyPrefix = "sd_user_"
-	AnyUserKeyPrefix 	 = "any_user_"
-	SessionKeyPrefix 	 = "session_"
+	UserKeyPrefix 		 	= "user_"
+	DeletedUserKeyPrefix 	= "sd_user_"
+	AnyUserKeyPrefix 	 	= "any_user_"
+	SessionKeyPrefix 	 	= "session_"
+	RevokedSessionKeyPrefix = "revoked_session_"
+	LocationKeyPrefix 		= "location_"
 )
 
 type client interface {

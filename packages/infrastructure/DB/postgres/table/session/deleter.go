@@ -33,12 +33,19 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 		sessionID,
 	)
 
-	cache.Client.Delete(
+	if err := executor.Exec(connection.Primary, revokeQuery); err != nil {
+		return err
+	}
+
+	err := cache.Client.Delete(
 		cache.KeyBase[cache.SessionByID] + sessionID,
 		cache.KeyBase[cache.UserBySessionID] + sessionID,
 	)
+	if err != nil {
+		sessionLogger.Error("Failed to delete cache", err.Error(), nil)
+	}
 
-	return executor.Exec(connection.Primary, revokeQuery)
+	return nil
 }
 
 func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Public) *Error.Status {

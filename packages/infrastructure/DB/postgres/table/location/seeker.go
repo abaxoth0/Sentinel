@@ -8,6 +8,7 @@ import (
 	"sentinel/packages/infrastructure/DB/postgres/executor"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
+	"sentinel/packages/infrastructure/cache"
 )
 
 func (_ *Manager) getLocationByID(id string) (*LocationDTO.Full, *Error.Status) {
@@ -17,7 +18,11 @@ func (_ *Manager) getLocationByID(id string) (*LocationDTO.Full, *Error.Status) 
 		id,
 	)
 
-	dto, err := executor.FullLocationDTO(connection.Replica, selectQuery)
+	dto, err := executor.FullLocationDTO(
+		connection.Replica,
+		selectQuery,
+		cache.KeyBase[cache.LocationByID] + id,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +57,11 @@ func (l *Manager) GetLocationBySessionID(act *ActionDTO.UserTargeted, sessionID 
 		sessionID,
 	)
 
-	dto, err := executor.FullLocationDTO(connection.Replica, selectQuery)
+	dto, err := executor.FullLocationDTO(
+		connection.Replica,
+		selectQuery,
+		cache.KeyBase[cache.LocationBySessionID] + sessionID,
+	)
 	if err != nil {
 		return nil, err
 	}
