@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package user.proto;
+option go_package = "github.com/StepanAnanin/Sentinel/packages/common/proto/generated";
+
+import "google/protobuf/timestamp.proto";
+
+message FullSessionDTO {
+	string ID = 1;
+	string UserID = 2;
+	string UserAgent = 3;
+	string IpAddress = 4;
+	string DeviceID = 5;
+	string DeviceType = 6;
+	string OS = 7;
+	string OSVersion = 8;
+	string Browser = 9;
+	string BrowserVersion = 10;
+	google.protobuf.Timestamp CreatedAt = 11;
+	google.protobuf.Timestamp LastUsedAt = 12;
+	google.protobuf.Timestamp ExpiresAt = 13;
+	bool Revoked = 14;
+}
+
+message PublicSessionDTO {
+	string ID = 1;
+	string UserAgent = 2;
+	string IpAddress = 3;
+	string DeviceID = 4;
+	string DeviceType = 5;
+	string OS = 6;
+	string OSVersion = 7;
+	string Browser = 8;
+	string BrowserVersion = 9;
+	google.protobuf.Timestamp CreatedAt = 10;
+	google.protobuf.Timestamp LastUsedAt = 11;
+	google.protobuf.Timestamp ExpiresAt = 12;
+}
+

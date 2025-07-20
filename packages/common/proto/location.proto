@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package user.proto;
+option go_package = "github.com/StepanAnanin/Sentinel/packages/common/proto/generated";
+
+import "google/protobuf/timestamp.proto";
+
+message FullLocationDTO {
+	string ID = 1;
+	string SessionID = 2;
+	bytes IP = 3;
+	// ISO 3166-1 alpha-2
+	string Country = 4;
+	// ISO 3166-2 region code
+	string Region = 5;
+	string City = 6;
+	float Latitude = 7;
+	float Longitude = 8;
+	string ISP = 9;
+	google.protobuf.Timestamp DeletedAt	= 10;
+	google.protobuf.Timestamp CreatedAt	= 11;
+}
+
