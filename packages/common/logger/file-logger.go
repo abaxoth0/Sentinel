@@ -176,12 +176,7 @@ func (l *FileLogger) Log(entry *LogEntry) {
     l.log(entry)
 
 	if entry.rawLevel >= FatalLogLevel {
-		if l.isRunning.Load() {
-			if err := l.Stop(); err != nil {
-				panic("Failed to stop logger '"+l.name+"' after handling critical error: " + err.Error())
-			}
-		}
-		throwError(entry)
+		handleCritical(entry)
 	}
 }
 

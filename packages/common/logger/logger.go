@@ -96,12 +96,13 @@ func logPreprocessing(entry *LogEntry, transmissions []Logger) bool {
     return true
 }
 
-func throwError(entry *LogEntry) {
-	// panic level
+// If log entry rawLevel is:
+// 	- FatalLogLevel: will call os.Exit(1)
+//	- PanicLogLevel: will cause panic with entry.Message and entry.Error
+func handleCritical(entry *LogEntry) {
 	if entry.rawLevel == PanicLogLevel {
 		panic(entry.Message+"\n"+entry.Error)
 	}
-	// fatal level
 	os.Exit(1)
 }
 

@@ -34,7 +34,7 @@ func (l *stderrLogger) Log(entry *LogEntry) {
     l.log(entry)
 
 	if entry.rawLevel >= FatalLogLevel {
-		throwError(entry)
+		handleCritical(entry)
 	}
 }
 
