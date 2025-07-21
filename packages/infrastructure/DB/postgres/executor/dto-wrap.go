@@ -178,7 +178,7 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 		&createdAt,
 		&lastUsedAt,
 		&expiresAt,
-		&dto.Revoked,
+		&dto.RevokedAt,
 	)
 	if err != nil {
 		return nil, err

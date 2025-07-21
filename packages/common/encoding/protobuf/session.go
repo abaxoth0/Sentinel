@@ -21,7 +21,7 @@ func MarshallFullSessionDTO(dto *SessionDTO.Full) ([]byte, error) {
 		CreatedAt: timestamppb.New(dto.CreatedAt),
 		LastUsedAt: timestamppb.New(dto.LastUsedAt),
 		ExpiresAt: timestamppb.New(dto.ExpiresAt),
-		Revoked: dto.Revoked,
+		RevokedAt: timestamppb.New(dto.RevokedAt),
 	})
 }
 
@@ -44,7 +44,7 @@ func UnmarshallFullSessionDTO(rawDTO []byte) (*SessionDTO.Full, error) {
 		CreatedAt: dto.CreatedAt.AsTime(),
 		LastUsedAt: dto.LastUsedAt.AsTime(),
 		ExpiresAt: dto.ExpiresAt.AsTime(),
-		Revoked: dto.Revoked,
+		RevokedAt: dto.RevokedAt.AsTime(),
 	}, nil
 }
 

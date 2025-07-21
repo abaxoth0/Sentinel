@@ -2,6 +2,7 @@ package sessiontable
 
 import (
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/util"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
@@ -12,9 +13,11 @@ import (
 )
 
 func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
+	cond := util.Ternary(revoked, "IS", "IS NOT")
+
 	selectQuery := query.New(
-		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE id = $1 AND revoked = $2;`,
-		sessionID, revoked,
+		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked_at FROM "user_session" WHERE id = $1 AND revoked_at `+cond+" NULL;",
+		sessionID,
 	)
 
 	var cacheKey string
@@ -56,7 +59,7 @@ func (m *Manager) GetRevokedSessionByID(act *ActionDTO.UserTargeted, sessionID s
 
 func (m *Manager) getUserSessions(UID string) ([]*SessionDTO.Public, *Error.Status) {
 	selectQuery := query.New(
-		`SELECT id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at FROM "user_session" WHERE user_id = $1 AND revoked = false;`,
+		`SELECT id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at FROM "user_session" WHERE user_id = $1 AND revoked_at IS NULL;`,
 		UID,
 	)
 
@@ -80,7 +83,7 @@ func (m *Manager) GetUserSessions(act *ActionDTO.UserTargeted) ([]*SessionDTO.Pu
 
 func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full ,*Error.Status) {
 	selectQuery := query.New(
-		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked FROM "user_session" WHERE device_id = $1 AND user_id = $2 AND revoked = false;`,
+		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked_at FROM "user_session" WHERE device_id = $1 AND user_id = $2 AND revoked_at IS NULL;`,
 		deviceID,
 		UID,
 	)

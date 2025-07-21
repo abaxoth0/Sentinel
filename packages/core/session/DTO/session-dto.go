@@ -16,7 +16,7 @@ type Full struct {
 	CreatedAt 		  time.Time
 	LastUsedAt 		  time.Time
 	ExpiresAt 		  time.Time
-	Revoked 		  bool
+	RevokedAt 		  time.Time
 }
 
 type Public struct {

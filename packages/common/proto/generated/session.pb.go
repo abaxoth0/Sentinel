@@ -37,7 +37,7 @@ type FullSessionDTO struct {
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=CreatedAt,proto3" json:"CreatedAt,omitempty"`
 	LastUsedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=LastUsedAt,proto3" json:"LastUsedAt,omitempty"`
 	ExpiresAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=ExpiresAt,proto3" json:"ExpiresAt,omitempty"`
-	Revoked        bool                   `protobuf:"varint,14,opt,name=Revoked,proto3" json:"Revoked,omitempty"`
+	RevokedAt      *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=RevokedAt,proto3" json:"RevokedAt,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -163,11 +163,11 @@ func (x *FullSessionDTO) GetExpiresAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *FullSessionDTO) GetRevoked() bool {
+func (x *FullSessionDTO) GetRevokedAt() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Revoked
+		return x.RevokedAt
 	}
-	return false
+	return nil
 }
 
 type PublicSessionDTO struct {
@@ -307,7 +307,7 @@ var File_packages_common_proto_session_proto protoreflect.FileDescriptor
 const file_packages_common_proto_session_proto_rawDesc = "" +
 	"\n" +
 	"#packages/common/proto/session.proto\x12\n" +
-	"user.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xea\x03\n" +
+	"user.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8a\x04\n" +
 	"\x0eFullSessionDTO\x12\x0e\n" +
 	"\x02ID\x18\x01 \x01(\tR\x02ID\x12\x16\n" +
 	"\x06UserID\x18\x02 \x01(\tR\x06UserID\x12\x1c\n" +
@@ -326,8 +326,8 @@ const file_packages_common_proto_session_proto_rawDesc = "" +
 	"\n" +
 	"LastUsedAt\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"LastUsedAt\x128\n" +
-	"\tExpiresAt\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tExpiresAt\x12\x18\n" +
-	"\aRevoked\x18\x0e \x01(\bR\aRevoked\"\xba\x03\n" +
+	"\tExpiresAt\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tExpiresAt\x128\n" +
+	"\tRevokedAt\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tRevokedAt\"\xba\x03\n" +
 	"\x10PublicSessionDTO\x12\x0e\n" +
 	"\x02ID\x18\x01 \x01(\tR\x02ID\x12\x1c\n" +
 	"\tUserAgent\x18\x02 \x01(\tR\tUserAgent\x12\x1c\n" +
@@ -369,14 +369,15 @@ var file_packages_common_proto_session_proto_depIdxs = []int32{
 	2, // 0: user.proto.FullSessionDTO.CreatedAt:type_name -> google.protobuf.Timestamp
 	2, // 1: user.proto.FullSessionDTO.LastUsedAt:type_name -> google.protobuf.Timestamp
 	2, // 2: user.proto.FullSessionDTO.ExpiresAt:type_name -> google.protobuf.Timestamp
-	2, // 3: user.proto.PublicSessionDTO.CreatedAt:type_name -> google.protobuf.Timestamp
-	2, // 4: user.proto.PublicSessionDTO.LastUsedAt:type_name -> google.protobuf.Timestamp
-	2, // 5: user.proto.PublicSessionDTO.ExpiresAt:type_name -> google.protobuf.Timestamp
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	2, // 3: user.proto.FullSessionDTO.RevokedAt:type_name -> google.protobuf.Timestamp
+	2, // 4: user.proto.PublicSessionDTO.CreatedAt:type_name -> google.protobuf.Timestamp
+	2, // 5: user.proto.PublicSessionDTO.LastUsedAt:type_name -> google.protobuf.Timestamp
+	2, // 6: user.proto.PublicSessionDTO.ExpiresAt:type_name -> google.protobuf.Timestamp
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_packages_common_proto_session_proto_init() }

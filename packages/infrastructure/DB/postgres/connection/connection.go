@@ -191,6 +191,7 @@ func (m *Manager) GetConnection(conType Type) (*pgxpool.Conn, *Error.Status) {
     return connection, nil
 }
 
+// TODO do i really need that?
 func (m *Manager) postConnection() error {
     connectionLogger.Info("Post-connection...", nil)
 
@@ -247,7 +248,7 @@ func (m *Manager) postConnection() error {
 			created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
 			last_used_at        TIMESTAMP,
 			expires_at          TIMESTAMP NOT NULL,
-			revoked             BOOL NOT NULL DEFAULT FALSE
+			revoked_at          TIMESTAMP
     	);`,
     ); err != nil {
         return err

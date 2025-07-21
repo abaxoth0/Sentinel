@@ -29,7 +29,7 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 	}
 
 	revokeQuery := query.New(
-		`UPDATE "user_session" SET revoked = true WHERE id = $1;`,
+		`UPDATE "user_session" SET revoked_at = NOW() WHERE id = $1;`,
 		sessionID,
 	)
 
@@ -59,7 +59,7 @@ func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Public) *Error.Stat
 	return cache.Client.Delete(cacheKeys...)
 }
 
-const revokeAllUserSessionsSQL = `UPDATE "user_session" SET revoked = true WHERE user_id = $1;`
+const revokeAllUserSessionsSQL = `UPDATE "user_session" SET revoked_at = NOW() WHERE user_id = $1;`
 
 func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Status {
 	if act.RequesterUID != act.TargetUID {

@@ -19,7 +19,7 @@ message FullSessionDTO {
 	google.protobuf.Timestamp CreatedAt = 11;
 	google.protobuf.Timestamp LastUsedAt = 12;
 	google.protobuf.Timestamp ExpiresAt = 13;
-	bool Revoked = 14;
+	google.protobuf.Timestamp RevokedAt = 14;
 }
 
 message PublicSessionDTO {
