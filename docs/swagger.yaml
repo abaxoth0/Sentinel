@@ -78,6 +78,41 @@ definitions:
         example: true
         type: boolean
     type: object
+  responsebody.Location:
+    properties:
+      city:
+        example: Ashburn
+        type: string
+      countryCode:
+        description: ISO 3166-1 alpha-2
+        example: US
+        type: string
+      created-at:
+        example: "2025-07-15T22:27:50.294Z"
+        type: string
+      deleted-at:
+        example: "2025-07-15T22:27:50.294Z"
+        type: string
+      id:
+        example: 0de6c6e9-5360-4cd8-a068-24ea035a0bd7
+        type: string
+      ip:
+        example: 8.8.8.8
+        type: string
+      isp:
+        example: Google LLC
+        type: string
+      lat:
+        example: 39.03
+        type: number
+      lon:
+        example: -77.5
+        type: number
+      region:
+        description: ISO 3166-2 region code
+        example: VA
+        type: string
+    type: object
   responsebody.Token:
     properties:
       accessToken:
@@ -88,6 +123,46 @@ definitions:
         type: integer
       message:
         example: hello
+        type: string
+    type: object
+  responsebody.UserSession:
+    properties:
+      browser:
+        example: Firefox
+        type: string
+      browser-version:
+        example: "138.0"
+        type: string
+      created-at:
+        example: "2025-07-20T23:54:14.503Z"
+        type: string
+      device-id:
+        type: string
+      device-type:
+        example: desktop
+        type: string
+      expires-at:
+        example: "2025-07-20T23:54:14.503Z"
+        type: string
+      id:
+        example: 254be108-2a12-4b0f-b095-c10cd80ef91d
+        type: string
+      ip-address:
+        example: 8.8.8.8
+        type: string
+      last-used-at:
+        example: "2025-07-20T23:54:14.503Z"
+        type: string
+      location:
+        $ref: '#/definitions/responsebody.Location'
+      os:
+        example: Linux
+        type: string
+      os-version:
+        example: Unknown
+        type: string
+      user-agent:
+        example: Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0
         type: string
     type: object
   userdto.Payload:
@@ -1069,7 +1144,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/userdto.Public'
+              $ref: '#/definitions/responsebody.UserSession'
             type: array
         "400":
           description: Bad Request

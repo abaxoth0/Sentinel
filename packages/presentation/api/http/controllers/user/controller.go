@@ -600,7 +600,7 @@ func SearchUsers(ctx echo.Context) error {
 // @Param 			uid path string true "User ID"
 // @Accept			json
 // @Produce			json
-// @Success			200				{object}	[]userdto.Public
+// @Success			200				{object}	[]responsebody.UserSession
 // @Failure			400,401,403,500	{object} 	responsebody.Error
 // @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
@@ -637,14 +637,27 @@ func GetUserSessions(ctx echo.Context) error {
 
 	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
+	// Get locations for this sessions (in SQL query?)
 	sessions, err := DB.Database.GetUserSessions(act)
 	if err != nil {
 		controller.Logger.Error("Failed to get user sessions", err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
+	res := make([]ResponseBody.UserSession, 0, len(sessions))
+
+	for _, session := range sessions {
+		location, err := DB.Database.GetLocationBySessionID(act, session.ID)
+		if err == nil {
+			res = append(res, ResponseBody.UserSession{
+				Session: session,
+				Location: location.MakePublic(),
+			})
+		}
+	}
+
 	controller.Logger.Info("Getting user sessions: OK", reqMeta)
 
-	return ctx.JSON(http.StatusOK, sessions)
+	return ctx.JSON(http.StatusOK, res)
 }
 

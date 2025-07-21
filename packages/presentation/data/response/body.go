@@ -1,5 +1,10 @@
 package responsebody
 
+import (
+	"sentinel/packages/core/location/DTO"
+	"sentinel/packages/core/session/DTO"
+)
+
 // swagger:model TokenResponse
 type Token struct {
 	Message     string `json:"message" example:"hello"`
@@ -21,5 +26,15 @@ type IsLoginAvailable struct {
 type Error struct {
 	Error 	string `json:"error" example:"Error"`
 	Message string `json:"message" example:"Something went wrong"`
+}
+
+type (
+	Session  = *sessiondto.Public
+	Location = *locationdto.Public
+)
+
+type UserSession struct {
+	Session  `json:",inline"`
+	Location `json:"location"`
 }
 

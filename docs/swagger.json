@@ -1787,7 +1787,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/userdto.Public"
+                                "$ref": "#/definitions/responsebody.UserSession"
                             }
                         }
                     },
@@ -1959,6 +1959,53 @@
                 }
             }
         },
+        "responsebody.Location": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "example": "Ashburn"
+                },
+                "countryCode": {
+                    "description": "ISO 3166-1 alpha-2",
+                    "type": "string",
+                    "example": "US"
+                },
+                "created-at": {
+                    "type": "string",
+                    "example": "2025-07-15T22:27:50.294Z"
+                },
+                "deleted-at": {
+                    "type": "string",
+                    "example": "2025-07-15T22:27:50.294Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0de6c6e9-5360-4cd8-a068-24ea035a0bd7"
+                },
+                "ip": {
+                    "type": "string",
+                    "example": "8.8.8.8"
+                },
+                "isp": {
+                    "type": "string",
+                    "example": "Google LLC"
+                },
+                "lat": {
+                    "type": "number",
+                    "example": 39.03
+                },
+                "lon": {
+                    "type": "number",
+                    "example": -77.5
+                },
+                "region": {
+                    "description": "ISO 3166-2 region code",
+                    "type": "string",
+                    "example": "VA"
+                }
+            }
+        },
         "responsebody.Token": {
             "type": "object",
             "properties": {
@@ -1973,6 +2020,61 @@
                 "message": {
                     "type": "string",
                     "example": "hello"
+                }
+            }
+        },
+        "responsebody.UserSession": {
+            "type": "object",
+            "properties": {
+                "browser": {
+                    "type": "string",
+                    "example": "Firefox"
+                },
+                "browser-version": {
+                    "type": "string",
+                    "example": "138.0"
+                },
+                "created-at": {
+                    "type": "string",
+                    "example": "2025-07-20T23:54:14.503Z"
+                },
+                "device-id": {
+                    "type": "string"
+                },
+                "device-type": {
+                    "type": "string",
+                    "example": "desktop"
+                },
+                "expires-at": {
+                    "type": "string",
+                    "example": "2025-07-20T23:54:14.503Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "254be108-2a12-4b0f-b095-c10cd80ef91d"
+                },
+                "ip-address": {
+                    "type": "string",
+                    "example": "8.8.8.8"
+                },
+                "last-used-at": {
+                    "type": "string",
+                    "example": "2025-07-20T23:54:14.503Z"
+                },
+                "location": {
+                    "$ref": "#/definitions/responsebody.Location"
+                },
+                "os": {
+                    "type": "string",
+                    "example": "Linux"
+                },
+                "os-version": {
+                    "type": "string",
+                    "example": "Unknown"
+                },
+                "user-agent": {
+                    "type": "string",
+                    "example": "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0"
                 }
             }
         },
