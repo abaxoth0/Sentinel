@@ -97,6 +97,10 @@ func (c *appConfig) ActivationTokenTTL() time.Duration {
     return parseDuration(c.RawActivationTokenTTL)
 }
 
+type sentry struct {
+	TraceSampleRate float64 `yaml:"sentry-trace-sample-rate" validate:"required,min=0.0,max=1.0"`
+}
+
 type configs struct {
     dbConfig         `yaml:",inline"`
     httpServerConfig `yaml:",inline"`
@@ -105,15 +109,19 @@ type configs struct {
     debugConfig      `yaml:",inline"`
     appConfig        `yaml:",inline"`
     emailConfig      `yaml:",inline"`
+	sentry			 `yaml:",inline"`
 }
 
-var DB *dbConfig
-var HTTP *httpServerConfig
-var Auth *authConfing
-var Cache *cacheConfig
-var Debug *debugConfig
-var App *appConfig
-var Email *emailConfig
+var (
+	DB 		*dbConfig
+	HTTP 	*httpServerConfig
+	Auth 	*authConfing
+	Cache 	*cacheConfig
+	Debug 	*debugConfig
+	App 	*appConfig
+	Email 	*emailConfig
+	Sentry 	*sentry
+)
 
 var isInit bool = false
 
@@ -179,6 +187,7 @@ func Init() {
     Debug = &configs.debugConfig
     App = &configs.appConfig
     Email = &configs.emailConfig
+	Sentry = &configs.sentry
 
 	configLogger.Info("Initializing: OK", nil)
 

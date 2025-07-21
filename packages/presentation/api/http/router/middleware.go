@@ -1,9 +1,7 @@
 package router
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/DB"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
@@ -12,18 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
-
-func catchError(next echo.HandlerFunc) echo.HandlerFunc {
-	return func (ctx echo.Context) error {
-		defer func(){
-			if r := recover(); r != nil {
-				fmt.Println("panic:", r)
-				os.Exit(1)
-			}
-		}()
-		return next(ctx)
-	}
-}
 
 func setTokenRefreshRequiredHeader(ctx echo.Context) {
 	ctx.Response().Header().Set("X-Token-Refresh-Required", "true")

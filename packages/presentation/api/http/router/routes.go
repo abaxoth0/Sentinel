@@ -12,6 +12,8 @@ import (
 	User "sentinel/packages/presentation/api/http/controllers/user"
 	"sentinel/packages/presentation/api/http/request"
 
+	"github.com/getsentry/sentry-go"
+	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -21,6 +23,17 @@ import (
 const rootPath = ""
 
 func Create() *echo.Echo {
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn: config.Secret.SentryDSN,
+		EnableTracing: true,
+		TracesSampleRate: config.Sentry.TraceSampleRate,
+		Debug: config.Debug.Enabled,
+		ServerName: config.App.ServiceID,
+		AttachStacktrace: true,
+	}); err != nil {
+		panic("Sentry initialization failed: " + err.Error())
+	}
+
 	router := echo.New()
 
     router.HideBanner = true
@@ -46,8 +59,10 @@ func Create() *echo.Echo {
 
 	router.Use(request.Middleware)
     router.Use(middleware.CORSWithConfig(cors))
-    router.Use(catchError)
 	router.Use(preventUserDesync)
+	router.Use(sentryecho.New(sentryecho.Options{
+		Repanic: true,
+	}))
     // router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))
 
     if config.Debug.Enabled {

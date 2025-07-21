@@ -53,3 +53,7 @@ smtp-host: smtp.gmail.com
 
 smtp-port: 587
 
+### SENTRY ###
+
+sentry-trace-sample-rate: 0.1 # 10%
+

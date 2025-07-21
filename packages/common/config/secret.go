@@ -35,6 +35,8 @@ type secrets struct {
 
     MailerEmailPassword       string             `validate:"required"`
     MailerEmail               string             `validate:"required"`
+
+	SentryDSN				  string 			 `validate:"required"`
 }
 
 var Secret secrets
@@ -77,6 +79,8 @@ func loadSecrets() {
 
         "MAILER_EMAIL_PASSWORD",
         "MAILER_EMAIL",
+
+        "SENTRY_DSN",
     }
 
     // Check is all required env variables exists
@@ -114,6 +118,8 @@ func loadSecrets() {
 
 	Secret.MailerEmailPassword = getEnv("MAILER_EMAIL_PASSWORD")
 	Secret.MailerEmail = getEnv("MAILER_EMAIL")
+
+	Secret.SentryDSN = getEnv("SENTRY_DSN")
 
     // All must be 32 bytes long
     AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
