@@ -13,7 +13,7 @@ import (
 )
 
 func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
-	cond := util.Ternary(revoked, "IS", "IS NOT")
+	cond := util.Ternary(revoked, "IS NOT", "IS")
 
 	selectQuery := query.New(
 		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked_at FROM "user_session" WHERE id = $1 AND revoked_at `+cond+" NULL;",

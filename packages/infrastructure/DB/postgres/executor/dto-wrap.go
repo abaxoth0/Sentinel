@@ -162,6 +162,7 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 	var createdAt sql.NullTime
 	var lastUsedAt sql.NullTime
 	var expiresAt sql.NullTime
+	var revokedAt sql.NullTime
 	var addr net.IP
 
 	err = scan(
@@ -178,7 +179,7 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 		&createdAt,
 		&lastUsedAt,
 		&expiresAt,
-		&dto.RevokedAt,
+		&revokedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -192,6 +193,9 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 	}
 	if expiresAt.Valid {
 		dto.ExpiresAt = expiresAt.Time
+	}
+	if revokedAt.Valid {
+		dto.RevokedAt = revokedAt.Time
 	}
 	dto.IpAddress = addr.To4().String()
 
