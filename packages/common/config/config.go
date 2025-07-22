@@ -25,8 +25,9 @@ func parseDuration(raw string) time.Duration {
 }
 
 type dbConfig struct {
-    RawDefaultQueryTimeout string `yaml:"db-default-queuery-timeout" validate:"required"`
-	MaxSearchPageSize 	   int    `yaml:"db-max-search-page-size" validate:"gt=0"`
+    RawDefaultQueryTimeout 	string 	`yaml:"db-default-queuery-timeout" validate:"required"`
+	MaxSearchPageSize 	   	int    	`yaml:"db-max-search-page-size" validate:"gt=0"`
+	SkipPostConnection		bool	`yaml:"db-skip-post-connection" validate:"exists"`
 }
 
 func (c * dbConfig) DefaultQueryTimeout() time.Duration {

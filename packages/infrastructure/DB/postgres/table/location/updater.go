@@ -3,8 +3,7 @@ package locationtable
 import (
 	Error "sentinel/packages/common/errors"
 	LocationDTO "sentinel/packages/core/location/DTO"
-	"sentinel/packages/infrastructure/DB/postgres/connection"
-	"sentinel/packages/infrastructure/DB/postgres/executor"
+	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 )
@@ -35,7 +34,9 @@ func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Erro
 		id,
 	)
 
-	if err := executor.Exec(connection.Primary, updateQuery); err != nil {
+	audit := newAuditDTO(audit.UpdatedOperation, location)
+
+	if err := execTxWithAudit(&audit, updateQuery); err != nil {
 		return err
 	}
 

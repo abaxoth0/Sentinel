@@ -4,8 +4,7 @@ import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
 	ActionDTO "sentinel/packages/core/action/DTO"
-	"sentinel/packages/infrastructure/DB/postgres/connection"
-	"sentinel/packages/infrastructure/DB/postgres/executor"
+	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
@@ -43,7 +42,9 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bo
 		)
 	}
 
-	if err := executor.Exec(connection.Primary, stateUpdateQuery); err != nil {
+	audit := newAuditDTO(audit.DeleteOperation, location)
+
+	if err := execTxWithAudit(&audit, stateUpdateQuery); err != nil {
 		return err
 	}
 

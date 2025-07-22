@@ -13,6 +13,8 @@ db-default-queuery-timeout: 5s
 
 db-max-search-page-size: 100
 
+db-skip-post-connection: false
+
 ### AUTH ###
 access-token-ttl: 10m
 
