@@ -47,11 +47,6 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
     )
 	sessionsDeleteQuery := SessionTable.NewRevokeAllUserSessionsQuery(act)
 
-	// TODO add cache for collect query methods and then change order of this operations.
-	//		(place it at the very end, after invalidateBasicUserDtoCache())
-	if err := m.session.DeleteUserSessionsCache(user.ID); err != nil {
-		userLogger.Error("Failed to delete user sessions cache", err.Error(), nil)
-	}
     if err := audit.ExecTxWithAuditUser(&auditUserDTO, updateQuery, sessionsDeleteQuery); err != nil {
 		return err
 	}
@@ -60,7 +55,10 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 	updatedUser.DeletedAt = auditUserDTO.ChangedAt
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
-	m.session.DeleteUserSessionsCache(user.ID)
+
+	if err := m.session.DeleteUserSessionsCache(user.ID); err != nil {
+		userLogger.Error("Failed to delete user sessions cache", err.Error(), nil)
+	}
 
 	return nil
 }
