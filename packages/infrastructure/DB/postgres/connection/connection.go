@@ -7,8 +7,11 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/logger"
+	"sentinel/packages/common/util"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -191,93 +194,31 @@ func (m *Manager) GetConnection(conType Type) (*pgxpool.Conn, *Error.Status) {
     return connection, nil
 }
 
-// TODO do i really need that?
 func (m *Manager) postConnection() error {
     connectionLogger.Info("Post-connection...", nil)
 
-    if err := m.exec(
-		Primary,
-		"Verifying that table 'user' exists",
-        `CREATE TABLE IF NOT EXISTS "user" (
-            id uuid PRIMARY KEY,
-            login VARCHAR(72) UNIQUE NOT NULL,
-            password CHAR(60) NOT NULL,
-            roles VARCHAR(32)[] NOT NULL,
-            deleted_at TIMESTAMP,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-			version INT DEFAULT 1
-        );`,
-    ); err != nil {
-        return err
-    }
+	connectionLogger.Info("Verifying that all tables exists in Primary DB...", nil)
 
-    if err := m.exec(
-		Primary,
-		"Verifying that table 'audit_user' exists",
-        `CREATE TABLE IF NOT EXISTS "audit_user" (
-            id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-            changed_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
-            changed_by_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
-            operation CHAR(1) NOT NULL,
-            login VARCHAR(72) NOT NULL,
-            password CHAR(60) NOT NULL,
-            roles VARCHAR(32)[] NOT NULL,
-            deleted_at TIMESTAMP,
-            changed_at TIMESTAMP NOT NULL,
-			version INT DEFAULT 1
-        );`,
-    ); err != nil {
-        return err
-    }
-
-    if err := m.exec(
-		Primary,
-		"Verifying that table 'user_session' exists",
-		`CREATE TABLE IF NOT EXISTS "user_session" (
-			id                  UUID PRIMARY KEY,
-			user_id             UUID REFERENCES "user"(id) ON DELETE CASCADE,
-			user_agent          TEXT NOT NULL,
-			ip_address          INET,
-			device_id           TEXT,
-			device_type         TEXT NOT NULL,
-			os                  TEXT NOT NULL,
-			os_version          TEXT,
-			browser             TEXT NOT NULL,
-			browser_version     TEXT,
-			location            TEXT,
-			created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
-			last_used_at        TIMESTAMP,
-			expires_at          TIMESTAMP NOT NULL,
-			revoked_at          TIMESTAMP
-    	);`,
-    ); err != nil {
-        return err
-    }
-    if err := m.exec(
-		Primary,
-		"Verifying that table 'location' exists",
-		`CREATE TABLE IF NOT EXISTS location (
- 	       id          UUID PRIMARY KEY,
- 	       ip          INET NOT NULL,
- 	       session_id  UUID REFERENCES "user_session"(id) ON DELETE SET NULL,
- 	       country     VARCHAR(2) NOT NULL,
- 	       region      VARCHAR(3),
- 	       city        VARCHAR(100),
- 	       latitude    REAL,
- 	       longitude   REAL,
- 	       isp         VARCHAR(100),
- 	       deleted_at  TIMESTAMPTZ,
- 	       created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
- 	   );`,
-	); err != nil {
-	return err
+	if err := m.checkTables(Primary); err != nil {
+		connectionLogger.Fatal("Post-connection failed", err.Error(), nil)
 	}
+
+	connectionLogger.Info("Verifying that all tables exists in Primary DB: OK", nil)
+
+	connectionLogger.Info("Verifying that all tables exists in Replica DB...", nil)
+
+	if err := m.checkTables(Replica); err != nil {
+		connectionLogger.Fatal("Post-connection failed", err.Error(), nil)
+	}
+
+	connectionLogger.Info("Verifying that all tables exists in Replica DB: OK", nil)
+
     connectionLogger.Info("Post-connection: OK", nil)
 
     return nil
 }
 
-func (m *Manager) exec(conType Type, logBase string, query string) error {
+func (m *Manager) checkTables(conType Type) error {
     con, err := m.GetConnection(conType)
 
     if err != nil {
@@ -286,13 +227,48 @@ func (m *Manager) exec(conType Type, logBase string, query string) error {
 
     defer con.Release()
 
-	connectionLogger.Info(logBase + "...", nil)
+	sql := `WITH tables_to_check(table_name) AS (VALUES ('user'), ('audit_user'), ('user_session'), ('location'))
+	SELECT t.table_name, EXISTS (
+		SELECT FROM information_schema.tables
+		WHERE table_schema = 'public'
+		AND table_name = t.table_name
+	) AS table_exists FROM tables_to_check t;`
 
-    if _, e := con.Exec(m.primaryCtx, query); e != nil {
-        return errors.New(logBase+": ERROR"+e.Error())
+	ctx := util.Ternary(conType == Primary, m.primaryCtx, m.replicaCtx)
+
+    rows, e := con.Query(ctx, sql)
+	if e != nil {
+        return e
     }
 
-	connectionLogger.Info(logBase + ": OK", nil)
+	type table struct {
+		name 	string
+		exists  bool
+	}
+
+	tables, e := pgx.CollectRows(rows, func (row pgx.CollectableRow) (*table, error) {
+		table := new(table)
+
+		if err := row.Scan(&table.name, &table.exists); err != nil {
+			return nil, err
+		}
+
+		return table, nil
+	})
+	if e != nil {
+		return e
+	}
+
+	nonExistingTables := []string{}
+	for _, table := range tables {
+		if !table.exists {
+			nonExistingTables = append(nonExistingTables, table.name)
+		}
+	}
+
+	if len(nonExistingTables) != 0 {
+		return errors.New("ERROR: Following table(-s) does not exists: " + strings.Join(nonExistingTables, ", "))
+	}
 
 	return nil
 }
