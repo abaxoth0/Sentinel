@@ -87,16 +87,17 @@ func (dto *Extended) ToBasic() *Basic {
 }
 
 type Audit struct {
-    ID               string    `json:"id"`
-    ChangedUserID    string    `json:"changedUserID"`
-    ChangedByUserID  string    `json:"changedByUserID"`
-    Operation        string    `json:"operation"`
-    Login            string    `json:"login"`
-	Password         string    `json:"password"`
-	Roles            []string  `json:"roles"`
-	DeletedAt        time.Time `json:"deletedAt"`
-    ChangedAt        time.Time `json:"changedAt"`
-	Version 	 	 uint32	   `json:"version"`
+    ID               string    	`json:"id"`
+    ChangedUserID    string    	`json:"changedUserID"`
+    ChangedByUserID  string    	`json:"changedByUserID"`
+    Operation        string    	`json:"operation"`
+    Login            string    	`json:"login"`
+	Password         string    	`json:"password"`
+	Roles            []string  	`json:"roles"`
+	DeletedAt        time.Time 	`json:"deletedAt"`
+    ChangedAt        time.Time 	`json:"changedAt"`
+	Version 	 	 uint32	   	`json:"version"`
+	Reason			 string		`json:"reason,omitempty"`
 }
 
 func (dto *Audit) IsDeleted() bool {

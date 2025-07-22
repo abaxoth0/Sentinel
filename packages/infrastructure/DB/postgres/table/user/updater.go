@@ -60,7 +60,7 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
         return err
     }
 
-    auditUserDTO := audit.NewUser(audit.UpdatedOperation, act, user)
+    userDTO := newAuditDTO(audit.UpdatedOperation, act, user)
 
     query := query.New(
         `UPDATE "user" SET login = $1, version = version + 1
@@ -68,7 +68,7 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
         newLogin, act.TargetUID,
     )
 
-    if err := audit.ExecTxWithAuditUser(&auditUserDTO, query); err != nil {
+    if err := execTxWithAudit(&userDTO, query); err != nil {
 		return err
 	}
 
@@ -106,7 +106,7 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
         return e
     }
 
-    auditUserDTO := audit.NewUser(audit.UpdatedOperation, act, user)
+    userDTO := newAuditDTO(audit.UpdatedOperation, act, user)
 
     query := query.New(
         `UPDATE "user" SET password = $1, version = version + 1
@@ -114,7 +114,7 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
         hashedPassword, act.TargetUID,
     )
 
-    if err := audit.ExecTxWithAuditUser(&auditUserDTO, query); err != nil {
+    if err := execTxWithAudit(&userDTO, query); err != nil {
 		return err
 	}
 
@@ -152,7 +152,7 @@ func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *E
 		return err
 	}
 
-    auditUserDTO := audit.NewUser(audit.UpdatedOperation, act, user)
+    userDTO := newAuditDTO(audit.UpdatedOperation, act, user)
 
     query := query.New(
         `UPDATE "user" SET roles = $1, version = version + 1
@@ -160,7 +160,7 @@ func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *E
         newRoles, act.TargetUID,
     )
 
-    if err := audit.ExecTxWithAuditUser(&auditUserDTO, query); err != nil {
+    if err := execTxWithAudit(&userDTO, query); err != nil {
 		return err
 	}
 
@@ -196,7 +196,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
 
     filter := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-    auditUserDTO := audit.NewUser(audit.UpdatedOperation, filter, user)
+    userDTO := newAuditDTO(audit.UpdatedOperation, filter, user)
 	var updatedUser *UserDTO.Basic
 
     for i, role := range user.Roles {
@@ -224,7 +224,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
              WHERE login = $2;`,
              updatedUser.Roles, updatedUser.Login,
         ),
-        audit.NewUserQuery(&auditUserDTO),
+        newAuditQuery(&userDTO),
     )
     if err := tx.Exec(connection.Primary); err != nil {
         return err

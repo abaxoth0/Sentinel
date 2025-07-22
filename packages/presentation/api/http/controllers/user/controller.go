@@ -99,11 +99,23 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
         uid = ctx.Param("uid")
     }
 
+	var body RequestBody.ActionReason
+
+	controller.Logger.Info("Binding request...", reqMeta)
+
+	if err := ctx.Bind(&body); err != nil {
+		controller.Logger.Error("Failed to bind request", err.Error(), reqMeta)
+	} else {
+		controller.Logger.Info("Binding request: OK", reqMeta)
+	}
+
     act, err := controller.NewTargetedActionDTO(ctx, uid)
     if err != nil {
 		controller.Logger.Error(logMessageBase + ": FAILED", err.Error(), reqMeta)
         return err
     }
+
+	act.Reason = body.Reason
 
     if err := upd(act); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
@@ -203,6 +215,8 @@ func BulkSoftDelete(ctx echo.Context) error {
 		return e
 	}
 
+	body.Reason = act.Reason
+
     if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
@@ -243,6 +257,8 @@ func BulkRestore(ctx echo.Context) error {
 	if e := controller.BindAndValidate(ctx, &body); e != nil {
 		return e
 	}
+
+	act.Reason = body.Reason
 
     if err := DB.Database.BulkRestore(act, body.IDs); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
@@ -354,6 +370,10 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
     }
 
     controller.Logger.Trace("Validating user update request: OK", reqMeta)
+
+	if act.TargetUID != act.RequesterUID {
+		act.Reason = body.GetReason()
+	}
 
     var err *Error.Status
 

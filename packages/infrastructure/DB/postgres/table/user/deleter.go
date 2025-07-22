@@ -36,7 +36,7 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
         return err
     }
 
-    auditUserDTO := audit.NewUser(audit.DeleteOperation, act, user)
+    auditUserDTO := newAuditDTO(audit.DeleteOperation, act, user)
 
     updateQuery := query.New(
         `UPDATE "user" SET deleted_at = $1, version = version + 1
@@ -47,7 +47,7 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
     )
 	sessionsDeleteQuery := SessionTable.NewRevokeAllUserSessionsQuery(act)
 
-    if err := audit.ExecTxWithAuditUser(&auditUserDTO, updateQuery, sessionsDeleteQuery); err != nil {
+    if err := execTxWithAudit(&auditUserDTO, updateQuery, sessionsDeleteQuery); err != nil {
 		return err
 	}
 
@@ -77,14 +77,14 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
         return err
     }
 
-    auditUserDTO := audit.NewUser(audit.RestoreOperation, act, user)
+    auditUserDTO := newAuditDTO(audit.RestoreOperation, act, user)
 
     query := query.New(
         `UPDATE "user" SET deleted_at = NULL, version = version + 1
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
         act.TargetUID,
     )
-    if err := audit.ExecTxWithAuditUser(&auditUserDTO, query); err != nil {
+    if err := execTxWithAudit(&auditUserDTO, query); err != nil {
 		return err
 	}
 
@@ -96,7 +96,7 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
 	return nil
 }
 
-// TODO add auditUserDTO
+// TODO add audit
 func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UIDs []string) *Error.Status {
 	if newState != user.DeletedState && newState != user.NotDeletedState {
 		userLogger.Panic(

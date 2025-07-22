@@ -81,9 +81,14 @@ type PasswordGetter interface {
     GetPassword() string
 }
 
+type ReasonGetter interface {
+	GetReason() string
+}
+
 type UpdateUser interface {
     PasswordGetter
     Validator
+	ReasonGetter
 }
 
 // swagger:model UserPasswordRequest
@@ -125,6 +130,14 @@ func (b *UserRoles) Validate() *Error.Status {
     return nil
 }
 
+type ActionReason struct {
+	Reason string `json:"reason" example:"Violation of terms of use"`
+}
+
+func (b *ActionReason) GetReason() string {
+	return b.Reason
+}
+
 // swagger:model UserLoginAndPasswordRequest
 type LoginAndPassword struct {
     UserLogin 		`json:",inline"`
@@ -145,6 +158,7 @@ func (b *LoginAndPassword) Validate() *Error.Status {
 type ChangePassword struct {
     UserPassword 		`json:",inline"`
 	NewPassword string 	`json:"newPassword" example:"your-new-password"`
+	Reason 		string 	`json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *ChangePassword) Validate() *Error.Status {
@@ -157,10 +171,15 @@ func (b *ChangePassword) Validate() *Error.Status {
     return nil
 }
 
+func (b *ChangePassword) GetReason() string {
+	return b.Reason
+}
+
 // swagger:model UserChangeLoginRequest
 type ChangeLogin struct {
     UserLogin 		`json:",inline"`
     UserPassword 	`json:",inline"`
+	Reason 	string 	`json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *ChangeLogin) Validate() *Error.Status {
@@ -173,10 +192,15 @@ func (b *ChangeLogin) Validate() *Error.Status {
     return nil
 }
 
+func (b *ChangeLogin) GetReason() string {
+	return b.Reason
+}
+
 // swagger:model UserChangeRolesRequest
 type ChangeRoles struct {
     UserRoles 		`json:",inline"`
     UserPassword 	`json:",inline"`
+	Reason 	string 	`json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *ChangeRoles) Validate() *Error.Status {
@@ -189,9 +213,14 @@ func (b *ChangeRoles) Validate() *Error.Status {
     return nil
 }
 
+func (b *ChangeRoles) GetReason() string {
+	return b.Reason
+}
+
 // swagger:model UsersIDsRequest
 type UsersIDs struct {
-	IDs []string `json:"id" example:"cef85e5a-5a5f-42d0-81bd-1650391c0e82,9bc87af1-5f92-4d8c-bf41-7ade642c5a91"`
+	IDs 	[]string 	`json:"id" example:"cef85e5a-5a5f-42d0-81bd-1650391c0e82,9bc87af1-5f92-4d8c-bf41-7ade642c5a91"`
+	Reason 	string 		`json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *UsersIDs) Validate() *Error.Status {

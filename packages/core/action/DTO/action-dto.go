@@ -10,8 +10,9 @@ type Any interface {
 }
 
 type Basic struct {
-	RequesterUID   string
-	RequesterRoles []string
+	RequesterUID   	string
+	RequesterRoles 	[]string
+	Reason 			string
 }
 
 func NewBasic(requesterUID string, requestedRoles []string) *Basic {
@@ -40,7 +41,7 @@ func (dto *Basic) ToUserTargeted(targetUID string) *UserTargeted {
 
 type UserTargeted struct {
 	TargetUID string
-    Basic
+	Basic
 }
 
 func NewUserTargeted(targetdUID string, requesterUID string, requestedRoles []string) *UserTargeted {
