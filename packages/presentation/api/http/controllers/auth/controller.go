@@ -401,6 +401,18 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 		return err
 	}
 
+	var body RequestBody.ActionReason
+
+	controller.Logger.Info("Binding request...", reqMeta)
+
+	if err := ctx.Bind(&body); err != nil {
+		controller.Logger.Error("Failed to bind request", err.Error(), reqMeta)
+	} else {
+		controller.Logger.Info("Binding request: OK", reqMeta)
+	}
+
+	act.Reason = body.GetReason()
+
 	if err := DB.Database.RevokeAllUserSessions(act); err != nil {
 		controller.Logger.Error("Failed to revoking all sessions of user "+uid, err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)

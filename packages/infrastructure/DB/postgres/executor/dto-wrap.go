@@ -209,19 +209,20 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 	return dto, nil
 }
 
-func CollectPublicSessionDTO(conType connection.Type, query *query.Query) ([]*SessionDTO.Public, *Error.Status) {
-	return collect(conType, query, func (row pgx.CollectableRow) (*SessionDTO.Public, error) {
-		dto := new(SessionDTO.Public)
+func CollectFullSessionDTO(conType connection.Type, query *query.Query) ([]*SessionDTO.Full, *Error.Status) {
+	return collect(conType, query, func (row pgx.CollectableRow) (*SessionDTO.Full, error) {
+		dto := new(SessionDTO.Full)
 
 		var createdAt sql.NullTime
 		var lastUsedAt sql.NullTime
 		var expiresAt sql.NullTime
-		var addr net.IP
+		var revokedAt sql.NullTime
 
 		err := row.Scan(
 			&dto.ID,
+			&dto.UserID,
 			&dto.UserAgent,
-			&addr,
+			&dto.IpAddress,
 			&dto.DeviceID,
 			&dto.DeviceType,
 			&dto.OS,
@@ -231,6 +232,7 @@ func CollectPublicSessionDTO(conType connection.Type, query *query.Query) ([]*Se
 			&createdAt,
 			&lastUsedAt,
 			&expiresAt,
+			&revokedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -245,7 +247,9 @@ func CollectPublicSessionDTO(conType connection.Type, query *query.Query) ([]*Se
 		if expiresAt.Valid {
 			dto.ExpiresAt = expiresAt.Time
 		}
-		dto.IpAddress = addr.To4().String()
+		if revokedAt.Valid {
+			dto.RevokedAt = revokedAt.Time
+		}
 
 		return dto, nil
 	})

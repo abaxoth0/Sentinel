@@ -24,8 +24,22 @@ type Full struct {
 	RevokedAt 		  time.Time	`json:"revoked-at" example:"2025-07-20T23:54:14.503Z"`
 }
 
-func (dto *Audit) IsRevoked() bool {
-	return !dto.RevokedAt.IsZero()
+// Creates new public session DTO based on current DTO
+func (dto *Full) MakePublic() *Public {
+	return &Public{
+		ID: dto.ID,
+		UserAgent: dto.UserAgent,
+		IpAddress: dto.IpAddress.To4().String(),
+		DeviceID: dto.DeviceID,
+		DeviceType: dto.DeviceType,
+		OS: dto.OS,
+		OSVersion: dto.OSVersion,
+		Browser: dto.Browser,
+		BrowserVersion: dto.BrowserVersion,
+		CreatedAt: dto.CreatedAt,
+		LastUsedAt: dto.LastUsedAt,
+		ExpiresAt: dto.ExpiresAt,
+	}
 }
 
 type Public struct {
@@ -51,5 +65,9 @@ type Audit struct {
 	Reason				string		`json:"reason,omitempty"`
 
 	*Full
+}
+
+func (dto *Audit) IsRevoked() bool {
+	return !dto.RevokedAt.IsZero()
 }
 

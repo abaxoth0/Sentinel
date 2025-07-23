@@ -8,8 +8,8 @@ import (
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
-	"sentinel/packages/infrastructure/DB/postgres/executor"
 	"sentinel/packages/infrastructure/DB/postgres/query"
+	"sentinel/packages/infrastructure/DB/postgres/transaction"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 )
@@ -52,7 +52,7 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 	return nil
 }
 
-func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Public) *Error.Status {
+func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Full) *Error.Status {
 	cacheKeys := make([]string, 0, len(sessions) * 2)
 
 	for _, session := range sessions {
@@ -79,7 +79,15 @@ func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Stat
 
 	revokeQuery := query.New(revokeAllUserSessionsSQL, act.TargetUID)
 
-	if err := executor.Exec(connection.Primary, revokeQuery); err != nil {
+	queries := make([]*query.Query, 0, len(sessions) + 1)
+	queries = append(queries, revokeQuery)
+
+	for i := range queries {
+		auditDTO := newAuditDTO(audit.DeleteOperation, &act.Basic, sessions[i])
+		queries = append(queries, newAuditQuery(&auditDTO))
+	}
+
+	if err := transaction.New(queries...).Exec(connection.Primary); err != nil {
 		return err
 	}
 

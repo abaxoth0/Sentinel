@@ -36,6 +36,11 @@ func New(queries ...*query.Query) *Transaction {
 }
 
 func (t *Transaction) Exec(conType connection.Type) *Error.Status {
+	if len(t.queries) == 0 {
+		txLogger.Warning("Transaction has no queries, execution will be skipped", nil)
+		return nil
+	}
+
     ctx, cancel := context.WithTimeout(context.Background(), time.Second * 5)
 	defer cancel()
 

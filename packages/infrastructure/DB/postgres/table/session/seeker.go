@@ -57,13 +57,13 @@ func (m *Manager) GetRevokedSessionByID(act *ActionDTO.UserTargeted, sessionID s
 	return m.getSessionByID(sessionID, true)
 }
 
-func (m *Manager) getUserSessions(UID string) ([]*SessionDTO.Public, *Error.Status) {
+func (m *Manager) getUserSessions(UID string) ([]*SessionDTO.Full, *Error.Status) {
 	selectQuery := query.New(
-		`SELECT id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at FROM "user_session" WHERE user_id = $1 AND revoked_at IS NULL;`,
+		`SELECT id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at, revoked_at FROM "user_session" WHERE user_id = $1 AND revoked_at IS NULL;`,
 		UID,
 	)
 
-	sessions, err := executor.CollectPublicSessionDTO(connection.Replica, selectQuery)
+	sessions, err := executor.CollectFullSessionDTO(connection.Replica, selectQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,20 @@ func (m *Manager) GetUserSessions(act *ActionDTO.UserTargeted) ([]*SessionDTO.Pu
 		); err != nil {
 		return nil, err
 	}
-	return m.getUserSessions(act.TargetUID)
+
+	fullSessions, err := m.getUserSessions(act.TargetUID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]*SessionDTO.Public, len(fullSessions))
+
+	for i, fulllSession := range fullSessions {
+		sessions[i] = fulllSession.MakePublic()
+	}
+
+	return sessions, nil
 }
 
 func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full ,*Error.Status) {
