@@ -20,7 +20,7 @@ var (
 
 var userEntity = rbac.NewEntity("user")
 
-var schema *rbac.Schema
+var Schema *rbac.Schema
 var Host *rbac.Host
 
 func Init() {
@@ -44,14 +44,14 @@ func Init() {
 	authzLogger.Info("Getting schema for this service: OK", nil)
 	authzLogger.Info("Initializing resources...", nil)
 
-    schema = s
+    Schema = s
 
-	userResource = rbac.NewResource("user", schema.Roles)
+	userResource = rbac.NewResource("user", Schema.Roles)
 
 	cacheResource = rbac.NewResource("cache", (func() []rbac.Role {
-		roles := make([]rbac.Role, len(schema.Roles))
+		roles := make([]rbac.Role, len(Schema.Roles))
 
-		for i, role := range schema.Roles {
+		for i, role := range Schema.Roles {
 			// Only admins can interact with cache
 			if role.Name == "admin" {
 				roles[i] = role
@@ -63,7 +63,7 @@ func Init() {
 		return roles
 	})())
 
-	docsResource = rbac.NewResource("docs", schema.Roles)
+	docsResource = rbac.NewResource("docs", Schema.Roles)
 
 	authzLogger.Info("Initializing resources: OK", nil)
 }

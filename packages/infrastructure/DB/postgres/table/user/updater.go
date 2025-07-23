@@ -127,6 +127,20 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
 }
 
 func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *Error.Status {
+	main_loop:
+	for _, newRole := range newRoles {
+		for _, role := range authz.Schema.Roles {
+			if role.Name == newRole {
+				continue main_loop
+			}
+		}
+
+		return Error.NewStatusError(
+			"Role '"+newRole+"' doesn't exists",
+			http.StatusBadRequest,
+		)
+	}
+
     if err := act.ValidateUIDs(); err != nil {
         return err
     }
