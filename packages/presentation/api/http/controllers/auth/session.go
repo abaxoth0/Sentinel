@@ -1,6 +1,7 @@
 package authcontroller
 
 import (
+	"net"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -135,7 +136,7 @@ func createSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (
 		ID: ID,
 		UserID: UID,
 		UserAgent: ua.String,
-		IpAddress: ctx.RealIP(),
+		IpAddress: net.ParseIP(ctx.RealIP()),
 		DeviceID: deviceID,
 		DeviceType: string(deviceType),
 		OS: os,
@@ -196,7 +197,7 @@ func actualizeSession(
 		ID: session.ID,
 		UserID: session.UserID,
 		UserAgent: ua.String,
-		IpAddress: ctx.RealIP(),
+		IpAddress: net.ParseIP(ctx.RealIP()),
 		DeviceID: session.DeviceID,
 		DeviceType: session.DeviceType,
 		OS: session.OS,

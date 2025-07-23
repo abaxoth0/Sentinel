@@ -27,7 +27,7 @@ type FullSessionDTO struct {
 	ID             string                 `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	UserID         string                 `protobuf:"bytes,2,opt,name=UserID,proto3" json:"UserID,omitempty"`
 	UserAgent      string                 `protobuf:"bytes,3,opt,name=UserAgent,proto3" json:"UserAgent,omitempty"`
-	IpAddress      string                 `protobuf:"bytes,4,opt,name=IpAddress,proto3" json:"IpAddress,omitempty"`
+	IpAddress      []byte                 `protobuf:"bytes,4,opt,name=IpAddress,proto3" json:"IpAddress,omitempty"`
 	DeviceID       string                 `protobuf:"bytes,5,opt,name=DeviceID,proto3" json:"DeviceID,omitempty"`
 	DeviceType     string                 `protobuf:"bytes,6,opt,name=DeviceType,proto3" json:"DeviceType,omitempty"`
 	OS             string                 `protobuf:"bytes,7,opt,name=OS,proto3" json:"OS,omitempty"`
@@ -93,11 +93,11 @@ func (x *FullSessionDTO) GetUserAgent() string {
 	return ""
 }
 
-func (x *FullSessionDTO) GetIpAddress() string {
+func (x *FullSessionDTO) GetIpAddress() []byte {
 	if x != nil {
 		return x.IpAddress
 	}
-	return ""
+	return nil
 }
 
 func (x *FullSessionDTO) GetDeviceID() string {
@@ -312,7 +312,7 @@ const file_packages_common_proto_session_proto_rawDesc = "" +
 	"\x02ID\x18\x01 \x01(\tR\x02ID\x12\x16\n" +
 	"\x06UserID\x18\x02 \x01(\tR\x06UserID\x12\x1c\n" +
 	"\tUserAgent\x18\x03 \x01(\tR\tUserAgent\x12\x1c\n" +
-	"\tIpAddress\x18\x04 \x01(\tR\tIpAddress\x12\x1a\n" +
+	"\tIpAddress\x18\x04 \x01(\fR\tIpAddress\x12\x1a\n" +
 	"\bDeviceID\x18\x05 \x01(\tR\bDeviceID\x12\x1e\n" +
 	"\n" +
 	"DeviceType\x18\x06 \x01(\tR\n" +

@@ -1,6 +1,7 @@
 package authcontroller
 
 import (
+	"net"
 	Error "sentinel/packages/common/errors"
 	LocationProvider "sentinel/packages/common/location"
 	ActionDTO "sentinel/packages/core/action/DTO"
@@ -8,7 +9,7 @@ import (
 	controller "sentinel/packages/presentation/api/http/controllers"
 )
 
-func updateLocation(act *ActionDTO.UserTargeted, sessionID string, ip string) *Error.Status {
+func updateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *Error.Status {
 	controller.Logger.Trace("Updating location for session "+sessionID+"...", nil)
 
 	location, err := DB.Database.GetLocationBySessionID(act, sessionID)
@@ -17,7 +18,7 @@ func updateLocation(act *ActionDTO.UserTargeted, sessionID string, ip string) *E
 			return err
 		}
 
-		newLocation, err := LocationProvider.GetLocationFromIP(ip)
+		newLocation, err := LocationProvider.GetLocationFromIP(ip.To4().String())
 		if err != nil {
 			return err
 		}
@@ -32,7 +33,7 @@ func updateLocation(act *ActionDTO.UserTargeted, sessionID string, ip string) *E
 
 		controller.Logger.Trace("Saving new location for session "+sessionID+": OK", nil)
 	} else {
-		newLocation, err := LocationProvider.GetLocationFromIP(ip)
+		newLocation, err := LocationProvider.GetLocationFromIP(ip.To4().String())
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,9 @@
 package sessiondto
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 // TODO Use composition instead of duplicating fields for each DTO? (the same goes for all DTOs in project)
 
@@ -8,8 +11,7 @@ type Full struct {
 	ID 				  string	`json:"id" example:"254be108-2a12-4b0f-b095-c10cd80ef91d"`
 	UserID 			  string	`json:"user-id" example:"7ee80427-b0c6-4120-b874-ba8567576b6d"`
 	UserAgent 		  string	`json:"user-agent" example:"Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0"`
-	// TODO use net.IP instead?
-	IpAddress 		  string	`json:"ip-address" example:"8.8.8.8"`
+	IpAddress 		  net.IP	`json:"ip-address" example:"8.8.8.8"`
 	DeviceID 		  string	`json:"device-id" example:"Linux x86_64 Firefox/138.0"`
 	DeviceType 		  string	`json:"device-type" example:"desktop"`
 	OS 				  string	`json:"os" example:"Linux"`

@@ -9,7 +9,7 @@ message FullSessionDTO {
 	string ID = 1;
 	string UserID = 2;
 	string UserAgent = 3;
-	string IpAddress = 4;
+	bytes  IpAddress = 4;
 	string DeviceID = 5;
 	string DeviceType = 6;
 	string OS = 7;

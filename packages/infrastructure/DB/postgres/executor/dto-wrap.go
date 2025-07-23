@@ -197,7 +197,7 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 	if revokedAt.Valid {
 		dto.RevokedAt = revokedAt.Time
 	}
-	dto.IpAddress = addr.To4().String()
+	dto.IpAddress = addr
 
 	cached, e := pbencoding.MarshallFullSessionDTO(dto)
 	if e != nil {
