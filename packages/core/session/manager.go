@@ -25,7 +25,7 @@ type seeker interface {
 }
 
 type updater interface {
-	UpdateSession(sessionID string, newSession *SessionDTO.Full) *Error.Status
+	UpdateSession(act *ActionDTO.Basic, sessionID string, newSession *SessionDTO.Full) *Error.Status
 }
 
 type deleter interface {

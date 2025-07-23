@@ -6,6 +6,7 @@ import (
 	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
+	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
 	"sentinel/packages/infrastructure/DB/postgres/query"
@@ -24,7 +25,8 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 		}
 	}
 
-	if _, err := m.getSessionByID(sessionID, false); err != nil {
+	session, err := m.getSessionByID(sessionID, false)
+	if err != nil {
 		return err
 	}
 
@@ -33,11 +35,13 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 		sessionID,
 	)
 
-	if err := executor.Exec(connection.Primary, revokeQuery); err != nil {
+	audit := newAuditDTO(audit.DeleteOperation, &act.Basic, session)
+
+	if err := execTxWithAudit(&audit, revokeQuery); err != nil {
 		return err
 	}
 
-	err := cache.Client.Delete(
+	err = cache.Client.Delete(
 		cache.KeyBase[cache.SessionByID] + sessionID,
 		cache.KeyBase[cache.UserBySessionID] + sessionID,
 	)

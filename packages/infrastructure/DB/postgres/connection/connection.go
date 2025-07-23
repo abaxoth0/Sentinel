@@ -232,7 +232,7 @@ func (m *Manager) checkTables(conType Type) error {
 
     defer con.Release()
 
-	sql := `WITH tables_to_check(table_name) AS (VALUES ('user'), ('audit_user'), ('user_session'), ('location'), ('audit_location'))
+	sql := `WITH tables_to_check(table_name) AS (VALUES ('user'), ('audit_user'), ('user_session'), ('audit_user_session'), ('location'), ('audit_location'))
 	SELECT t.table_name, EXISTS (
 		SELECT FROM information_schema.tables
 		WHERE table_schema = 'public'

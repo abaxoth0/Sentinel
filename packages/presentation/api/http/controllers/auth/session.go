@@ -274,7 +274,7 @@ func updateSession(
 		}
 	}
 
-	if err := DB.Database.UpdateSession(newSession.ID, newSession); err != nil {
+	if err := DB.Database.UpdateSession(&act.Basic, newSession.ID, newSession); err != nil {
 		return nil, nil, err
 	}
 

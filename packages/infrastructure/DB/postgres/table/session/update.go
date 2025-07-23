@@ -2,13 +2,19 @@ package sessiontable
 
 import (
 	Error "sentinel/packages/common/errors"
+	actiondto "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
-	"sentinel/packages/infrastructure/DB/postgres/connection"
-	"sentinel/packages/infrastructure/DB/postgres/executor"
+	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/query"
+	"sentinel/packages/infrastructure/cache"
 )
 
-func (m *Manager) UpdateSession(sessionID string, newSession *SessionDTO.Full) *Error.Status {
+func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSession *SessionDTO.Full) *Error.Status {
+	session, err := m.getSessionByID(sessionID, false)
+	if err != nil {
+		return err
+	}
+
 	updateQuery := query.New(
 		`UPDATE "user_session" SET
 		user_id = $1, user_agent = $2, ip_address = $3, device_id = $4, device_type = $5, os = $6, os_version = $7, browser = $8, browser_version = $9, last_used_at = $10, expires_at = $11
@@ -27,6 +33,20 @@ func (m *Manager) UpdateSession(sessionID string, newSession *SessionDTO.Full) *
 		sessionID,
 	)
 
-	return executor.Exec(connection.Primary, updateQuery)
+	audit := newAuditDTO(audit.UpdatedOperation, act, session)
+
+	if err := execTxWithAudit(&audit, updateQuery); err != nil {
+		return err
+	}
+
+	err = cache.Client.Delete(
+		cache.KeyBase[cache.SessionByID] + sessionID,
+		cache.KeyBase[cache.UserBySessionID] + sessionID,
+	)
+	if err != nil {
+		sessionLogger.Error("Failed to delete cache", err.Error(), nil)
+	}
+
+	return nil
 }
 

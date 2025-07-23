@@ -12,6 +12,7 @@ func MarshallFullSessionDTO(dto *SessionDTO.Full) ([]byte, error) {
 		ID: dto.ID,
 		UserID: dto.UserID,
 		UserAgent: dto.UserAgent,
+		IpAddress: dto.IpAddress,
 		DeviceID: dto.DeviceID,
 		DeviceType: dto.DeviceType,
 		OS: dto.OS,
@@ -35,6 +36,7 @@ func UnmarshallFullSessionDTO(rawDTO []byte) (*SessionDTO.Full, error) {
 		ID: dto.ID,
 		UserID: dto.UserID,
 		UserAgent: dto.UserAgent,
+		IpAddress: dto.IpAddress,
 		DeviceID: dto.DeviceID,
 		DeviceType: dto.DeviceType,
 		OS: dto.OS,
@@ -52,6 +54,7 @@ func MarshallPublicSessionDTO(dto *SessionDTO.Public) ([]byte, error) {
 	return marshall(&pbgen.PublicSessionDTO{
 		ID: dto.ID,
 		UserAgent: dto.UserAgent,
+		IpAddress: dto.IpAddress,
 		DeviceID: dto.DeviceID,
 		DeviceType: dto.DeviceType,
 		OS: dto.OS,
@@ -73,6 +76,7 @@ func UnmarshallPublicSessionDTO(rawDTO []byte) (*SessionDTO.Public, error) {
 	return &SessionDTO.Public{
 		ID: dto.ID,
 		UserAgent: dto.UserAgent,
+		IpAddress: dto.IpAddress,
 		DeviceID: dto.DeviceID,
 		DeviceType: dto.DeviceType,
 		OS: dto.OS,
