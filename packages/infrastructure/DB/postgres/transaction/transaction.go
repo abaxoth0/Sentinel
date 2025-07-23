@@ -41,6 +41,13 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 		return nil
 	}
 
+	for _, query := range t.queries {
+		if query == nil {
+			txLogger.Panic("Failed to run transaction", "At least one query is nil", nil)
+			return Error.StatusInternalError
+		}
+	}
+
     ctx, cancel := context.WithTimeout(context.Background(), time.Second * 5)
 	defer cancel()
 
@@ -72,7 +79,8 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 
     for _, query := range t.queries {
         if _, err := tx.Exec(ctx, query.SQL, query.Args...); err != nil {
-            return query.ConvertError(err)        }
+            return query.ConvertError(err)
+		}
     }
 
     if err := tx.Commit(ctx); err != nil {

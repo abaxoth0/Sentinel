@@ -215,7 +215,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 		return e
 	}
 
-	body.Reason = act.Reason
+	act.Reason = body.Reason
 
     if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)

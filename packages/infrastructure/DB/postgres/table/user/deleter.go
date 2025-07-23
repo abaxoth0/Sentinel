@@ -12,6 +12,7 @@ import (
 	"sentinel/packages/infrastructure/DB/postgres/executor"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	SessionTable "sentinel/packages/infrastructure/DB/postgres/table/session"
+	"sentinel/packages/infrastructure/DB/postgres/transaction"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	"slices"
@@ -96,7 +97,6 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
 	return nil
 }
 
-// TODO add audit
 func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UIDs []string) *Error.Status {
 	if newState != user.DeletedState && newState != user.NotDeletedState {
 		userLogger.Panic(
@@ -158,13 +158,25 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
 	value := util.Ternary(newState == user.DeletedState, "NOW()", "NULL")
+
+	queries := make([]*query.Query, 0, len(deletedUsers) + 1)
+
 	updateQuery := query.New(
 		`UPDATE "user" SET deleted_at = `+value+`, version = version + 1 WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
 		UIDs,
 	)
 
-	err = executor.Exec(connection.Primary, updateQuery)
-	if err != nil {
+	queries = append(queries, updateQuery)
+
+	for _, deletedUser := range deletedUsers {
+		op := util.Ternary(newState == user.DeletedState, audit.DeleteOperation, audit.RestoreOperation)
+
+		auditDTO := newAuditDTO(op, act.ToUserTargeted(deletedUser.ID), deletedUser)
+
+		queries = append(queries, newAuditQuery(&auditDTO))
+	}
+
+	if err := transaction.New(queries...).Exec(connection.Primary); err != nil {
 		return err
 	}
 
@@ -199,6 +211,7 @@ func (m *Manager) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Sta
 	if err := authz.User.SoftDeleteUser(false, act.RequesterRoles); err != nil {
 		return err
 	}
+
 	if err := m.bulkStateUpdate(user.DeletedState, act, UIDs); err != nil {
 		return err
 	}
@@ -213,7 +226,7 @@ func (m *Manager) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status
 	return m.bulkStateUpdate(user.NotDeletedState, act, UIDs)
 }
 
-// TODO add auditUserDTO (there are some problem with foreign keys)
+// TODO add audit (there are some problem with foreign keys)
 func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
     if err := act.ValidateUIDs(); err != nil {
         return err
@@ -251,7 +264,7 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 	return nil
 }
 
-// TODO add auditUserDTO (this method really cause a lot of problems)
+// TODO add audit (this method really cause a lot of problems)
 func (m *Manager) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
     if err := act.ValidateRequesterUID(); err != nil {
         return err
