@@ -8,6 +8,7 @@ import (
 	"sentinel/packages/infrastructure/DB/postgres/connection"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
+	"time"
 )
 
 func newAuditDTO(op audit.Operation, location *LocationDTO.Full) LocationDTO.Audit {
@@ -24,6 +25,7 @@ func newAuditDTO(op audit.Operation, location *LocationDTO.Full) LocationDTO.Aud
 		ISP: location.ISP,
 		DeletedAt: location.DeletedAt,
 		CreatedAt: location.CreatedAt,
+		ChangedAt: time.Now(),
     }
 }
 
@@ -32,9 +34,9 @@ func newAuditQuery(dto *LocationDTO.Audit) *query.Query {
 
     return query.New(
         `INSERT INTO "audit_location"
-        (changed_location_id, session_id, operation, ip, country, region, city, latitude, longitude, isp, deleted_at, created_at)
+        (changed_location_id, session_id, operation, ip, country, region, city, latitude, longitude, isp, deleted_at, created_at, changed_at)
         VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         dto.ChangedLocationID,
 		dto.SessionID,
         dto.Operation,
@@ -47,6 +49,7 @@ func newAuditQuery(dto *LocationDTO.Audit) *query.Query {
 		dto.ISP,
 		deletedAt,
 		dto.CreatedAt,
+		dto.ChangedAt,
     )
 }
 

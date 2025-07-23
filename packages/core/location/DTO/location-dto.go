@@ -73,6 +73,7 @@ type Audit struct {
 	ISP 				string		`json:"isp" example:"Google LLC"`
 	DeletedAt			time.Time	`json:"deleted-at" example:"2025-07-15T22:27:50.294Z"`
 	CreatedAt			time.Time	`json:"created-at" example:"2025-07-15T22:27:50.294Z"`
+	ChangedAt			time.Time	`json:"changed-at"`
 }
 
 func (dto *Audit) IsDeleted() bool {
