@@ -8,11 +8,17 @@ definitions:
       password:
         example: your-password
         type: string
+      reason:
+        example: Violation of terms of use
+        type: string
     type: object
   requestbody.ChangeRoles:
     properties:
       password:
         example: your-password
+        type: string
+      reason:
+        example: Violation of terms of use
         type: string
       roles:
         example:
@@ -62,6 +68,9 @@ definitions:
         items:
           type: string
         type: array
+      reason:
+        example: Violation of terms of use
+        type: string
     type: object
   responsebody.Error:
     properties:
@@ -137,6 +146,7 @@ definitions:
         example: "2025-07-20T23:54:14.503Z"
         type: string
       device-id:
+        example: Linux x86_64 Firefox/138.0
         type: string
       device-type:
         example: desktop

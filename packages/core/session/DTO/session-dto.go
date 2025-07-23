@@ -23,7 +23,7 @@ type Public struct {
 	ID 				  string	`json:"id" example:"254be108-2a12-4b0f-b095-c10cd80ef91d"`
 	UserAgent 		  string	`json:"user-agent" example:"Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0"`
 	IpAddress 		  string	`json:"ip-address" example:"8.8.8.8"`
-	DeviceID 		  string	`json:"device-id" example:"Linux x86_64 Firefox/138.0:`
+	DeviceID 		  string	`json:"device-id" example:"Linux x86_64 Firefox/138.0"`
 	DeviceType 		  string	`json:"device-type" example:"desktop"`
 	OS 				  string	`json:"os" example:"Linux"`
 	OSVersion		  string	`json:"os-version" example:"Unknown"`

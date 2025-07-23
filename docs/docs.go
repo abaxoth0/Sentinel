@@ -1861,6 +1861,10 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "your-password"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "Violation of terms of use"
                 }
             }
         },
@@ -1870,6 +1874,10 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "your-password"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "Violation of terms of use"
                 },
                 "roles": {
                     "type": "array",
@@ -1941,6 +1949,10 @@ const docTemplate = `{
                         "cef85e5a-5a5f-42d0-81bd-1650391c0e82",
                         "9bc87af1-5f92-4d8c-bf41-7ade642c5a91"
                     ]
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "Violation of terms of use"
                 }
             }
         },
@@ -2046,7 +2058,8 @@ const docTemplate = `{
                     "example": "2025-07-20T23:54:14.503Z"
                 },
                 "device-id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Linux x86_64 Firefox/138.0"
                 },
                 "device-type": {
                     "type": "string",
