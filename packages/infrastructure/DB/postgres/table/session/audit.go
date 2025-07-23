@@ -2,6 +2,7 @@ package sessiontable
 
 import (
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/util"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
@@ -23,7 +24,7 @@ func newAuditDTO(op audit.Operation, act *ActionDTO.Basic, session *SessionDTO.F
 }
 
 func newAuditQuery(dto *SessionDTO.Audit) *query.Query {
-    // var revokedAt = util.Ternary(dto.IsRevoked(), &dto.RevokedAt, nil)
+    var revokedAt = util.Ternary(dto.IsRevoked(), &dto.RevokedAt, nil)
 	var reason any = dto.Reason
 
 	if dto.Reason == "" {
@@ -50,7 +51,7 @@ func newAuditQuery(dto *SessionDTO.Audit) *query.Query {
 		dto.CreatedAt,
 		dto.LastUsedAt,
 		dto.ExpiresAt,
-		dto.RevokedAt,
+		revokedAt,
         dto.ChangedAt,
 		reason,
     )
