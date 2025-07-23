@@ -15,17 +15,8 @@ func newAuditDTO(op audit.Operation, location *LocationDTO.Full) LocationDTO.Aud
     return LocationDTO.Audit{
 		ChangedLocationID: location.ID,
 		Operation: string(op),
-		SessionID: location.SessionID,
-		IP: location.IP,
-		Country: location.Country,
-		Region: location.Region,
-		City: location.City,
-		Latitude: location.Latitude,
-		Longitude: location.Longitude,
-		ISP: location.ISP,
-		DeletedAt: location.DeletedAt,
-		CreatedAt: location.CreatedAt,
 		ChangedAt: time.Now(),
+		Full: location,
     }
 }
 

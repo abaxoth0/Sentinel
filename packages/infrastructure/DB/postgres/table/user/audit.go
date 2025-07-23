@@ -17,13 +17,9 @@ func newAuditDTO(op audit.Operation, act *ActionDTO.UserTargeted, user *UserDTO.
         ChangedUserID: act.TargetUID,
         ChangedByUserID: act.RequesterUID,
         Operation: string(op),
-        Login: user.Login,
-        Password: user.Password,
-        Roles: user.Roles,
-        DeletedAt: user.DeletedAt,
         ChangedAt: time.Now(),
-		Version: user.Version,
 		Reason: act.Reason,
+		Basic: user,
     }
 }
 

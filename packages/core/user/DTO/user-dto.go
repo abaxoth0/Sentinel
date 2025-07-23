@@ -62,7 +62,7 @@ func (dto *Basic) IsActive() bool {
     return !slices.Contains(dto.Roles, "unconfirmed_user")
 }
 
-type Extended struct {
+type Full struct {
     ID           string    `json:"id"`
 	Login        string    `json:"login"`
 	Password     string    `json:"password"`
@@ -72,11 +72,11 @@ type Extended struct {
 	Version 	 uint32	   `json:"version"`
 }
 
-func (dto *Extended) IsDeleted() bool {
+func (dto *Full) IsDeleted() bool {
     return !dto.DeletedAt.IsZero()
 }
 
-func (dto *Extended) ToBasic() *Basic {
+func (dto *Full) ToBasic() *Basic {
     return &Basic{
         ID: dto.ID,
         Login: dto.Login,
@@ -87,17 +87,13 @@ func (dto *Extended) ToBasic() *Basic {
 }
 
 type Audit struct {
-    ID               string    	`json:"id"`
     ChangedUserID    string    	`json:"changedUserID"`
     ChangedByUserID  string    	`json:"changedByUserID"`
     Operation        string    	`json:"operation"`
-    Login            string    	`json:"login"`
-	Password         string    	`json:"password"`
-	Roles            []string  	`json:"roles"`
-	DeletedAt        time.Time 	`json:"deletedAt"`
     ChangedAt        time.Time 	`json:"changedAt"`
-	Version 	 	 uint32	   	`json:"version"`
 	Reason			 string		`json:"reason,omitempty"`
+
+	*Basic						`json:",inline"`
 }
 
 func (dto *Audit) IsDeleted() bool {

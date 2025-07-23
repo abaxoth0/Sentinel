@@ -61,7 +61,7 @@ func UnmarshallBasicUserDTO(rawDTO []byte) (*UserDTO.Basic, error) {
 	}, nil
 }
 
-func MarshallExtendedUserDTO(dto *UserDTO.Extended) ([]byte, error) {
+func MarshallExtendedUserDTO(dto *UserDTO.Full) ([]byte, error) {
 	return marshall(&pbgen.ExtendedUserDTO{
 		Id: dto.ID,
 		Login: dto.Login,
@@ -73,13 +73,13 @@ func MarshallExtendedUserDTO(dto *UserDTO.Extended) ([]byte, error) {
 	})
 }
 
-func UnmarshallExtendedUserDTO(rawDTO []byte) (*UserDTO.Extended, error) {
+func UnmarshallExtendedUserDTO(rawDTO []byte) (*UserDTO.Full, error) {
 	dto, err := unmarshall(new(pbgen.ExtendedUserDTO), rawDTO)
 	if err != nil {
 		return nil, err
 	}
 
-	return &UserDTO.Extended{
+	return &UserDTO.Full{
 		ID: dto.Id,
 		Login: dto.Login,
 		Password: dto.Password,
@@ -112,16 +112,18 @@ func UnmarshallAuditUserDTO(rawDTO []byte) (*UserDTO.Audit, error) {
 	}
 
 	return &UserDTO.Audit{
-		ID: dto.Id,
 		ChangedByUserID: dto.ChangedById,
 		ChangedUserID: dto.ChangedUserId,
 		Operation: dto.Operation,
-		Login: dto.Login,
-		Password: dto.Password,
-		Roles: dto.Roles,
-		DeletedAt: dto.DeletedAt.AsTime(),
 		ChangedAt: dto.ChangedAt.AsTime(),
-		Version: dto.Version,
+		Basic: &UserDTO.Basic{
+			ID: dto.Id,
+			Login: dto.Login,
+			Password: dto.Password,
+			Roles: dto.Roles,
+			DeletedAt: dto.DeletedAt.AsTime(),
+			Version: dto.Version,
+		},
 	}, nil
 }
 
