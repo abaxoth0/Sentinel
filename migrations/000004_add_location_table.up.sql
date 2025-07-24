@@ -9,8 +9,8 @@ BEGIN;
         latitude    REAL,
         longitude   REAL,
         isp         VARCHAR(100),
-        deleted_at  TIMESTAMPTZ,
-        created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+        deleted_at  TIMESTAMP,
+        created_at  TIMESTAMP DEFAULT NOW() NOT NULL
     );
 
     ALTER TABLE "user_session" DROP COLUMN IF EXISTS location;

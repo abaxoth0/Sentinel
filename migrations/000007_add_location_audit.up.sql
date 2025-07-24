@@ -11,8 +11,8 @@ BEGIN;
         latitude            REAL,
         longitude           REAL,
         isp                 VARCHAR(100),
-        deleted_at          TIMESTAMPTZ,
-        created_at          TIMESTAMPTZ NOT NULL,
-        changed_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        deleted_at          TIMESTAMP,
+        created_at          TIMESTAMP NOT NULL,
+        changed_at          TIMESTAMP NOT NULL DEFAULT NOW()
     );
 COMMIT;
