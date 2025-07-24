@@ -96,6 +96,7 @@ func Create() *echo.Echo {
     userGroup.PUT("/activation/resend", Activation.Resend)
 	userGroup.GET("/search", User.SearchUsers)
 	userGroup.GET("/:uid/sessions", User.GetUserSessions)
+	userGroup.GET("/:uid", User.GetUser)
 
     rolesGroup := router.Group("/roles")
 

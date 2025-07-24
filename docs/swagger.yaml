@@ -175,6 +175,25 @@ definitions:
         example: Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0
         type: string
     type: object
+  userdto.Full:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      id:
+        type: string
+      login:
+        type: string
+      password:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      version:
+        type: integer
+    type: object
   userdto.Payload:
     properties:
       id:
@@ -770,6 +789,61 @@ paths:
       security:
       - BearerAuth: []
       summary: Soft delete user
+      tags:
+      - user
+    get:
+      consumes:
+      - application/json
+      description: Search users with pagination
+      operationId: get-user-by-id
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/userdto.Full'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "490":
+          description: User data desynchronization
+          headers:
+            X-Token-Refresh-Required:
+              description: Set to 'true' when token refresh is required
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "491":
+          description: Session revoked
+          headers:
+            X-Session-Revoked:
+              description: Set to 'true' if current user session was revoked
+              type: string
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
+      summary: Users search
       tags:
       - user
   /user/{uid}/drop:

@@ -681,3 +681,60 @@ func GetUserSessions(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, res)
 }
 
+// @Summary 		Users search
+// @Description 	Search users with pagination
+// @ID 				get-user-by-id
+// @Tags			user
+// @Param 			uid 		path 	string 	true 	"User ID"
+// @Accept			json
+// @Produce			json
+// @Success			200				{object}	userdto.Full
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
+// @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
+// @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
+// @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
+// @Router			/user/{uid} [get]
+// @Security		BearerAuth
+func GetUser(ctx echo.Context) error {
+	reqMeta := request.GetMetadata(ctx)
+
+	uid := ctx.Param("uid")
+
+	if e := validation.UUID(uid); e != nil {
+		return echo.NewHTTPError(
+			http.StatusBadRequest,
+			e.ToStatus(
+				"User ID is missing in URL path",
+				"User ID has invalid format (expected UUID)",
+			).Error(),
+		)
+	}
+
+	accessToken, err := controller.GetAccessToken(ctx)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
+	controller.Logger.Info("Getting user sessions...", reqMeta)
+
+	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
+
+	err = authz.User.GetUserSession(act.RequesterUID == act.TargetUID, act.RequesterRoles)
+	if err != nil {
+		return err
+	}
+
+	user, err := DB.Database.FindUserByID(uid)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, user)
+}
+

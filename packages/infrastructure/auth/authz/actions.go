@@ -131,3 +131,15 @@ var deleteLocation = registerAction(
 	rbac.DeletePermission,
 )
 
+var getUser = registerAction(
+	userEntity,
+	"get_user",
+	rbac.ReadPermission,
+)
+
+var getSelf = registerAction(
+	userEntity,
+	"get_self",
+	rbac.SelfReadPermission,
+)
+

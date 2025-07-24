@@ -91,3 +91,11 @@ func (u user) GetSessionLocation(roles []string) *Error.Status {
 func (u user) DeleteLocation(roles []string) *Error.Status {
 	return authorize(getSessionLocation, userResource, roles)
 }
+
+func (u user) GetUser(self bool, roles []string) *Error.Status {
+	return authorize(
+		util.Ternary(self, getSelf, getUser),
+		userResource,
+		roles,
+	)
+}
