@@ -24,8 +24,8 @@ type geoIpResponseBody struct {
 
 // Returns user location in raw string format based on specified ip address
 func GetLocationFromIP(ip string) (*LocationDTO.Full, *Error.Status) {
-	if config.Debug.Enabled && config.Debug.LocationIP != "" {
-		log.Debug("IP changed from "+ip+" to "+config.Debug.LocationIP, nil)
+	if config.Debug.Enabled && config.Debug.LocationIP != "" && ip != config.Debug.LocationIP {
+		log.Debug("IP changed: "+ip+" -> "+config.Debug.LocationIP, nil)
 		ip = config.Debug.LocationIP
 	}
 
