@@ -2,6 +2,7 @@ package pbencoding
 
 import (
 	pbgen "sentinel/packages/common/proto/generated"
+	"sentinel/packages/common/util"
 	UserDTO "sentinel/packages/core/user/DTO"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -12,7 +13,7 @@ func MarshallPublicUserDTO(dto *UserDTO.Public) ([]byte, error) {
 		Id: dto.ID,
 		Login: dto.Login,
 		Roles: dto.Roles,
-		DeletedAt: timestamppb.New(*dto.DeletedAt),
+		DeletedAt: timestamppb.New(util.SafeDereference(dto.DeletedAt)),
 		Version: dto.Version,
 	})
 }
@@ -29,7 +30,7 @@ func UnmarshallPublicUserDTO(rawDTO []byte) (*UserDTO.Public, error) {
 		ID: dto.Id,
 		Login: dto.Login,
 		Roles: dto.Roles,
-		DeletedAt: &deletedAt,
+		DeletedAt: util.Ternary(deletedAt.IsZero(), nil, &deletedAt),
 		Version: dto.Version,
 	}, nil
 }
@@ -40,7 +41,7 @@ func MarshallBasicUserDTO(dto *UserDTO.Basic) ([]byte, error) {
 		Login: dto.Login,
 		Password: dto.Password,
 		Roles: dto.Roles,
-		DeletedAt: timestamppb.New(dto.DeletedAt),
+		DeletedAt: timestamppb.New(util.SafeDereference(dto.DeletedAt)),
 		Version: dto.Version,
 	})
 }
@@ -51,42 +52,48 @@ func UnmarshallBasicUserDTO(rawDTO []byte) (*UserDTO.Basic, error) {
 		return nil, err
 	}
 
+	deletedAt := dto.DeletedAt.AsTime()
+
 	return &UserDTO.Basic{
 		ID: dto.Id,
 		Login: dto.Login,
 		Password: dto.Password,
 		Roles: dto.Roles,
-		DeletedAt: dto.DeletedAt.AsTime(),
+		DeletedAt: util.Ternary(deletedAt.IsZero(), nil, &deletedAt),
 		Version: dto.Version,
 	}, nil
 }
 
-func MarshallExtendedUserDTO(dto *UserDTO.Full) ([]byte, error) {
-	return marshall(&pbgen.ExtendedUserDTO{
+func MarshallFullUserDTO(dto *UserDTO.Full) ([]byte, error) {
+	return marshall(&pbgen.FullUserDTO{
 		Id: dto.ID,
 		Login: dto.Login,
 		Password: dto.Password,
 		Roles: dto.Roles,
-		DeletedAt: timestamppb.New(dto.DeletedAt),
+		DeletedAt: timestamppb.New(util.SafeDereference(dto.DeletedAt)),
 		CreatedAt: timestamppb.New(dto.CreatedAt),
 		Version: dto.Version,
 	})
 }
 
-func UnmarshallExtendedUserDTO(rawDTO []byte) (*UserDTO.Full, error) {
-	dto, err := unmarshall(new(pbgen.ExtendedUserDTO), rawDTO)
+func UnmarshallFullUserDTO(rawDTO []byte) (*UserDTO.Full, error) {
+	dto, err := unmarshall(new(pbgen.FullUserDTO), rawDTO)
 	if err != nil {
 		return nil, err
 	}
 
+	deletedAt := dto.DeletedAt.AsTime()
+
 	return &UserDTO.Full{
-		ID: dto.Id,
-		Login: dto.Login,
-		Password: dto.Password,
-		Roles: dto.Roles,
-		DeletedAt: dto.DeletedAt.AsTime(),
+		Basic: UserDTO.Basic{
+			ID: dto.Id,
+			Login: dto.Login,
+			Password: dto.Password,
+			Roles: dto.Roles,
+			DeletedAt: util.Ternary(deletedAt.IsZero(), nil, &deletedAt),
+			Version: dto.Version,
+		},
 		CreatedAt: dto.CreatedAt.AsTime(),
-		Version: dto.Version,
 	}, nil
 }
 
@@ -99,7 +106,7 @@ func MarshallAuditUserDTO(dto *UserDTO.Audit) ([]byte, error) {
 		Login: dto.Login,
 		Password: dto.Password,
 		Roles: dto.Roles,
-		DeletedAt: timestamppb.New(dto.DeletedAt),
+		DeletedAt: timestamppb.New(util.SafeDereference(dto.DeletedAt)),
 		ChangedAt: timestamppb.New(dto.ChangedAt),
 		Version: dto.Version,
 	})
@@ -111,6 +118,8 @@ func UnmarshallAuditUserDTO(rawDTO []byte) (*UserDTO.Audit, error) {
 		return nil, err
 	}
 
+	deletedAt := dto.DeletedAt.AsTime()
+
 	return &UserDTO.Audit{
 		ChangedByUserID: dto.ChangedById,
 		ChangedUserID: dto.ChangedUserId,
@@ -121,7 +130,7 @@ func UnmarshallAuditUserDTO(rawDTO []byte) (*UserDTO.Audit, error) {
 			Login: dto.Login,
 			Password: dto.Password,
 			Roles: dto.Roles,
-			DeletedAt: dto.DeletedAt.AsTime(),
+			DeletedAt: util.Ternary(deletedAt.IsZero(), nil, &deletedAt),
 			Version: dto.Version,
 		},
 	}, nil

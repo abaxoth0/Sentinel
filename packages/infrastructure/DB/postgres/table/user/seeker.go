@@ -144,7 +144,7 @@ func (m *Manager) findUserBy(
     conditionValue string,
     state user.State,
     cacheKey string,
-) (*UserDTO.Basic, *Error.Status) {
+) (*UserDTO.Full, *Error.Status) {
     if conditionProperty == user.IdProperty {
         if err := validation.UUID(conditionValue); err != nil {
             return nil, err.ToStatus(
@@ -166,7 +166,7 @@ func (m *Manager) findUserBy(
 
 	var selectQuery *query.Query
 
-	sql := `SELECT id, login, password, roles, deleted_at, version FROM "user" WHERE ` + string(conditionProperty) + ` = $1`
+	sql := `SELECT id, login, password, roles, deleted_at, created_at, version FROM "user" WHERE ` + string(conditionProperty) + ` = $1`
 
 	switch state {
 	case user.NotDeletedState:
@@ -180,7 +180,7 @@ func (m *Manager) findUserBy(
 		return nil, Error.StatusInternalError
 	}
 
-    dto, err := executor.BasicUserDTO(connection.Replica, selectQuery, cacheKey)
+    dto, err := executor.FullUserDTO(connection.Replica, selectQuery, cacheKey)
     if err != nil {
         return nil, err
     }
@@ -190,7 +190,7 @@ func (m *Manager) findUserBy(
     return dto, nil
 }
 
-func (m *Manager) FindAnyUserByID(id string) (*UserDTO.Basic, *Error.Status) {
+func (m *Manager) FindAnyUserByID(id string) (*UserDTO.Full, *Error.Status) {
     return m.findUserBy(
         user.IdProperty,
         id,
@@ -199,7 +199,7 @@ func (m *Manager) FindAnyUserByID(id string) (*UserDTO.Basic, *Error.Status) {
     )
 }
 
-func (m *Manager) FindUserByID(id string) (*UserDTO.Basic, *Error.Status) {
+func (m *Manager) FindUserByID(id string) (*UserDTO.Full, *Error.Status) {
     return m.findUserBy(
         user.IdProperty,
         id,
@@ -208,7 +208,7 @@ func (m *Manager) FindUserByID(id string) (*UserDTO.Basic, *Error.Status) {
     )
 }
 
-func (m *Manager) FindSoftDeletedUserByID(id string) (*UserDTO.Basic, *Error.Status) {
+func (m *Manager) FindSoftDeletedUserByID(id string) (*UserDTO.Full, *Error.Status) {
     return m.findUserBy(
         user.IdProperty,
         id,
@@ -217,7 +217,7 @@ func (m *Manager) FindSoftDeletedUserByID(id string) (*UserDTO.Basic, *Error.Sta
     )
 }
 
-func (m *Manager) FindAnyUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
+func (m *Manager) FindAnyUserByLogin(login string) (*UserDTO.Full, *Error.Status) {
     return m.findUserBy(
         user.LoginProperty,
         login,
@@ -226,7 +226,7 @@ func (m *Manager) FindAnyUserByLogin(login string) (*UserDTO.Basic, *Error.Statu
     )
 }
 
-func (m *Manager) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) {
+func (m *Manager) FindUserByLogin(login string) (*UserDTO.Full, *Error.Status) {
     return m.findUserBy(
         user.LoginProperty,
         login,
@@ -235,9 +235,9 @@ func (m *Manager) FindUserByLogin(login string) (*UserDTO.Basic, *Error.Status) 
     )
 }
 
-func (m *Manager) FindUserBySessionID(sessionID string) (*UserDTO.Basic, *Error.Status) {
+func (m *Manager) FindUserBySessionID(sessionID string) (*UserDTO.Full, *Error.Status) {
 	selectQuery := query.New(
-		`SELECT "user".id, "user".login, "user".password, "user".roles, "user".deleted_at, "user".version
+		`SELECT "user".id, "user".login, "user".password, "user".roles, "user".deleted_at, "user".created_at, "user".version
 		FROM "user" INNER JOIN "user_session" ON "user_session".user_id = "user".id
 		WHERE "user_session".id = $1;`,
 		sessionID,
@@ -245,7 +245,12 @@ func (m *Manager) FindUserBySessionID(sessionID string) (*UserDTO.Basic, *Error.
 
 	cacheKey := cache.KeyBase[cache.UserBySessionID] + sessionID
 
-	return executor.BasicUserDTO(connection.Replica, selectQuery, cacheKey)
+	dto, err := executor.FullUserDTO(connection.Replica, selectQuery, cacheKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return dto, nil
 }
 
 func (m *Manager) IsLoginAvailable(login string) bool  {

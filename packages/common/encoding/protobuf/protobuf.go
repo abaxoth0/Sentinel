@@ -17,7 +17,7 @@ func marshall(pb any) ([]byte, error){
 	switch v := pb.(type) {
 	case
 		// user
-		*pbgen.PublicUserDTO, *pbgen.BasicUserDTO, *pbgen.ExtendedUserDTO, *pbgen.AuditUserDTO,
+		*pbgen.PublicUserDTO, *pbgen.BasicUserDTO, *pbgen.FullUserDTO, *pbgen.AuditUserDTO,
 		// session
 		*pbgen.PublicSessionDTO, *pbgen.FullSessionDTO,
 		// location

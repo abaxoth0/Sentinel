@@ -41,11 +41,12 @@ func collect[T any](
 }
 
 // TODO add cache
-func CollectBasicUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.Basic, *Error.Status) {
-	return collect(conType, q, func (row pgx.CollectableRow) (*UserDTO.Basic, error) {
-		dto := new(UserDTO.Basic)
+func CollectFullUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.Full, *Error.Status) {
+	return collect(conType, q, func (row pgx.CollectableRow) (*UserDTO.Full, error) {
+		dto := new(UserDTO.Full)
 
 		var deletedAt sql.NullTime
+		var createdAt sql.NullTime
 
 		if err := row.Scan(
 			&dto.ID,
@@ -53,12 +54,16 @@ func CollectBasicUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.Ba
 			&dto.Password,
 			&dto.Roles,
 			&deletedAt,
+			&createdAt,
 			&dto.Version,
 		); err != nil {
 			return nil, err
 		}
 		if deletedAt.Valid {
-			dto.DeletedAt = deletedAt.Time
+			dto.DeletedAt = &deletedAt.Time
+		}
+		if createdAt.Valid {
+			dto.CreatedAt = createdAt.Time
 		}
 
 		return dto, nil
@@ -90,10 +95,10 @@ func CollectPublicUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.P
 }
 
 // Works same as queryRow, but also creates and returns
-// UserDTO.Basic after scanning resulting row into it.
-func BasicUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*UserDTO.Basic, *Error.Status) {
+// *UserDTO.Full after scanning resulting row into it.
+func FullUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*UserDTO.Full, *Error.Status) {
     if cached, hit := cache.Client.Get(cacheKey); hit {
-		r, err := pbencoding.UnmarshallBasicUserDTO([]byte(cached))
+		r, err := pbencoding.UnmarshallFullUserDTO([]byte(cached))
         if err == nil {
             return r, nil
         }
@@ -110,9 +115,10 @@ func BasicUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Us
         return nil, err
     }
 
-	dto := new(UserDTO.Basic)
+	dto := new(UserDTO.Full)
 
 	var deletedAt sql.NullTime
+	var createdAt sql.NullTime
 
 	if err := scan(
 		&dto.ID,
@@ -120,17 +126,21 @@ func BasicUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Us
 		&dto.Password,
 		&dto.Roles,
 		&deletedAt,
+		&createdAt,
 		&dto.Version,
 	); err != nil {
 		return nil, err
 	}
 	if deletedAt.Valid {
-		dto.DeletedAt = deletedAt.Time
+		dto.DeletedAt = &deletedAt.Time
+	}
+	if createdAt.Valid {
+		dto.CreatedAt = createdAt.Time
 	}
 
-	cached, e := pbencoding.MarshallBasicUserDTO(dto)
+	cached, e := pbencoding.MarshallFullUserDTO(dto)
 	if e != nil {
-		executorLogger.Error("Failed to encode basic user DTO", e.Error(), nil)
+		executorLogger.Error("Failed to encode user DTO", e.Error(), nil)
 	} else {
     	cache.Client.Set(cacheKey, cached)
 	}

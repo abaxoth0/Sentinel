@@ -37,7 +37,7 @@ type Basic struct {
 	Login        string    `json:"login"`
 	Password     string    `json:"password"`
 	Roles        []string  `json:"roles"`
-	DeletedAt    time.Time `json:"deletedAt"`
+	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
 	Version 	 uint32	   `json:"version"`
 }
 
@@ -63,27 +63,29 @@ func (dto *Basic) IsActive() bool {
 }
 
 type Full struct {
-    ID           string    `json:"id"`
-	Login        string    `json:"login"`
-	Password     string    `json:"password"`
-	Roles        []string  `json:"roles"`
-	DeletedAt    time.Time `json:"deletedAt"`
-    CreatedAt    time.Time `json:"createdAt"`
-	Version 	 uint32	   `json:"version"`
+    CreatedAt time.Time `json:"createdAt"`
+
+	Basic				`json:",inline"`
 }
 
 func (dto *Full) IsDeleted() bool {
     return !dto.DeletedAt.IsZero()
 }
 
-func (dto *Full) ToBasic() *Basic {
-    return &Basic{
-        ID: dto.ID,
-        Login: dto.Login,
-        Password: dto.Password,
-        Roles: dto.Roles,
-        DeletedAt: dto.DeletedAt,
-    }
+// Creates new copy of this DTO, returns non-nil pointer to it
+func (dto *Full) Copy() *Full {
+	roles := make([]string, len(dto.Roles))
+	copy(roles, dto.Roles)
+	return &Full{
+		CreatedAt: dto.CreatedAt,
+		Basic: Basic{
+			ID: dto.ID,
+			Login: dto.Login,
+			Password: dto.Password,
+			Roles: roles,
+			DeletedAt: dto.DeletedAt,
+		},
+	}
 }
 
 type Audit struct {

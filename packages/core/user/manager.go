@@ -21,17 +21,17 @@ type creator interface {
 type seeker interface {
 	SearchUsers(act *ActionDTO.Basic, rawFilters []string, page int, pageSize int) ([]*UserDTO.Public, *Error.Status)
 
-	FindAnyUserByID(string) (*UserDTO.Basic, *Error.Status)
+	FindAnyUserByID(string) (*UserDTO.Full, *Error.Status)
 
-	FindUserByID(string) (*UserDTO.Basic, *Error.Status)
+	FindUserByID(string) (*UserDTO.Full, *Error.Status)
 
-	FindSoftDeletedUserByID(string) (*UserDTO.Basic, *Error.Status)
+	FindSoftDeletedUserByID(string) (*UserDTO.Full, *Error.Status)
 
-	FindUserByLogin(string) (*UserDTO.Basic, *Error.Status)
+	FindUserByLogin(string) (*UserDTO.Full, *Error.Status)
 
-	FindAnyUserByLogin(string) (*UserDTO.Basic, *Error.Status)
+	FindAnyUserByLogin(string) (*UserDTO.Full, *Error.Status)
 
-	FindUserBySessionID(string) (*UserDTO.Basic, *Error.Status)
+	FindUserBySessionID(string) (*UserDTO.Full, *Error.Status)
 
 	IsLoginAvailable(login string) bool
 

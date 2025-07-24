@@ -12,14 +12,14 @@ import (
 	"time"
 )
 
-func newAuditDTO(op audit.Operation, act *ActionDTO.UserTargeted, user *UserDTO.Basic) UserDTO.Audit {
+func newAuditDTO(op audit.Operation, act *ActionDTO.UserTargeted, user *UserDTO.Full) UserDTO.Audit {
     return UserDTO.Audit{
         ChangedUserID: act.TargetUID,
         ChangedByUserID: act.RequesterUID,
         Operation: string(op),
         ChangedAt: time.Now(),
 		Reason: act.Reason,
-		Basic: user,
+		Basic: &user.Basic,
     }
 }
 

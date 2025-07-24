@@ -63,6 +63,8 @@ func prepare(conType connection.Type, q *query.Query) (*executionContext, contex
 				args[i] = strconv.FormatFloat(float64(a), 'f', 11, 64)
 			case time.Time:
 				args[i] = a.String()
+			case *time.Time:
+				args[i] = a.String()
 			case bool:
 				args[i] = strconv.FormatBool(a)
 			case net.IP:

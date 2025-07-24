@@ -21,7 +21,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func invalidateBasicUserDtoCache(old, current *UserDTO.Basic) {
+func invalidateBasicUserDtoCache(old, current *UserDTO.Full) {
 	invalidator := cache.NewBasicUserDtoInvalidator(old, current)
 	if err := invalidator.Invalidate(); err != nil {
 		userLogger.Error("Failed to invalidate cache", err.Error(), nil)
@@ -211,7 +211,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
     filter := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
     audit := newAuditDTO(audit.UpdatedOperation, filter, user)
-	var updatedUser *UserDTO.Basic
+	var updatedUser *UserDTO.Full
 
     for i, role := range user.Roles {
         if role == "unconfirmed_user" {

@@ -182,7 +182,7 @@ func (x *BasicUserDTO) GetVersion() uint32 {
 	return 0
 }
 
-type ExtendedUserDTO struct {
+type FullUserDTO struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Login         string                 `protobuf:"bytes,2,opt,name=login,proto3" json:"login,omitempty"`
@@ -195,20 +195,20 @@ type ExtendedUserDTO struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ExtendedUserDTO) Reset() {
-	*x = ExtendedUserDTO{}
+func (x *FullUserDTO) Reset() {
+	*x = FullUserDTO{}
 	mi := &file_packages_common_proto_user_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExtendedUserDTO) String() string {
+func (x *FullUserDTO) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExtendedUserDTO) ProtoMessage() {}
+func (*FullUserDTO) ProtoMessage() {}
 
-func (x *ExtendedUserDTO) ProtoReflect() protoreflect.Message {
+func (x *FullUserDTO) ProtoReflect() protoreflect.Message {
 	mi := &file_packages_common_proto_user_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -220,54 +220,54 @@ func (x *ExtendedUserDTO) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExtendedUserDTO.ProtoReflect.Descriptor instead.
-func (*ExtendedUserDTO) Descriptor() ([]byte, []int) {
+// Deprecated: Use FullUserDTO.ProtoReflect.Descriptor instead.
+func (*FullUserDTO) Descriptor() ([]byte, []int) {
 	return file_packages_common_proto_user_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ExtendedUserDTO) GetId() string {
+func (x *FullUserDTO) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *ExtendedUserDTO) GetLogin() string {
+func (x *FullUserDTO) GetLogin() string {
 	if x != nil {
 		return x.Login
 	}
 	return ""
 }
 
-func (x *ExtendedUserDTO) GetPassword() string {
+func (x *FullUserDTO) GetPassword() string {
 	if x != nil {
 		return x.Password
 	}
 	return ""
 }
 
-func (x *ExtendedUserDTO) GetRoles() []string {
+func (x *FullUserDTO) GetRoles() []string {
 	if x != nil {
 		return x.Roles
 	}
 	return nil
 }
 
-func (x *ExtendedUserDTO) GetDeletedAt() *timestamppb.Timestamp {
+func (x *FullUserDTO) GetDeletedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.DeletedAt
 	}
 	return nil
 }
 
-func (x *ExtendedUserDTO) GetCreatedAt() *timestamppb.Timestamp {
+func (x *FullUserDTO) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
 	}
 	return nil
 }
 
-func (x *ExtendedUserDTO) GetVersion() uint32 {
+func (x *FullUserDTO) GetVersion() uint32 {
 	if x != nil {
 		return x.Version
 	}
@@ -410,8 +410,8 @@ const file_packages_common_proto_user_proto_rawDesc = "" +
 	"\x05roles\x18\x04 \x03(\tR\x05roles\x129\n" +
 	"\n" +
 	"deleted_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdeletedAt\x12\x18\n" +
-	"\aversion\x18\x06 \x01(\rR\aversion\"\xf9\x01\n" +
-	"\x0fExtendedUserDTO\x12\x0e\n" +
+	"\aversion\x18\x06 \x01(\rR\aversion\"\xf5\x01\n" +
+	"\vFullUserDTO\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05login\x18\x02 \x01(\tR\x05login\x12\x1a\n" +
 	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x14\n" +
@@ -452,15 +452,15 @@ var file_packages_common_proto_user_proto_msgTypes = make([]protoimpl.MessageInf
 var file_packages_common_proto_user_proto_goTypes = []any{
 	(*PublicUserDTO)(nil),         // 0: user.proto.PublicUserDTO
 	(*BasicUserDTO)(nil),          // 1: user.proto.BasicUserDTO
-	(*ExtendedUserDTO)(nil),       // 2: user.proto.ExtendedUserDTO
+	(*FullUserDTO)(nil),           // 2: user.proto.FullUserDTO
 	(*AuditUserDTO)(nil),          // 3: user.proto.AuditUserDTO
 	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_packages_common_proto_user_proto_depIdxs = []int32{
 	4, // 0: user.proto.PublicUserDTO.deleted_at:type_name -> google.protobuf.Timestamp
 	4, // 1: user.proto.BasicUserDTO.deleted_at:type_name -> google.protobuf.Timestamp
-	4, // 2: user.proto.ExtendedUserDTO.deleted_at:type_name -> google.protobuf.Timestamp
-	4, // 3: user.proto.ExtendedUserDTO.created_at:type_name -> google.protobuf.Timestamp
+	4, // 2: user.proto.FullUserDTO.deleted_at:type_name -> google.protobuf.Timestamp
+	4, // 3: user.proto.FullUserDTO.created_at:type_name -> google.protobuf.Timestamp
 	4, // 4: user.proto.AuditUserDTO.deleted_at:type_name -> google.protobuf.Timestamp
 	4, // 5: user.proto.AuditUserDTO.changed_at:type_name -> google.protobuf.Timestamp
 	6, // [6:6] is the sub-list for method output_type

@@ -53,7 +53,7 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 	}
 
 	updatedUser := user.Copy()
-	updatedUser.DeletedAt = auditUserDTO.ChangedAt
+	updatedUser.DeletedAt = &auditUserDTO.ChangedAt
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
@@ -90,7 +90,7 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
 	}
 
 	updatedUser := user.Copy()
-	updatedUser.DeletedAt = time.Time{}
+	updatedUser.DeletedAt = new(time.Time)
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
@@ -132,11 +132,11 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 
 	cond := util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
 	selectQuery := query.New(
-		`SELECT id, login, password, roles, deleted_at, version FROM "user" WHERE id = ANY($1) and deleted_at `+cond+` NULL;`,
+		`SELECT id, login, password, roles, deleted_at, created_at, version FROM "user" WHERE id = ANY($1) and deleted_at `+cond+` NULL;`,
 		UIDs,
 	)
 
-	deletedUsers, err := executor.CollectBasicUserDTO(connection.Replica, selectQuery)
+	deletedUsers, err := executor.CollectFullUserDTO(connection.Replica, selectQuery)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 	}
 
 	updatedUser := user.Copy()
-	updatedUser.DeletedAt = time.Time{}
+	updatedUser.DeletedAt = new(time.Time)
 	invalidateBasicUserDtoCache(user, updatedUser)
 
 	return nil

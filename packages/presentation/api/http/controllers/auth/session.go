@@ -216,7 +216,7 @@ func actualizeSession(
 func updateSession(
 	ctx echo.Context,
 	session *SessionDTO.Full, // can be nil
-	user *UserDTO.Basic,
+	user *UserDTO.Full,
 	payload *UserDTO.Payload, // from existing token claims
 ) (*token.AccessToken, *token.RefreshToken, *Error.Status){
 	if user == nil {

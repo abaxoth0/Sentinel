@@ -22,7 +22,7 @@ message BasicUserDTO {
   uint32 version = 6;
 }
 
-message ExtendedUserDTO {
+message FullUserDTO {
   string id = 1;
   string login = 2;
   string password = 3;
