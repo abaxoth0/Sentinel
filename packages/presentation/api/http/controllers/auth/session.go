@@ -218,11 +218,11 @@ func updateSession(
 	session *SessionDTO.Full, // can be nil
 	user *UserDTO.Full,
 	payload *UserDTO.Payload, // from existing token claims
-) (*token.AccessToken, *token.RefreshToken, *Error.Status){
+) (accessToken *token.SignedToken, refreshToken *token.SignedToken, err *Error.Status){
 	if user == nil {
 		controller.Logger.Panic(
 			"Invalid updateSession call",
-			"user is nil (expected *UserDTO.Basic)",
+			"user is nil (expected *UserDTO.Full)",
 			nil,
 		)
 		return nil, nil, Error.StatusInternalError
@@ -256,7 +256,7 @@ func updateSession(
 		}
 	}
 
-	accessToken, refreshToken, err := token.NewAuthTokens(payload)
+	accessToken, refreshToken, err = token.NewAuthTokens(payload)
 	if err != nil {
 		return nil, nil, err
 	}

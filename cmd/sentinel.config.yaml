@@ -20,6 +20,11 @@ access-token-ttl: 10m
 
 refresh-token-ttl: 336h # 14 days
 
+token-audience:
+  - "urn:api:auth"
+
+self-audience: "urn:api:auth" # Audience for this service (must exists in token-audience)
+
 ### CACHE ###
 cache-socket-timeout: 3s
 

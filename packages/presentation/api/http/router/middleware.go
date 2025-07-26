@@ -5,9 +5,9 @@ import (
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/DB"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
+	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,6 +23,7 @@ var skipSyncCheckEndpoints map[string]bool = map[string]bool{
 }
 
 func preventUserDesync(next echo.HandlerFunc) echo.HandlerFunc {
+	// TODO store payload and token in ctx
 	return func (ctx echo.Context) error {
 		req := ctx.Request()
 
@@ -35,14 +36,7 @@ func preventUserDesync(next echo.HandlerFunc) echo.HandlerFunc {
 			return next(ctx)
 		}
 
-		payload, err := UserMapper.PayloadFromClaims(refreshToken.Claims.(jwt.MapClaims))
-		if err != nil {
-			setTokenRefreshRequiredHeader(ctx)
-			return echo.NewHTTPError(
-				http.StatusUnauthorized,
-				"Failed to check user data synchronization: " + err.Error(),
-			)
-		}
+		payload := UserMapper.PayloadFromClaims(refreshToken.Claims.(*token.Claims))
 
 		actualVersion, err := DB.Database.GetUserVersion(payload.ID)
 		if err != nil {

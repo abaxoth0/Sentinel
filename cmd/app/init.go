@@ -8,6 +8,7 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
+	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/router"
 
 	"github.com/labstack/echo/v4"
@@ -42,6 +43,8 @@ func InitModules() {
 	appLogger.Info("Initializng modules...", nil)
 
     authz.Init()
+
+	token.Init()
 
 	appLogger.Info("Initializng modules: OK", nil)
 }

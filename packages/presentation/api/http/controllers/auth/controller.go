@@ -9,6 +9,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
+	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
@@ -16,7 +17,6 @@ import (
 	RequestBody "sentinel/packages/presentation/data/request"
 	ResponseBody "sentinel/packages/presentation/data/response"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
@@ -25,7 +25,7 @@ import (
 // @Description 	Login endpoint
 // @ID 				login
 // @Tags			auth
-// @Param 			credentials body requestbody.LoginAndPassword true "User credentials"
+// @Param 			credentials body requestbody.Auth true "User credentials and audience"
 // @Accept			json
 // @Produce			json
 // @Success			200 			{object} 	responsebody.Token
@@ -36,7 +36,7 @@ import (
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/auth [post]
 func Login(ctx echo.Context) error {
-    var body RequestBody.LoginAndPassword
+    var body RequestBody.Auth
     if err := controller.BindAndValidate(ctx, &body); err != nil {
         return err
     }
@@ -66,11 +66,7 @@ func Login(ctx echo.Context) error {
 	} else {
 		controller.Logger.Info("Updating user session...", reqMeta)
 
-		payload, err := UserMapper.PayloadFromClaims(tk.Claims.(jwt.MapClaims))
-		if err != nil {
-			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
-			goto regularLogin
-		}
+		payload := UserMapper.PayloadFromClaims(tk.Claims.(*token.Claims))
 
 		if payload.ID != user.ID {
 			controller.Logger.Error(
@@ -148,6 +144,7 @@ func Login(ctx echo.Context) error {
         Roles: user.Roles,
 		SessionID: uuid.NewString(),
 		Version: user.Version,
+		Audience: body.Audience,
     }
 
     accessToken, refreshToken, err := token.NewAuthTokens(payload)
@@ -225,13 +222,8 @@ func Logout(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	claims := refreshToken.Claims.(jwt.MapClaims)
-
-	payload, err := UserMapper.PayloadFromClaims(claims)
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
+	claims := refreshToken.Claims.(*token.Claims)
+	payload := UserMapper.PayloadFromClaims(claims)
 	sessionID := payload.SessionID
 
 	if id := ctx.Param("sessionID"); id != "" {
@@ -249,10 +241,7 @@ func Logout(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	act, err := UserMapper.TargetedActionDTOFromClaims(user.ID, claims)
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
+	act := ActionMapper.TargetedActionDTOFromClaims(user.ID, claims)
 
 	controller.Logger.Info("Logoutting user "+user.ID+"...", reqMeta)
 
@@ -293,10 +282,7 @@ func Refresh(ctx echo.Context) error {
         return controller.HandleTokenError(ctx, err)
     }
 
-	payload, err := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(jwt.MapClaims))
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
+	payload := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(*token.Claims))
 
 	user, err := DB.Database.FindUserByID(payload.ID)
 	if err != nil {
@@ -354,11 +340,7 @@ func Verify(ctx echo.Context) error {
         return controller.HandleTokenError(ctx, err)
     }
 
-    payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
-    if err != nil {
-		controller.Logger.Error("Failed to verify access token", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
-    }
+    payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
 
 	controller.Logger.Info("Verifying access token: OK", reqMeta)
 

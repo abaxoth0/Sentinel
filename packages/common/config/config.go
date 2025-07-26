@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"sentinel/packages/common/logger"
+	"slices"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -42,8 +43,10 @@ type httpServerConfig struct {
 }
 
 type authConfing struct {
-    RawAccessTokenTTL  string `yaml:"access-token-ttl" validate:"required"`
-    RawRefreshTokenTTL string `yaml:"refresh-token-ttl" validate:"required"`
+    RawAccessTokenTTL 	string 		`yaml:"access-token-ttl" validate:"required"`
+    RawRefreshTokenTTL 	string 		`yaml:"refresh-token-ttl" validate:"required"`
+	TokenAudience		[]string	`yaml:"token-audience" validate:"required,min=1"`
+	SelfAudience		string		`yaml:"self-audience" validate:"required"`
 }
 
 func (c *authConfing) AccessTokenTTL() time.Duration {
@@ -163,6 +166,11 @@ func loadConfig(path string, dest *configs) {
         configLogger.Fatal("Failed to validate config", err.Error(), nil)
         os.Exit(1)
     }
+
+	if !slices.Contains(dest.authConfing.TokenAudience, dest.authConfing.SelfAudience) {
+        configLogger.Fatal("Failed to validate config", "Value of 'self-audience' must exists in 'token-audience'", nil)
+        os.Exit(1)
+	}
 
     configLogger.Info("Validating config: OK", nil)
 }

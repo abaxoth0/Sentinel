@@ -6,12 +6,11 @@ import (
 	"sentinel/packages/common/logger"
 	"sentinel/packages/common/util"
 	ActionDTO "sentinel/packages/core/action/DTO"
-	UserMapper "sentinel/packages/infrastructure/mappers/user"
+	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -87,7 +86,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
 func newActionDTO[T ActionDTO.Any](
 	ctx echo.Context,
 	uid string,
-	mapFunc func (uid string, claims jwt.MapClaims) (T, *Error.Status),
+	mapFunc func (uid string, claims *token.Claims) (T),
 ) (T, *echo.HTTPError) {
 	var zero T
     reqMeta := request.GetMetadata(ctx)
@@ -104,11 +103,7 @@ func newActionDTO[T ActionDTO.Any](
     Logger.Trace("Creating action DTO from token claims...", reqMeta)
 
 	// claims can be trusted if token is valid
-	act, err := mapFunc(uid, accessToken.Claims.(jwt.MapClaims))
-    if err != nil {
-        Logger.Error("Failed to create action DTO from token claims", err.Error(), reqMeta)
-        return zero, ConvertErrorStatusToHTTP(err)
-    }
+	act := mapFunc(uid, accessToken.Claims.(*token.Claims))
 
     Logger.Trace("Creating action DTO from token claims: OK", reqMeta)
 
@@ -116,14 +111,14 @@ func newActionDTO[T ActionDTO.Any](
 }
 
 func NewBasicActionDTO(ctx echo.Context) (*ActionDTO.Basic, *echo.HTTPError) {
-	return newActionDTO(ctx, "", func (_ string, claims jwt.MapClaims) (*ActionDTO.Basic, *Error.Status) {
-		return UserMapper.BasicActionDTOFromClaims(claims)
+	return newActionDTO(ctx, "", func (_ string, claims *token.Claims) (*ActionDTO.Basic) {
+		return ActionMapper.BasicActionDTOFromClaims(claims)
 	})
 }
 
 func NewTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.UserTargeted, *echo.HTTPError) {
-	return newActionDTO(ctx, uid, func (id string, claims jwt.MapClaims) (*ActionDTO.UserTargeted, *Error.Status) {
-		return UserMapper.TargetedActionDTOFromClaims(id, claims)
+	return newActionDTO(ctx, uid, func (id string, claims *token.Claims) (*ActionDTO.UserTargeted) {
+		return ActionMapper.TargetedActionDTOFromClaims(id, claims)
 	})
 }
 

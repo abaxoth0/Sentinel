@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
-	UserMapper "sentinel/packages/infrastructure/mappers/user"
+	ActionMapper "sentinel/packages/infrastructure/mappers/action"
+	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -37,13 +37,9 @@ func Drop(ctx echo.Context) error {
         return controller.HandleTokenError(ctx, err)
     }
 
-    filter, err := UserMapper.BasicActionDTOFromClaims(accessToken.Claims.(jwt.MapClaims))
-    if err != nil {
-		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
-    }
+    act := ActionMapper.BasicActionDTOFromClaims(accessToken.Claims.(*token.Claims))
 
-	if err := authz.User.DropCache(filter.RequesterRoles); err != nil {
+	if err := authz.User.DropCache(act.RequesterRoles); err != nil {
 		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
 		return err
 	}

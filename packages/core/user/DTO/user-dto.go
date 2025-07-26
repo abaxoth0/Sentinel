@@ -109,5 +109,6 @@ type Payload struct {
 	Roles 		[]string `json:"roles" example:"user,moderator"`
 	Version 	uint32	 `json:"version" example:"7"`
 	SessionID 	string 	 `json:"session-id" example:"35b92582-7694-4958-9751-1fef710cb94d"`
+	Audience	[]string `json:"audience" example:"urn:api:auth,urn:api:billing,https://example.domain.com"`
 }
 

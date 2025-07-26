@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
-	actiondto "sentinel/packages/core/action/DTO"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/infrastructure/DB"
-	usermapper "sentinel/packages/infrastructure/mappers/user"
+	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
 	"strings"
@@ -44,17 +44,14 @@ func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 
     accessTokenStr := splitAuthHeader[1]
 
-	token, err := token.ParseSingedToken(accessTokenStr, config.Secret.AccessTokenPublicKey)
+	accessToken, err := token.ParseSingedToken(accessTokenStr, config.Secret.AccessTokenPublicKey)
     if err != nil {
         return nil, err
     }
 
-	payload, err := usermapper.PayloadFromClaims(token.Claims.(jwt.MapClaims))
-	if err != nil {
-		return nil, err
-	}
+	payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
 
-	act := actiondto.NewUserTargeted(payload.ID, payload.ID, payload.Roles)
+	act := ActionDTO.NewUserTargeted(payload.ID, payload.ID, payload.Roles)
 
 	if _, err := DB.Database.GetRevokedSessionByID(act, payload.SessionID); err == nil {
 		return nil, Error.StatusSessionRevoked
@@ -62,7 +59,7 @@ func GetAccessToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 
 	Logger.Trace("Getting access token from the request: OK", reqMeta)
 
-	return token, nil
+	return accessToken, nil
 }
 
 const RefreshTokenCookieKey string = "refreshToken"

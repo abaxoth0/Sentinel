@@ -154,6 +154,25 @@ func (b *LoginAndPassword) Validate() *Error.Status {
     return nil
 }
 
+type Auth struct {
+    UserLogin 			`json:",inline"`
+    UserPassword 		`json:",inline"`
+	Audience []string	`json:"audience"`
+}
+
+func (b *Auth) Validate() *Error.Status {
+    if err := b.UserLogin.Validate(); err != nil {
+        return err
+    }
+    if err := b.UserPassword.Validate(); err != nil {
+        return err
+    }
+	if b.Audience == nil || len(b.Audience) == 0 {
+		return missingFieldValue("audience")
+	}
+    return nil
+}
+
 // swagger:model UserChangePasswordRequest
 type ChangePassword struct {
     UserPassword 		`json:",inline"`

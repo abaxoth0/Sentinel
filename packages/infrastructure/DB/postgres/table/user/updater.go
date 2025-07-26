@@ -17,8 +17,6 @@ import (
 	"sentinel/packages/infrastructure/token"
 	"slices"
 	"strings"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 func invalidateBasicUserDtoCache(old, current *UserDTO.Full) {
@@ -192,10 +190,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
         return err
     }
 
-    payload, err := UserMapper.PayloadFromClaims(t.Claims.(jwt.MapClaims))
-    if err != nil {
-        return err
-    }
+    payload := UserMapper.PayloadFromClaims(t.Claims.(*token.Claims))
 
     user, err := m.FindUserByID(payload.ID)
     if err != nil {

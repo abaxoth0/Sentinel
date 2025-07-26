@@ -30,10 +30,34 @@ var TokenModified = Error.NewStatusError(
     http.StatusBadRequest,
 )
 
+var TokenMissingRequiredClaims = Error.NewStatusError(
+    "At least one of required token claims is missing",
+    http.StatusBadRequest,
+)
+
+var TokenAudienceDoesNotExists = Error.NewStatusError(
+	"Audience doesn't exists",
+	http.StatusBadRequest,
+)
+
+var TokenAudienceIsNotSpecified = Error.NewStatusError(
+	"Audience isn't specified",
+	http.StatusBadRequest,
+)
+
+var TokenAudienceMismatch = Error.NewStatusError(
+	"Token not valid for this audience",
+	http.StatusBadRequest,
+)
+
 func IsTokenError(err *Error.Status) bool {
     return err == TokenMalformed ||
-           err == TokenExpired ||
-           err == TokenModified ||
-           err == InvalidToken
+        	err == TokenExpired ||
+    		err == TokenModified ||
+			err == InvalidToken ||
+			err == TokenMissingRequiredClaims ||
+			err == TokenAudienceDoesNotExists ||
+			err == TokenAudienceMismatch ||
+			err == TokenAudienceIsNotSpecified
 }
 

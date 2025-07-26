@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	rbac "github.com/StepanAnanin/SentinelRBAC"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -648,10 +647,7 @@ func GetUserSessions(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
+	payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
 
 	controller.Logger.Info("Getting user sessions...", reqMeta)
 
@@ -716,10 +712,7 @@ func GetUser(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	payload, err := UserMapper.PayloadFromClaims(accessToken.Claims.(jwt.MapClaims))
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
+	payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
 
 	controller.Logger.Info("Getting user sessions...", reqMeta)
 
