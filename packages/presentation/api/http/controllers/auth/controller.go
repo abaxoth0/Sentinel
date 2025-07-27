@@ -333,14 +333,7 @@ func Verify(ctx echo.Context) error {
 
 	controller.Logger.Info("Verifying access token...", reqMeta)
 
-	// If token is invalid (expired, malformed etc) then this method will return error
-    accessToken, err := controller.GetAccessToken(ctx)
-    if err != nil {
-		controller.Logger.Error("Verifying access token: ERROR", err.Error(), reqMeta)
-        return controller.HandleTokenError(ctx, err)
-    }
-
-    payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
+    payload := controller.GetAccessTokenPayload(ctx)
 
 	controller.Logger.Info("Verifying access token: OK", reqMeta)
 
@@ -377,11 +370,7 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 
 	controller.Logger.Info("Revoking all sessions of user "+uid+"...", reqMeta)
 
-	act, err := controller.NewTargetedActionDTO(ctx, uid)
-	if err != nil {
-		controller.Logger.Error("Failed to revoking all sessions of user "+uid, err.Error(), reqMeta)
-		return err
-	}
+	act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
 	var body RequestBody.ActionReason
 

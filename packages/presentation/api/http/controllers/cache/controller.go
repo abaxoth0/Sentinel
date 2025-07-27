@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
-	ActionMapper "sentinel/packages/infrastructure/mappers/action"
-	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 
@@ -31,13 +29,7 @@ func Drop(ctx echo.Context) error {
 
 	controller.Logger.Info("Crealing cache...", reqMeta)
 
-    accessToken, err := controller.GetAccessToken(ctx)
-    if err != nil {
-		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
-        return controller.HandleTokenError(ctx, err)
-    }
-
-    act := ActionMapper.BasicActionDTOFromClaims(accessToken.Claims.(*token.Claims))
+    act := controller.GetBasicAction(ctx)
 
 	if err := authz.User.DropCache(act.RequesterRoles); err != nil {
 		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)

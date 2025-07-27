@@ -11,7 +11,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authn"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/email"
-	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
@@ -108,11 +107,7 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 		controller.Logger.Info("Binding request: OK", reqMeta)
 	}
 
-    act, err := controller.NewTargetedActionDTO(ctx, uid)
-    if err != nil {
-		controller.Logger.Error(logMessageBase + ": FAILED", err.Error(), reqMeta)
-        return err
-    }
+    act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
 	act.Reason = body.Reason
 
@@ -202,11 +197,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 
     controller.Logger.Info("Bulk soft deleting users...", reqMeta)
 
-    act, err := controller.NewBasicActionDTO(ctx)
-    if err != nil {
-		controller.Logger.Error("Bulk soft deleting users: FAILED", err.Error(), reqMeta)
-        return err
-    }
+    act := controller.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
 
@@ -245,11 +236,7 @@ func BulkRestore(ctx echo.Context) error {
 
     controller.Logger.Info("Bulk restoring users...", reqMeta)
 
-    act, err := controller.NewBasicActionDTO(ctx)
-    if err != nil {
-		controller.Logger.Error("Bulk restoring users: FAILED", err.Error(), reqMeta)
-        return err
-    }
+    act := controller.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
 
@@ -287,12 +274,9 @@ func DropAllDeleted(ctx echo.Context) error {
 
     controller.Logger.Info("Dropping all soft deleted user...", reqMeta)
 
-    act, err := controller.NewTargetedActionDTO(ctx, "")
-    if err != nil {
-        return err
-    }
+    act := controller.GetBasicAction(ctx)
 
-    if err := DB.Database.DropAllSoftDeleted(&act.Basic); err != nil {
+    if err := DB.Database.DropAllSoftDeleted(act); err != nil {
         controller.Logger.Error("Failed to drop all soft deleted user", err.Error(), reqMeta)
 
         return controller.ConvertErrorStatusToHTTP(err)
@@ -356,10 +340,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 
     uid := ctx.Param("uid")
 
-    act, e := controller.NewTargetedActionDTO(ctx, uid)
-    if e != nil {
-        return e
-    }
+    act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
     controller.Logger.Trace("Validating user update request...", reqMeta)
 
@@ -483,10 +464,7 @@ func ChangeRoles(ctx echo.Context) error {
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
 
-    filter, e := controller.NewTargetedActionDTO(ctx, uid)
-    if e != nil {
-        return e
-    }
+    filter := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
     reqMeta := request.GetMetadata(ctx)
 
@@ -595,10 +573,7 @@ func SearchUsers(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "pageSize must be an integer number")
 	}
 
-	act, e := controller.NewBasicActionDTO(ctx)
-	if e != nil {
-		return e
-	}
+	act := controller.GetBasicAction(ctx)
 
 	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters...", reqMeta)
 
@@ -642,12 +617,7 @@ func GetUserSessions(ctx echo.Context) error {
 		)
 	}
 
-	accessToken, err := controller.GetAccessToken(ctx)
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
+	payload := controller.GetAccessTokenPayload(ctx)
 
 	controller.Logger.Info("Getting user sessions...", reqMeta)
 
@@ -707,18 +677,13 @@ func GetUser(ctx echo.Context) error {
 		)
 	}
 
-	accessToken, err := controller.GetAccessToken(ctx)
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
+	payload := controller.GetAccessTokenPayload(ctx)
 
 	controller.Logger.Info("Getting user sessions...", reqMeta)
 
 	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
-	err = authz.User.GetUserSession(act.RequesterUID == act.TargetUID, act.RequesterRoles)
+	err := authz.User.GetUserSession(act.RequesterUID == act.TargetUID, act.RequesterRoles)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
-	responsebody "sentinel/packages/presentation/data/response"
+	ResponseBody "sentinel/packages/presentation/data/response"
 
 	"github.com/getsentry/sentry-go"
 	sentryecho "github.com/getsentry/sentry-go/echo"
@@ -27,7 +27,12 @@ func handleHttpError(err error, ctx echo.Context) {
     if e, is := err.(*echo.HTTPError); is {
         code = e.Code
         message = e.Message.(string)
-    }
+    } else {
+		routerLogger.Warning(
+			"Error is not *echo.HTTPError. It will be turned into the Internal Server Error",
+			request.GetMetadata(ctx),
+		)
+	}
 
     statusText := Error.StatusText(code)
 
@@ -62,7 +67,7 @@ func handleHttpError(err error, ctx echo.Context) {
 		}
 	}
 
-	ctx.JSON(code, responsebody.Error{
+	ctx.JSON(code, ResponseBody.Error{
 		Error: statusText,
 		Message: message,
 	})

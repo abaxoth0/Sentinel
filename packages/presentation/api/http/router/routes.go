@@ -4,6 +4,7 @@ import (
 	"net/http"
 	_ "sentinel/docs"
 	"sentinel/packages/common/config"
+	"sentinel/packages/common/logger"
 	Activation "sentinel/packages/presentation/api/http/controllers/activation"
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
 	Cache "sentinel/packages/presentation/api/http/controllers/cache"
@@ -17,6 +18,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+var routerLogger = logger.NewSource("ROUTER", logger.Default)
 
 // i could just explicitly pass empty string in routes when i need it
 // but it looks really awful, shitty and not obvious
@@ -59,7 +62,6 @@ func Create() *echo.Echo {
 
 	router.Use(request.Middleware)
     router.Use(middleware.CORSWithConfig(cors))
-	router.Use(preventUserDesync)
 	router.Use(sentryecho.New(sentryecho.Options{
 		Repanic: true,
 	}))
@@ -71,14 +73,14 @@ func Create() *echo.Echo {
 
     authGroup := router.Group("/auth")
 
-    authGroup.GET(rootPath, Auth.Verify)
+    authGroup.GET(rootPath, Auth.Verify, secure, preventUserDesync)
     authGroup.POST(rootPath, Auth.Login)
     authGroup.PUT(rootPath, Auth.Refresh)
     authGroup.DELETE(rootPath, Auth.Logout)
-	authGroup.DELETE("/:sessionID", Auth.Logout)
-	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions)
+	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync)
+	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync)
 
-    userGroup := router.Group("/user")
+    userGroup := router.Group("/user", secure, preventUserDesync)
 
     userGroup.POST(rootPath, User.Create)
     userGroup.DELETE("/:uid", User.SoftDelete)
@@ -98,15 +100,15 @@ func Create() *echo.Echo {
 	userGroup.GET("/:uid/sessions", User.GetUserSessions)
 	userGroup.GET("/:uid", User.GetUser)
 
-    rolesGroup := router.Group("/roles")
+    rolesGroup := router.Group("/roles", secure, preventUserDesync)
 
     rolesGroup.GET("/:serviceID", Roles.GetAll)
 
-    cacheGroup := router.Group("/cache")
+    cacheGroup := router.Group("/cache", secure, preventUserDesync)
 
     cacheGroup.DELETE(rootPath, Cache.Drop)
 
-	docsGroup := router.Group("/docs")
+	docsGroup := router.Group("/docs", secure, preventUserDesync)
 
 	docsGroup.GET("/*", Docs.Swagger)
 

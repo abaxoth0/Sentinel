@@ -1,17 +1,20 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/logger"
 	"sentinel/packages/common/util"
-	ActionDTO "sentinel/packages/core/action/DTO"
-	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
-
 	"github.com/labstack/echo/v4"
+	"sentinel/packages/common/config"
+	ActionDTO "sentinel/packages/core/action/DTO"
+	UserDTO "sentinel/packages/core/user/DTO"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var Logger = logger.NewSource("CONTROLLER", logger.Default)
@@ -83,42 +86,103 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
     return ConvertErrorStatusToHTTP(err)
 }
 
-func newActionDTO[T ActionDTO.Any](
-	ctx echo.Context,
-	uid string,
-	mapFunc func (uid string, claims *token.Claims) (T),
-) (T, *echo.HTTPError) {
-	var zero T
-    reqMeta := request.GetMetadata(ctx)
+var invalidAuthorizationHeaderFormat = Error.NewStatusError(
+    "Invalid Authorization header. Expected format: 'Bearer <token>'",
+    http.StatusUnauthorized,
+)
 
-    Logger.Trace("Retrieving access token from the request...", reqMeta)
+// IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
+// Otherwise, using this function will cause panic.
+func getNonNilValueFromSecuredRequestContext[T any](ctx echo.Context, key string) T {
+	value := ctx.Get(key)
+	if value == nil {
+		secured := ctx.Get("Secured")
+		switch s := secured.(type) {
+		case bool:
+			Logger.Panic(
+				"Failed to get value from request context",
+				fmt.Sprintf("Route %s %s isn't secured", ctx.Request().Method, ctx.Path()),
+				nil,
+			)
+		default:
+			Logger.Panic(
+				"Failed to get value from request context",
+				fmt.Sprintf("Secured has invalid type: Expected bool, but got %T", s),
+				nil,
+			)
+		}
+		Logger.Panic(
+			"Failed to get value from request context",
+			"value is nil",
+			nil,
+		)
+		return *new(T) // Anyway will panic
+	}
+	switch v := value.(type) {
+	case T:
+		return v
+	default:
+		Logger.Panic(
+			"Failed to get value from request context",
+			fmt.Sprintf("value has invalid type: %T", v),
+			nil,
+		)
+		return *new(T) // Anyway will panic
+	}
+}
 
-    accessToken, err := GetAccessToken(ctx)
+// IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
+// Otherwise, using this function will cause panic.
+//
+// Returned value guaranteed to be non-nil.
+func GetAccessToken(ctx echo.Context) *jwt.Token {
+	return getNonNilValueFromSecuredRequestContext[*jwt.Token](ctx, "access_token")
+}
+
+// IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
+// Otherwise, using this function will cause panic.
+//
+// Returned value guaranteed to be non-nil.
+func GetAccessTokenPayload(ctx echo.Context) *UserDTO.Payload {
+	return getNonNilValueFromSecuredRequestContext[*UserDTO.Payload](ctx, "access_token_payload")
+}
+
+// IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
+// Otherwise, using this function will cause panic.
+//
+// Returned value guaranteed to be non-nil.
+func GetBasicAction(ctx echo.Context) *ActionDTO.Basic {
+	return getNonNilValueFromSecuredRequestContext[*ActionDTO.Basic](ctx, "basic_action")
+}
+
+const RefreshTokenCookieKey string = "refreshToken"
+
+// Retrieves and validates refresh token.
+//
+// Returns pointer to token and nil if valid and not expired token was found.
+// Otherwise returns empty pointer to token and *Error.Status.
+func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
+	reqMeta := request.GetMetadata(ctx)
+
+	Logger.Trace("Getting refresh token from the request...", reqMeta)
+
+    cookie, err := ctx.Cookie(RefreshTokenCookieKey)
     if err != nil {
-        Logger.Error("Failed to retrieve valid access token from the request", err.Error(), reqMeta)
-        return zero, HandleTokenError(ctx, err)
+        if err == http.ErrNoCookie {
+            return nil, Error.StatusUnauthorized
+        }
+
+        Logger.Error("Failed to get auth cookie", err.Error(), reqMeta)
+        return nil, Error.StatusInternalError
     }
 
-    Logger.Trace("Retrieving access token from the request: OK", reqMeta)
-    Logger.Trace("Creating action DTO from token claims...", reqMeta)
+	token, e := token.ParseSingedToken(cookie.Value, config.Secret.RefreshTokenPublicKey)
+    if e != nil {
+        return nil, e
+    }
 
-	// claims can be trusted if token is valid
-	act := mapFunc(uid, accessToken.Claims.(*token.Claims))
+	Logger.Trace("Getting refresh token from the request: OK", reqMeta)
 
-    Logger.Trace("Creating action DTO from token claims: OK", reqMeta)
-
-    return act, nil
-}
-
-func NewBasicActionDTO(ctx echo.Context) (*ActionDTO.Basic, *echo.HTTPError) {
-	return newActionDTO(ctx, "", func (_ string, claims *token.Claims) (*ActionDTO.Basic) {
-		return ActionMapper.BasicActionDTOFromClaims(claims)
-	})
-}
-
-func NewTargetedActionDTO(ctx echo.Context, uid string) (*ActionDTO.UserTargeted, *echo.HTTPError) {
-	return newActionDTO(ctx, uid, func (id string, claims *token.Claims) (*ActionDTO.UserTargeted) {
-		return ActionMapper.TargetedActionDTOFromClaims(id, claims)
-	})
+	return token, nil
 }
 
