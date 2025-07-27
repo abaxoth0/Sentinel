@@ -25,6 +25,9 @@ type Public struct {
 }
 
 func (dto *Public) IsDeleted() bool {
+	if dto.DeletedAt == nil {
+		return false
+	}
     return !dto.DeletedAt.IsZero()
 }
 
@@ -55,6 +58,9 @@ func (dto *Basic) Copy() *Basic {
 }
 
 func (dto *Basic) IsDeleted() bool {
+	if dto.DeletedAt == nil {
+		return false
+	}
     return !dto.DeletedAt.IsZero()
 }
 
@@ -69,6 +75,9 @@ type Full struct {
 }
 
 func (dto *Full) IsDeleted() bool {
+	if dto.DeletedAt == nil {
+		return false
+	}
     return !dto.DeletedAt.IsZero()
 }
 
@@ -99,6 +108,9 @@ type Audit struct {
 }
 
 func (dto *Audit) IsDeleted() bool {
+	if dto.DeletedAt == nil {
+		return false
+	}
     return !dto.DeletedAt.IsZero()
 }
 

@@ -24,7 +24,8 @@ func newAuditDTO(op audit.Operation, act *ActionDTO.UserTargeted, user *UserDTO.
 }
 
 func newAuditQuery(dto *UserDTO.Audit) *query.Query {
-    var deletedAt = util.Ternary(dto.IsDeleted(), &dto.DeletedAt, nil)
+    var deletedAt = util.Ternary(dto.IsDeleted(), dto.DeletedAt, nil)
+
 	var reason any = dto.Reason
 
 	if dto.Reason == "" {

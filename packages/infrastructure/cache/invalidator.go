@@ -2,8 +2,10 @@ package cache
 
 import (
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/util"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"slices"
+	"time"
 )
 
 // Used to automically find/delete invalid cache keys
@@ -15,13 +17,14 @@ type Invalidator interface {
 // Used to automically find/delete invalid cache keys by analyzing
 // changes between 'old' and 'current' version of specified DTO.
 type BasicUserDtoInvalidator struct {
-	old 		 	*UserDTO.Full
-	current 	 	*UserDTO.Full
-	invalidKeys	 	[]string
-	isIdValid 	 	bool
-	isLoginValid 	bool
-	isOldDeleted 	bool
-	isVersionValid 	bool
+	old 		 		*UserDTO.Full
+	current 	 		*UserDTO.Full
+	invalidKeys	 		[]string
+	isIdValid 	 		bool
+	isLoginValid 		bool
+	oldDeletedAt 		time.Time
+	currentDeletedAt 	time.Time
+	isVersionValid 		bool
 }
 
 func NewBasicUserDtoInvalidator(old *UserDTO.Full, current *UserDTO.Full) *BasicUserDtoInvalidator {
@@ -31,7 +34,8 @@ func NewBasicUserDtoInvalidator(old *UserDTO.Full, current *UserDTO.Full) *Basic
 		invalidKeys: []string{},
 		isIdValid: true,
 		isLoginValid: true,
-		isOldDeleted: !old.DeletedAt.IsZero(),
+		oldDeletedAt: util.SafeDereference(old.DeletedAt),
+		currentDeletedAt: util.SafeDereference(current.DeletedAt),
 		isVersionValid: true,
 	}
 }
@@ -46,14 +50,14 @@ func (i *BasicUserDtoInvalidator) invalidateIdKeys() {
 	i.invalidKeys = append(i.invalidKeys, KeyBase[AnyUserById] + i.old.ID)
 	i.invalidKeys = append(i.invalidKeys, KeyBase[UserVersionByID] + i.old.ID)
 
-	if !i.old.DeletedAt.Equal(*i.current.DeletedAt) {
+	if !i.oldDeletedAt.Equal(i.currentDeletedAt) {
 		i.invalidKeys = append(i.invalidKeys, KeyBase[UserById] + i.old.ID)
 		i.invalidKeys = append(i.invalidKeys, KeyBase[DeletedUserById] + i.old.ID)
 		i.isIdValid = false
 		return
 	}
 
-	if !i.isOldDeleted {
+	if !i.old.IsDeleted() {
 		i.invalidKeys = append(i.invalidKeys, KeyBase[UserById] + i.old.ID)
 	} else {
 		i.invalidKeys = append(i.invalidKeys, KeyBase[DeletedUserById] + i.old.ID)
@@ -71,7 +75,7 @@ func (i *BasicUserDtoInvalidator) invalidateLoginKeys() {
 
 	i.invalidKeys = append(i.invalidKeys, KeyBase[AnyUserByLogin] + i.old.Login)
 
-	if !i.isOldDeleted || !i.old.DeletedAt.Equal(*i.current.DeletedAt) {
+	if !i.old.IsDeleted() || !i.oldDeletedAt.Equal(i.currentDeletedAt) {
 		i.invalidKeys = append(i.invalidKeys, KeyBase[UserByLogin] + i.old.Login)
 	}
 
@@ -79,7 +83,7 @@ func (i *BasicUserDtoInvalidator) invalidateLoginKeys() {
 }
 
 func (i *BasicUserDtoInvalidator) GetInvalidKeys() []string {
-	isDeletedAtChaged := !i.old.DeletedAt.Equal(*i.current.DeletedAt)
+	isDeletedAtChaged := !i.oldDeletedAt.Equal(i.currentDeletedAt)
 
 	if i.old.ID != i.current.ID ||
 	i.old.Login != i.current.Login ||
