@@ -204,8 +204,7 @@ func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Erro
         case errors.Is(err, jwt.ErrTokenNotValidYet):
             return nil, TokenModified
         case errors.Is(err, jwt.ErrTokenSignatureInvalid):
-            // If someone tampered with the token
-            return nil, TokenModified
+            return nil, TokenInvalidSignature
         default:
             tokenLogger.Error("Failed to parse signed token", err.Error(), nil)
             return nil, Error.StatusInternalError

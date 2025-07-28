@@ -25,6 +25,11 @@ var InvalidToken = Error.NewStatusError(
     http.StatusBadRequest,
 )
 
+var TokenInvalidSignature = Error.NewStatusError(
+    "Invalid Token Signature",
+    http.StatusBadRequest,
+)
+
 var TokenModified = Error.NewStatusError(
     "Invalid Token (and you know that)",
     http.StatusBadRequest,
@@ -53,7 +58,7 @@ var TokenAudienceMismatch = Error.NewStatusError(
 func IsTokenError(err *Error.Status) bool {
     return err == TokenMalformed ||
         	err == TokenExpired ||
-    		err == TokenModified ||
+    		err == TokenInvalidSignature ||
 			err == InvalidToken ||
 			err == TokenMissingRequiredClaims ||
 			err == TokenAudienceDoesNotExists ||

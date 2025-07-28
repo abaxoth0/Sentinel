@@ -252,3 +252,18 @@ func (b *UsersIDs) Validate() *Error.Status {
 	return nil
 }
 
+type Introspect struct {
+	Token 	string 	`form:"token" json:"token" example:"eyJhbGciOiJFZER..."`
+	Type	string	`form:"type" json:"type" example:"access"`
+}
+
+func (b *Introspect) Validate() *Error.Status {
+	if b.Token == "" {
+		return missingFieldValue("token")
+	}
+	if b.Type == "" {
+		return missingFieldValue("type")
+	}
+	return nil
+}
+

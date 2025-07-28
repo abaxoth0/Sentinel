@@ -167,12 +167,12 @@ const docTemplate = `{
                 "operationId": "login",
                 "parameters": [
                     {
-                        "description": "User credentials",
+                        "description": "User credentials and audience",
                         "name": "credentials",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/requestbody.LoginAndPassword"
+                            "$ref": "#/definitions/requestbody.Auth"
                         }
                     }
                 ],
@@ -271,6 +271,59 @@ const docTemplate = `{
                                 "type": "string",
                                 "description": "Set to 'true' when token refresh is required"
                             }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oauth/introspect": {
+            "post": {
+                "description": "RFC 7662 (https://datatracker.ietf.org/doc/html/rfc7662). Valid token types are: access, refresh and activate.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "OAuth 2.0 Token Introspection",
+                "operationId": "oauth-introspect",
+                "parameters": [
+                    {
+                        "description": "OAuth2.0 token which must be introspected",
+                        "name": "Token",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.Introspect"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Introspection"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
                         }
                     },
                     "500": {
@@ -1935,6 +1988,25 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "requestbody.Auth": {
+            "type": "object",
+            "properties": {
+                "audience": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "login": {
+                    "type": "string",
+                    "example": "admin@mail.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "your-password"
+                }
+            }
+        },
         "requestbody.ChangePassword": {
             "type": "object",
             "properties": {
@@ -1972,6 +2044,19 @@ const docTemplate = `{
                         "user",
                         "moderator"
                     ]
+                }
+            }
+        },
+        "requestbody.Introspect": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJFZER..."
+                },
+                "type": {
+                    "type": "string",
+                    "example": "access"
                 }
             }
         },
@@ -2050,6 +2135,55 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Something went wrong"
+                }
+            }
+        },
+        "responsebody.Introspection": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "aud": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "urn:api:auth",
+                        "urn:api:billing"
+                    ]
+                },
+                "exp": {
+                    "type": "integer",
+                    "example": 1753707388
+                },
+                "iat": {
+                    "type": "integer",
+                    "example": 1753706788
+                },
+                "iss": {
+                    "type": "string",
+                    "example": "3c23ebbd-42af-47c6-9c50-7295b3ac3a62"
+                },
+                "jti": {
+                    "type": "string",
+                    "example": "ade1cdb0-309c-48c5-8251-c3f39ec0d606"
+                },
+                "scope": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "read",
+                        "write"
+                    ]
+                },
+                "sub": {
+                    "type": "string",
+                    "example": "c9fcc8e3-f4f1-4b85-a65e-29bb889cbccb"
                 }
             }
         },
@@ -2214,6 +2348,17 @@ const docTemplate = `{
         "userdto.Payload": {
             "type": "object",
             "properties": {
+                "audience": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "urn:api:auth",
+                        "urn:api:billing",
+                        "https://example.domain.com"
+                    ]
+                },
                 "id": {
                     "type": "string",
                     "example": "d529a8d2-1eb4-4bce-82aa-e62095dbc653"

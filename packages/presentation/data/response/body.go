@@ -38,3 +38,14 @@ type UserSession struct {
 	Location `json:"location"`
 }
 
+type Introspection struct {
+	Active 		bool		`json:"active" example:"true"`
+	SessionID	string		`json:"jti" example:"ade1cdb0-309c-48c5-8251-c3f39ec0d606"`
+	Subject 	string 		`json:"sub" example:"c9fcc8e3-f4f1-4b85-a65e-29bb889cbccb"`
+	Issuer		string		`json:"iss" example:"3c23ebbd-42af-47c6-9c50-7295b3ac3a62"`
+	Audience	[]string 	`json:"aud" example:"urn:api:auth,urn:api:billing"`
+	ExpiresAt	int64		`json:"exp" example:"1753707388"`
+	IssuedAt	int64		`json:"iat" example:"1753706788"`
+	Scope		[]string 	`json:"scope" example:"read,write"`
+}
+

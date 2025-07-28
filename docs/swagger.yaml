@@ -1,5 +1,18 @@
 basePath: /
 definitions:
+  requestbody.Auth:
+    properties:
+      audience:
+        items:
+          type: string
+        type: array
+      login:
+        example: admin@mail.com
+        type: string
+      password:
+        example: your-password
+        type: string
+    type: object
   requestbody.ChangePassword:
     properties:
       newPassword:
@@ -27,6 +40,15 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  requestbody.Introspect:
+    properties:
+      token:
+        example: eyJhbGciOiJFZER...
+        type: string
+      type:
+        example: access
+        type: string
     type: object
   requestbody.LoginAndPassword:
     properties:
@@ -79,6 +101,41 @@ definitions:
         type: string
       message:
         example: Something went wrong
+        type: string
+    type: object
+  responsebody.Introspection:
+    properties:
+      active:
+        example: true
+        type: boolean
+      aud:
+        example:
+        - urn:api:auth
+        - urn:api:billing
+        items:
+          type: string
+        type: array
+      exp:
+        example: 1753707388
+        type: integer
+      iat:
+        example: 1753706788
+        type: integer
+      iss:
+        example: 3c23ebbd-42af-47c6-9c50-7295b3ac3a62
+        type: string
+      jti:
+        example: ade1cdb0-309c-48c5-8251-c3f39ec0d606
+        type: string
+      scope:
+        example:
+        - read
+        - write
+        items:
+          type: string
+        type: array
+      sub:
+        example: c9fcc8e3-f4f1-4b85-a65e-29bb889cbccb
         type: string
     type: object
   responsebody.IsLoginAvailable:
@@ -196,6 +253,14 @@ definitions:
     type: object
   userdto.Payload:
     properties:
+      audience:
+        example:
+        - urn:api:auth
+        - urn:api:billing
+        - https://example.domain.com
+        items:
+          type: string
+        type: array
       id:
         example: d529a8d2-1eb4-4bce-82aa-e62095dbc653
         type: string
@@ -330,12 +395,12 @@ paths:
       description: Login endpoint
       operationId: login
       parameters:
-      - description: User credentials
+      - description: User credentials and audience
         in: body
         name: credentials
         required: true
         schema:
-          $ref: '#/definitions/requestbody.LoginAndPassword'
+          $ref: '#/definitions/requestbody.Auth'
       produces:
       - application/json
       responses:
@@ -454,6 +519,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Revoke user session
+      tags:
+      - auth
+  /auth/oauth/introspect:
+    post:
+      consumes:
+      - application/json
+      description: 'RFC 7662 (https://datatracker.ietf.org/doc/html/rfc7662). Valid
+        token types are: access, refresh and activate.'
+      operationId: oauth-introspect
+      parameters:
+      - description: OAuth2.0 token which must be introspected
+        in: body
+        name: Token
+        required: true
+        schema:
+          $ref: '#/definitions/requestbody.Introspect'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responsebody.Introspection'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: OAuth 2.0 Token Introspection
       tags:
       - auth
   /auth/sessions/{uid}:

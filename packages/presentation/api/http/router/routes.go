@@ -79,6 +79,7 @@ func Create() *echo.Echo {
     authGroup.DELETE(rootPath, Auth.Logout)
 	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync)
 	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync)
+	authGroup.POST("/oauth/introspect", Auth.IntrospectOAuthToken)
 
     userGroup := router.Group("/user", secure, preventUserDesync)
 
@@ -108,7 +109,12 @@ func Create() *echo.Echo {
 
     cacheGroup.DELETE(rootPath, Cache.Drop)
 
-	docsGroup := router.Group("/docs", secure, preventUserDesync)
+	docsGroupMiddlewares := []echo.MiddlewareFunc{secure, preventUserDesync}
+	if config.Debug.Enabled {
+		docsGroupMiddlewares = nil
+	}
+
+	docsGroup := router.Group("/docs", docsGroupMiddlewares...)
 
 	docsGroup.GET("/*", Docs.Swagger)
 
