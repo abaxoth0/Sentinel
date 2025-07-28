@@ -99,3 +99,8 @@ func (u user) GetUser(self bool, roles []string) *Error.Status {
 		roles,
 	)
 }
+
+func (u user) OAuthIntrospect(roles []string) *Error.Status {
+	return authorize(oauthIntrospect, userResource, roles)
+}
+

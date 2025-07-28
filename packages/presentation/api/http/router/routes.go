@@ -82,7 +82,7 @@ func Create() *echo.Echo {
     authGroup.DELETE(rootPath, Auth.Logout)
 	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync)
 	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync)
-	authGroup.POST("/oauth/introspect", Auth.IntrospectOAuthToken)
+	authGroup.POST("/oauth/introspect", Auth.IntrospectOAuthToken, secure, preventUserDesync)
 
     userGroup := router.Group("/user", secure, preventUserDesync)
 

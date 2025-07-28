@@ -143,3 +143,9 @@ var getSelf = registerAction(
 	rbac.SelfReadPermission,
 )
 
+var oauthIntrospect = registerAction(
+	userEntity,
+	"oauth_introspect",
+	rbac.ReadPermission,
+)
+

@@ -311,6 +311,11 @@ const docTemplate = `{
         },
         "/auth/oauth/introspect": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "RFC 7662 (https://datatracker.ietf.org/doc/html/rfc7662). Valid token types are: access, refresh and activate.",
                 "consumes": [
                     "application/json"

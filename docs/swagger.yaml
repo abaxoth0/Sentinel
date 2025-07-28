@@ -600,6 +600,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/responsebody.Error'
+      security:
+      - BearerAuth: []
       summary: OAuth 2.0 Token Introspection
       tags:
       - auth

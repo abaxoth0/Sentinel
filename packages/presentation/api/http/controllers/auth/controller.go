@@ -11,6 +11,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
+	"sentinel/packages/infrastructure/auth/authz"
 	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
@@ -352,7 +353,14 @@ func Verify(ctx echo.Context) error {
 // @Success			200 			{object} 	responsebody.Introspection
 // @Failure			400,401,500 	{object} 	responsebody.Error
 // @Router			/auth/oauth/introspect [post]
+// @Security		BearerAuth
 func IntrospectOAuthToken(ctx echo.Context) error {
+	act := controller.GetBasicAction(ctx)
+
+	if err := authz.User.OAuthIntrospect(act.RequesterRoles); err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
+
 	body := RequestBody.Introspect{}
 
 	if err := controller.BindAndValidate(ctx, &body); err != nil {
@@ -377,7 +385,7 @@ func IntrospectOAuthToken(ctx echo.Context) error {
 
 	tk, err := token.ParseSingedToken(body.Token, key)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return echo.NewHTTPError(err.Status(), "Failed to parse specified token: " + err.Error())
 	}
 
 	claims := tk.Claims.(*token.Claims)
