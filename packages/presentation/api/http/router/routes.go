@@ -60,6 +60,7 @@ func Create() *echo.Echo {
         },
     }
 
+	router.Use(securityHeaders)
 	router.Use(request.Middleware)
     router.Use(middleware.CORSWithConfig(cors))
 	router.Use(sentryecho.New(sentryecho.Options{
