@@ -28,7 +28,7 @@ func Start(Router *echo.Echo) {
     }
 
     go func(){
-        err := Router.Start(":" + config.HTTP.Port)
+        err := Router.StartTLS(":" + config.HTTP.Port, "cert.pem", "key.pem")
 
         appLogger.Info(err.Error(), nil)
     }()

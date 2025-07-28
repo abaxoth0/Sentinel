@@ -1,4 +1,6 @@
 cmd/.env
+cmd/key.pem
+cmd/cert.pem
 
 cmd/migrate/.env
 
