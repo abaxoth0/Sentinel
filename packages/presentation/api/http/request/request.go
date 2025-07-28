@@ -12,8 +12,9 @@ import (
 // TODO Do the same for error?
 const metaKey = "req_meta"
 
-func newMeta(req *http.Request) logger.Meta {
+func newMeta(requestID string, req *http.Request) logger.Meta {
 	return logger.Meta{
+		"request_id": requestID,
 		"addr": req.RemoteAddr,
 		"method": req.Method,
 		"path": req.URL.RequestURI(),
@@ -25,7 +26,8 @@ func newMeta(req *http.Request) logger.Meta {
 // for the all functions in this package to work correctly.
 func Middleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func (ctx echo.Context) error {
-		ctx.Set(metaKey, newMeta(ctx.Request()))
+		id := ctx.Response().Header().Get("X-Request-Id")
+		ctx.Set(metaKey, newMeta(id, ctx.Request()))
 
 		return next(ctx)
 	}
@@ -38,17 +40,21 @@ func GetMetadata(ctx echo.Context) logger.Meta {
 	case logger.Meta:
 		return m
 	case nil:
+		id := ctx.Response().Header().Get("X-Request-Id")
+
 		transport.Logger.Panic(
 			"Failed to get metadata from context",
 			"Request meta wasn't set (check if middleware applied correctly)",
-			newMeta(ctx.Request()),
+			newMeta(id, ctx.Request()),
 		)
 		return nil
 	default:
+		id := ctx.Response().Header().Get("X-Request-Id")
+
 		transport.Logger.Panic(
 			"Failed to get metadata from context",
 			fmt.Sprintf("Request meta has invalid type. Expected logger.Meta, but got %T", m),
-			newMeta(ctx.Request()),
+			newMeta(id, ctx.Request()),
 		)
 		return nil
 	}

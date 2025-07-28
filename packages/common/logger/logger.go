@@ -31,8 +31,12 @@ func createSuffixFromReqeustMeta(m Meta) string {
 		s += v + " "
 	}
 	if v, ok := m["user_agent"].(string); ok {
-		s += v
+		s += v + " "
 	}
+	if v, ok := m["request_id"].(string); ok {
+		s += "id:" + v
+	}
+
 
 	s += ")"
 

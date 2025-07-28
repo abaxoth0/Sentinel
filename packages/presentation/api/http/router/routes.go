@@ -67,6 +67,7 @@ func Create() *echo.Echo {
 	router.Use(middleware.BodyLimit("1M"))
 	router.Use(middleware.HTTPSRedirect())
     router.Use(middleware.CORSWithConfig(cors))
+	router.Use(middleware.RequestID())
 	router.Use(request.Middleware)
 	router.Use(checkOrigin)
 	router.Use(sentryecho.New(sentryecho.Options{
