@@ -62,3 +62,7 @@ type JWKs struct {
 	Keys []JSONWebKey `json:"keys"`
 }
 
+type CSRF struct {
+	Token string `json:"csrf-token" example:"h3PCI++3T0fEphsWoupOQyIQjlOx953bF0wlhMNu1jw="`
+}
+

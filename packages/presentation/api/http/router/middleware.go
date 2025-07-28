@@ -1,6 +1,7 @@
 package router
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -11,12 +12,72 @@ import (
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
+	"slices"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 )
 
 var middlewareLogger = logger.NewSource("MIDDLEWARE", logger.Default)
+
+// Used to prevent request forgery attacks
+func checkOrigin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		req := ctx.Request()
+
+		if req.Method == http.MethodGet || req.Method == http.MethodHead {
+			return next(ctx)
+		}
+
+		origin := req.Header.Get("Origin")
+
+		if origin != "" && slices.Contains(config.HTTP.AllowedOrigins, origin) {
+			middlewareLogger.Error("Invalid request origin", "Origin isn't allowed", request.GetMetadata(ctx))
+			return echo.NewHTTPError(
+				http.StatusForbidden,
+				"Invalid origin",
+			)
+		}
+
+		return next(ctx)
+	}
+}
+
+// Requires two same CSRF tokens, one must be set in HTTP-Only cookie and
+// another one must be provided in X-CSRF-Token header.
+// If tokens doesn't match this middleware won't pass this request further.
+func doubleSubmitCSRF(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodHead {
+			return next(c)
+		}
+
+		headerToken := c.Request().Header.Get("X-CSRF-Token")
+		cookie, err := c.Cookie("_csrf")
+
+		// Verify both exist
+		if headerToken == "" || err != nil {
+			return echo.NewHTTPError(
+				http.StatusBadRequest,
+				"CSRF token missing in header or cookie",
+			)
+		}
+
+		if !secureCompare(headerToken, cookie.Value) {
+			return echo.NewHTTPError(
+				http.StatusForbidden,
+				"CSRF tokens mismatch",
+			)
+		}
+
+		return next(c)
+	}
+}
+
+// Constant-time comparison to prevent timing attacks
+func secureCompare(a, b string) bool {
+    return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
 
 func securityHeaders(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {

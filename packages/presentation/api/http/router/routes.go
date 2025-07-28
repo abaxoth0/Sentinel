@@ -58,11 +58,17 @@ func Create() *echo.Echo {
             http.MethodPost,
             http.MethodDelete,
         },
+		AllowHeaders: []string{
+			"X-CSRF-Token",
+		},
     }
 
 	router.Use(securityHeaders)
-	router.Use(request.Middleware)
+	router.Use(middleware.BodyLimit("1M"))
+	router.Use(middleware.HTTPSRedirect())
     router.Use(middleware.CORSWithConfig(cors))
+	router.Use(request.Middleware)
+	router.Use(checkOrigin)
 	router.Use(sentryecho.New(sentryecho.Options{
 		Repanic: true,
 	}))
@@ -77,28 +83,29 @@ func Create() *echo.Echo {
 
     authGroup := router.Group("/auth")
 
+	authGroup.GET("/csrf-token", Auth.GetCSRFToken)
     authGroup.GET(rootPath, Auth.Verify, secure, preventUserDesync)
-    authGroup.POST(rootPath, Auth.Login)
-    authGroup.PUT(rootPath, Auth.Refresh)
-    authGroup.DELETE(rootPath, Auth.Logout)
-	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync)
-	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync)
+    authGroup.POST(rootPath, Auth.Login, doubleSubmitCSRF)
+    authGroup.PUT(rootPath, Auth.Refresh, doubleSubmitCSRF)
+    authGroup.DELETE(rootPath, Auth.Logout, doubleSubmitCSRF)
+	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync, doubleSubmitCSRF)
+	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync, doubleSubmitCSRF)
 	authGroup.POST("/oauth/introspect", Auth.IntrospectOAuthToken, secure, preventUserDesync)
 
     userGroup := router.Group("/user", secure, preventUserDesync)
 
     userGroup.POST(rootPath, User.Create)
-    userGroup.DELETE("/:uid", User.SoftDelete)
-    userGroup.PUT("/:uid/restore", User.Restore)
-    userGroup.DELETE(rootPath, User.BulkSoftDelete)
-    userGroup.PUT(rootPath, User.BulkRestore)
-    userGroup.DELETE("/:uid/drop", User.Drop)
-    userGroup.DELETE("/all/drop", User.DropAllDeleted)
+    userGroup.DELETE("/:uid", User.SoftDelete, doubleSubmitCSRF)
+    userGroup.PUT("/:uid/restore", User.Restore, doubleSubmitCSRF)
+    userGroup.DELETE(rootPath, User.BulkSoftDelete, doubleSubmitCSRF)
+    userGroup.PUT(rootPath, User.BulkRestore, doubleSubmitCSRF)
+    userGroup.DELETE("/:uid/drop", User.Drop, doubleSubmitCSRF)
+    userGroup.DELETE("/all/drop", User.DropAllDeleted, doubleSubmitCSRF)
     userGroup.POST("/login/available", User.IsLoginAvailable)
     userGroup.GET("/:uid/roles", User.GetRoles)
-    userGroup.PATCH("/:uid/login", User.ChangeLogin)
-    userGroup.PATCH("/:uid/password", User.ChangePassword)
-    userGroup.PATCH("/:uid/roles", User.ChangeRoles)
+    userGroup.PATCH("/:uid/login", User.ChangeLogin, doubleSubmitCSRF)
+    userGroup.PATCH("/:uid/password", User.ChangePassword, doubleSubmitCSRF)
+    userGroup.PATCH("/:uid/roles", User.ChangeRoles, doubleSubmitCSRF)
     userGroup.GET("/activation/:token", Activation.Activate)
     userGroup.PUT("/activation/resend", Activation.Resend)
 	userGroup.GET("/search", User.SearchUsers)
@@ -111,11 +118,11 @@ func Create() *echo.Echo {
 
     cacheGroup := router.Group("/cache", secure, preventUserDesync)
 
-    cacheGroup.DELETE(rootPath, Cache.Drop)
+    cacheGroup.DELETE(rootPath, Cache.Drop, doubleSubmitCSRF)
 
-	docsGroupMiddlewares := []echo.MiddlewareFunc{secure, preventUserDesync}
-	if config.Debug.Enabled {
-		docsGroupMiddlewares = nil
+	docsGroupMiddlewares := []echo.MiddlewareFunc{doubleSubmitCSRF}
+	if !config.Debug.Enabled {
+		docsGroupMiddlewares = append(docsGroupMiddlewares, secure, preventUserDesync)
 	}
 
 	docsGroup := router.Group("/docs", docsGroupMiddlewares...)

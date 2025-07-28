@@ -135,6 +135,8 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/{uid} [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func SoftDelete(ctx echo.Context) error {
 	return handleUserStateUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
 }
@@ -154,6 +156,8 @@ func SoftDelete(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/{uid}/restore [put]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Restore(ctx echo.Context) error {
     return handleUserStateUpdate(ctx, DB.Database.Restore, false, "Restoring user")
 }
@@ -173,6 +177,8 @@ func Restore(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/{uid}/drop [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Drop(ctx echo.Context) error {
     return handleUserStateUpdate(ctx, DB.Database.Drop, false, "Dropping user")
 }
@@ -192,6 +198,8 @@ func Drop(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func BulkSoftDelete(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -231,6 +239,8 @@ func BulkSoftDelete(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user [put]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func BulkRestore(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -269,6 +279,8 @@ func BulkRestore(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/drop/all [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func DropAllDeleted(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -400,6 +412,8 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/{uid}/login [patch]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func ChangeLogin(ctx echo.Context) error {
     return update(ctx, new(RequestBody.ChangeLogin), "Changing user login")
 }
@@ -421,6 +435,8 @@ func ChangeLogin(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/{uid}/password [patch]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func ChangePassword(ctx echo.Context) error {
     return update(ctx, new(RequestBody.ChangePassword), "Changing user password")
 }
@@ -442,6 +458,8 @@ func ChangePassword(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/user/{uid}/roles [patch]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func ChangeRoles(ctx echo.Context) error {
     return update(ctx, new(RequestBody.ChangeRoles), "Changing user roles")
 }

@@ -10,6 +10,10 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {},
+        "license": {
+            "name": "AGPL-3.0 (With additional terms, see NOTICE file)",
+            "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -122,6 +126,14 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
+                    }
+                ],
                 "description": "Create new access and refresh tokens and update current session info",
                 "consumes": [
                     "application/json"
@@ -180,6 +192,14 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
+                    }
+                ],
                 "description": "Login endpoint",
                 "consumes": [
                     "application/json"
@@ -258,6 +278,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Logout endpoint",
@@ -298,6 +324,36 @@ const docTemplate = `{
                                 "type": "string",
                                 "description": "Set to 'true' when token refresh is required"
                             }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/csrf-token": {
+            "get": {
+                "description": "Generates CSRF token and sets correspond \"_csrf\" cookie",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get CSRF token",
+                "operationId": "get-csrf-token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.CSRF"
                         }
                     },
                     "500": {
@@ -372,6 +428,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Revoke all existing non-revoked sessions",
@@ -455,6 +517,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Logout endpoint",
@@ -520,6 +588,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Delete all cache. Only users with \"admin\" role can do that, even if they have enough permission to do that",
@@ -648,6 +722,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Bulk restore soft deleted users",
@@ -779,6 +859,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Bulk user soft delete. All sessions of soft deleted users will be revoked",
@@ -962,6 +1048,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Hard delete all soft deleted users",
@@ -1298,6 +1390,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Soft delete user. All sessions of soft deleted user will be revoked",
@@ -1381,6 +1479,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Hard delete user. Only soft deleted users can be hard deleted",
@@ -1464,6 +1568,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Change user login",
@@ -1564,6 +1674,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Change user password",
@@ -1664,6 +1780,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Restore soft delete user",
@@ -1834,6 +1956,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "BearerAuth": []
+                    },
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
                     }
                 ],
                 "description": "Change user roles",
@@ -2154,6 +2282,15 @@ const docTemplate = `{
                 "reason": {
                     "type": "string",
                     "example": "Violation of terms of use"
+                }
+            }
+        },
+        "responsebody.CSRF": {
+            "type": "object",
+            "properties": {
+                "csrf-token": {
+                    "type": "string",
+                    "example": "h3PCI++3T0fEphsWoupOQyIQjlOx953bF0wlhMNu1jw="
                 }
             }
         },
@@ -2485,9 +2622,21 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Bearer token format: Bearer \u003cYOUR_TOKEN\u003e",
+            "description": "Bearer token format: Bearer \u003caccess_token\u003e",
             "type": "apiKey",
             "name": "Authorization",
+            "in": "header"
+        },
+        "CSRF_Cookie": {
+            "description": "CSRF token in cookie. Required for state-changing requests, must match with token in X-CSRF-Token header",
+            "type": "apiKey",
+            "name": "_csrf",
+            "in": "cookie"
+        },
+        "CSRF_Header": {
+            "description": "CSRF token in request header. Required for state-changing requests, must match with token in cookie",
+            "type": "apiKey",
+            "name": "X-CSRF-Token",
             "in": "header"
         }
     }

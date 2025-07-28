@@ -94,6 +94,12 @@ definitions:
         example: Violation of terms of use
         type: string
     type: object
+  responsebody.CSRF:
+    properties:
+      csrf-token:
+        example: h3PCI++3T0fEphsWoupOQyIQjlOx953bF0wlhMNu1jw=
+        type: string
+    type: object
   responsebody.Error:
     properties:
       error:
@@ -327,6 +333,9 @@ definitions:
 info:
   contact: {}
   description: Authentication/Authorization Service
+  license:
+    name: AGPL-3.0 (With additional terms, see NOTICE file)
+    url: https://www.gnu.org/licenses/agpl-3.0.html
   title: Sentinel
   version: "1.0"
 paths:
@@ -381,6 +390,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Revoke user session
       tags:
       - auth
@@ -482,6 +493,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/responsebody.Error'
+      security:
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Login into the service
       tags:
       - auth
@@ -522,6 +536,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/responsebody.Error'
+      security:
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Refreshes auth tokens
       tags:
       - auth
@@ -564,7 +581,29 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Revoke user session
+      tags:
+      - auth
+  /auth/csrf-token:
+    get:
+      consumes:
+      - application/json
+      description: Generates CSRF token and sets correspond "_csrf" cookie
+      operationId: get-csrf-token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responsebody.CSRF'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Get CSRF token
       tags:
       - auth
   /auth/oauth/introspect:
@@ -656,6 +695,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Revokes all user sessions
       tags:
       - auth
@@ -705,6 +746,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Flush cache
       tags:
       - cache
@@ -797,6 +840,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Soft delete several users
       tags:
       - user
@@ -883,6 +928,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Restore several soft deleted users
       tags:
       - user
@@ -937,6 +984,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Soft delete user
       tags:
       - user
@@ -1046,6 +1095,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Hard delete user
       tags:
       - user
@@ -1112,6 +1163,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Change user login
       tags:
       - user
@@ -1178,6 +1231,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Change user password
       tags:
       - user
@@ -1232,6 +1287,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Restore soft delete user
       tags:
       - user
@@ -1355,6 +1412,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Change user roles
       tags:
       - user
@@ -1526,6 +1585,8 @@ paths:
             $ref: '#/definitions/responsebody.Error'
       security:
       - BearerAuth: []
+      - CSRF_Header: []
+      - CSRF_Cookie: []
       summary: Drop all delete users
       tags:
       - user
@@ -1649,8 +1710,20 @@ paths:
       - user
 securityDefinitions:
   BearerAuth:
-    description: 'Bearer token format: Bearer <YOUR_TOKEN>'
+    description: 'Bearer token format: Bearer <access_token>'
     in: header
     name: Authorization
+    type: apiKey
+  CSRF_Cookie:
+    description: CSRF token in cookie. Required for state-changing requests, must
+      match with token in X-CSRF-Token header
+    in: cookie
+    name: _csrf
+    type: apiKey
+  CSRF_Header:
+    description: CSRF token in request header. Required for state-changing requests,
+      must match with token in cookie
+    in: header
+    name: X-CSRF-Token
     type: apiKey
 swagger: "2.0"

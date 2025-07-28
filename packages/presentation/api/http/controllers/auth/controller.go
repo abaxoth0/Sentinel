@@ -2,6 +2,7 @@ package authcontroller
 
 import (
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"net/http"
 	"sentinel/packages/common/config"
@@ -24,6 +25,44 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// @Summary 		Get CSRF token
+// @Description 	Generates CSRF token and sets correspond "_csrf" cookie
+// @ID 				get-csrf-token
+// @Tags			auth
+// @Accept			json
+// @Produce			json
+// @Success			200 	{object} 	responsebody.CSRF
+// @Failure			500 	{object} 	responsebody.Error
+// @Router			/auth/csrf-token [get]
+func GetCSRFToken(ctx echo.Context) error {
+	reqMeta := request.GetMetadata(ctx)
+
+	controller.Logger.Trace("Generating CSRF token...", reqMeta)
+
+	token := make([]byte, 32)
+    if _, err := rand.Read(token); err != nil {
+		controller.Logger.Error("Failed to generate CSRF token", err.Error(), reqMeta)
+        return controller.ConvertErrorStatusToHTTP(Error.StatusInternalError)
+    }
+    tokenStr := base64.RawURLEncoding.EncodeToString(token)
+
+	controller.Logger.Trace("Generating CSRF token: OK", reqMeta)
+
+    // Set cookie
+    ctx.SetCookie(&http.Cookie{
+        Name:     "_csrf",
+        Value:    tokenStr,
+        Secure:   true,
+        HttpOnly: false,
+        SameSite: http.SameSiteStrictMode,
+        Path:     "/",
+        MaxAge:   300, // 5 minutes
+    })
+
+	// Exposuring token like that is safe if CORS configured correctly
+    return ctx.JSON(200, ResponseBody.CSRF{ Token: tokenStr })
+}
+
 // @Summary 		Login into the service
 // @Description 	Login endpoint
 // @ID 				login
@@ -38,6 +77,8 @@ import (
 // @Failure			491 			{object} 	responsebody.Error			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/auth [post]
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Login(ctx echo.Context) error {
     var body RequestBody.Auth
     if err := controller.BindAndValidate(ctx, &body); err != nil {
@@ -212,6 +253,8 @@ func Login(ctx echo.Context) error {
 // @Router			/auth [delete]
 // @Router			/auth/{sessionID} [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Logout(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -274,6 +317,8 @@ func Logout(ctx echo.Context) error {
 // @Failure			491 			{object} 	responsebody.Error		"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 		"Set to 'true' if current user session was revoked"
 // @Router			/auth [put]
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Refresh(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -452,6 +497,8 @@ func GetJWKs(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/auth/sessions/{uid} [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func RevokeAllUserSessions(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

@@ -9,6 +9,11 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
+// @Summary 		This page
+// @Description 	API Documentation
+// @ID 				api-docs
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Swagger(ctx echo.Context) error {
 	if !config.Debug.Enabled {
 		payload := controller.GetAccessTokenPayload(ctx)

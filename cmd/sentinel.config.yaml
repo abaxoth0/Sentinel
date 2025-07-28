@@ -6,7 +6,7 @@ http-port: 8080
 http-secured: false
 
 http-allowed-origins:
-  - "http://127.0.0.1:4321"
+  - "127.0.0.1:4321"
 
 ### DATABASE ###
 db-default-queuery-timeout: 5s

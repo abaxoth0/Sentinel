@@ -24,6 +24,8 @@ import (
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/cache [delete]
 // @Security		BearerAuth
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
 func Drop(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
