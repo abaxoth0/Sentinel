@@ -71,6 +71,9 @@ func Create() *echo.Echo {
         router.Use(middleware.Logger())
     }
 
+	// Path is strange, but it's convention from OpenID Connect Discovery (OIDC)
+	router.GET("/.well-known/jwks.json", Auth.GetJWKs)
+
     authGroup := router.Group("/auth")
 
     authGroup.GET(rootPath, Auth.Verify, secure, preventUserDesync)

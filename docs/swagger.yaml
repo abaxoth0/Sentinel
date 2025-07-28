@@ -144,6 +144,34 @@ definitions:
         example: true
         type: boolean
     type: object
+  responsebody.JSONWebKey:
+    properties:
+      alg:
+        example: EdDSA
+        type: string
+      crv:
+        example: Ed25519
+        type: string
+      kid:
+        example: access-1
+        type: string
+      kty:
+        example: OKP
+        type: string
+      use:
+        example: sig
+        type: string
+      x:
+        example: Vzu3AwphVg7zmlrmAojBswMl4xoEIzsc9BY5DHGgUzo
+        type: string
+    type: object
+  responsebody.JWKs:
+    properties:
+      keys:
+        items:
+          $ref: '#/definitions/responsebody.JSONWebKey'
+        type: array
+    type: object
   responsebody.Location:
     properties:
       city:
@@ -302,6 +330,24 @@ info:
   title: Sentinel
   version: "1.0"
 paths:
+  /.well-known/jwks.json:
+    get:
+      consumes:
+      - application/json
+      description: RFC 7517 (https://datatracker.ietf.org/doc/html/rfc7517)
+      operationId: get-jwks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responsebody.JWKs'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Get JSON Web Keys (JWKs)
   /auth:
     delete:
       consumes:

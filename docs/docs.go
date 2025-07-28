@@ -15,6 +15,33 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/.well-known/jwks.json": {
+            "get": {
+                "description": "RFC 7517 (https://datatracker.ietf.org/doc/html/rfc7517)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get JSON Web Keys (JWKs)",
+                "operationId": "get-jwks",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.JWKs"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/auth": {
             "get": {
                 "security": [
@@ -2193,6 +2220,46 @@ const docTemplate = `{
                 "available": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "responsebody.JSONWebKey": {
+            "type": "object",
+            "properties": {
+                "alg": {
+                    "type": "string",
+                    "example": "EdDSA"
+                },
+                "crv": {
+                    "type": "string",
+                    "example": "Ed25519"
+                },
+                "kid": {
+                    "type": "string",
+                    "example": "access-1"
+                },
+                "kty": {
+                    "type": "string",
+                    "example": "OKP"
+                },
+                "use": {
+                    "type": "string",
+                    "example": "sig"
+                },
+                "x": {
+                    "type": "string",
+                    "example": "Vzu3AwphVg7zmlrmAojBswMl4xoEIzsc9BY5DHGgUzo"
+                }
+            }
+        },
+        "responsebody.JWKs": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/responsebody.JSONWebKey"
+                    }
                 }
             }
         },

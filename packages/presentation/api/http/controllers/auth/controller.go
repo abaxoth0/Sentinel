@@ -2,6 +2,7 @@ package authcontroller
 
 import (
 	"crypto/ed25519"
+	"encoding/base64"
 	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
@@ -391,6 +392,41 @@ func IntrospectOAuthToken(ctx echo.Context) error {
 		IssuedAt: 	claims.IssuedAt.Unix(),
 		Scope: 		claims.Roles,
 	})
+}
+
+// @Summary 		Get JSON Web Keys (JWKs)
+// @Description 	RFC 7517 (https://datatracker.ietf.org/doc/html/rfc7517)
+// @ID 				get-jwks
+// @Accept			json
+// @Produce			json
+// @Success			200 	{object} 	responsebody.JWKs
+// @Failure			500 	{object} 	responsebody.Error
+// @Router			/.well-known/jwks.json [get]
+func GetJWKs(ctx echo.Context) error {
+	res := ResponseBody.JWKs{
+		Keys: []ResponseBody.JSONWebKey{
+			// Access token pubic key
+			{
+				Kty: "OKP",
+				Alg: "EdDSA",
+				Kid: "access-1",
+				Use: "sig",
+				Crv: "Ed25519",
+				X:   base64.RawURLEncoding.EncodeToString(config.Secret.AccessTokenPublicKey),
+			},
+			// Refresh token pubic key
+			{
+				Kty: "OKP",
+				Alg: "EdDSA",
+				Kid: "refresh-1",
+				Use: "sig",
+				Crv: "Ed25519",
+				X:   base64.RawURLEncoding.EncodeToString(config.Secret.RefreshTokenPublicKey),
+			},
+			// There are no point in exposing activation tokens public key since they are used only internally
+		},
+	}
+	return ctx.JSON(http.StatusOK, res)
 }
 
 // @Summary 		Revokes all user sessions

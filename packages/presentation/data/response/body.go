@@ -49,3 +49,16 @@ type Introspection struct {
 	Scope		[]string 	`json:"scope" example:"read,write"`
 }
 
+type JSONWebKey struct {
+	Kty string `json:"kty" example:"OKP"`
+	Alg string `json:"alg" example:"EdDSA"`
+	Kid string `json:"kid" example:"access-1"`
+	Use string `json:"use" example:"sig"`
+	Crv string `json:"crv,omitempty" example:"Ed25519"`
+	X 	string `json:"x,omitempty" example:"Vzu3AwphVg7zmlrmAojBswMl4xoEIzsc9BY5DHGgUzo"`
+}
+
+type JWKs struct {
+	Keys []JSONWebKey `json:"keys"`
+}
+
