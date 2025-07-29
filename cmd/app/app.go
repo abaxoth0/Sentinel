@@ -28,7 +28,13 @@ func Start(Router *echo.Echo) {
     }
 
     go func(){
-        err := Router.StartTLS(":" + config.HTTP.Port, "cert.pem", "key.pem")
+		var err error
+
+		if config.HTTP.Secured {
+			err = Router.StartTLS(":" + config.HTTP.Port, "cert.pem", "key.pem")
+		} else {
+			err = Router.Start(":" + config.HTTP.Port)
+		}
 
         appLogger.Info(err.Error(), nil)
     }()
@@ -92,7 +98,12 @@ func printAppInfo() {
 
     if config.Debug.Enabled {
         appLogger.Warning("Debug mode enabled.", nil)
-        print("\n\n")
     }
+
+	if !config.HTTP.Secured {
+		appLogger.Warning("HTTPS Disabled", nil)
+	}
+
+	print("\n\n")
 }
 

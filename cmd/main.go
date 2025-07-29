@@ -52,6 +52,12 @@ func main() {
 	logger.Debug.Store(config.Debug.Enabled)
 	logger.Trace.Store(config.App.TraceLogsEnabled)
 
+	if !config.HTTP.Secured {
+		if !config.Debug.Enabled {
+			mainLogger.Fatal("Failed to start application", "HTTPS Can be disabled only in Debug mode", nil)
+		}
+	}
+
 	app.InitModules()
 	app.InitConnections()
 

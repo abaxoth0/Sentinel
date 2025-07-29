@@ -1,9 +1,9 @@
 ### HTTP ###
-domain: 0.0.0.0
+domain: localhost
 
 http-port: 8080
 
-http-secured: false
+http-secured: true
 
 http-allowed-origins:
   - "127.0.0.1:4321"
