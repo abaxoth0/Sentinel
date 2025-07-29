@@ -20,6 +20,19 @@ import (
 
 var middlewareLogger = logger.NewSource("MIDDLEWARE", logger.Default)
 
+// Used to prevent sensitive data caching at transport layer
+func noCache(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		res := ctx.Response()
+
+		res.Header().Set("Cache-Control", "no-store, max-age=0")
+		res.Header().Set("Pragma", "no-cache")
+		res.Header().Set("Expires", "0")
+
+		return next(ctx)
+	}
+}
+
 // Used to prevent request forgery attacks
 func checkOrigin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
@@ -47,20 +60,32 @@ func checkOrigin(next echo.HandlerFunc) echo.HandlerFunc {
 // another one must be provided in X-CSRF-Token header.
 // If tokens doesn't match this middleware won't pass this request further.
 func doubleSubmitCSRF(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodHead {
-			return next(c)
+	return func(ctx echo.Context) error {
+		if ctx.Request().Method == http.MethodGet || ctx.Request().Method == http.MethodHead {
+			return next(ctx)
 		}
 
-		headerToken := c.Request().Header.Get("X-CSRF-Token")
-		cookie, err := c.Cookie("_csrf")
-
-		// Verify both exist
-		if headerToken == "" || err != nil {
+		headerToken := ctx.Request().Header.Get("X-CSRF-Token")
+		if headerToken == "" {
 			return echo.NewHTTPError(
 				http.StatusBadRequest,
-				"CSRF token missing in header or cookie",
+				"CSRF token is missing in the request header",
 			)
+		}
+
+		cookie, err := ctx.Cookie("_csrf")
+		if err != nil {
+			if err == http.ErrNoCookie {
+				return echo.NewHTTPError(
+					http.StatusBadRequest,
+					"CSRF cookie is missing",
+				)
+			} else {
+				return echo.NewHTTPError(
+					http.StatusBadRequest,
+					"Failed to get CSRF cookie",
+				)
+			}
 		}
 
 		if !secureCompare(headerToken, cookie.Value) {
@@ -70,7 +95,7 @@ func doubleSubmitCSRF(next echo.HandlerFunc) echo.HandlerFunc {
 			)
 		}
 
-		return next(c)
+		return next(ctx)
 	}
 }
 
@@ -116,11 +141,6 @@ func securityHeaders(next echo.HandlerFunc) echo.HandlerFunc {
 				"form-action 'none'; " +
 				"base-uri 'none'")
 		}
-
-		// Prevent sensitive data caching
-		res.Header().Set("Cache-Control", "no-store, max-age=0")
-		res.Header().Set("Pragma", "no-cache")
-		res.Header().Set("Expires", "0")
 
 		// Control browser feature access
 		res.Header().Set("Permissions-Policy",

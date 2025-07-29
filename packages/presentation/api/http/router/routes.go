@@ -82,7 +82,7 @@ func Create() *echo.Echo {
 	// Path is strange, but it's convention from OpenID Connect Discovery (OIDC)
 	router.GET("/.well-known/jwks.json", Auth.GetJWKs)
 
-    authGroup := router.Group("/auth")
+    authGroup := router.Group("/auth", noCache)
 
 	authGroup.GET("/csrf-token", Auth.GetCSRFToken)
     authGroup.GET(rootPath, Auth.Verify, secure, preventUserDesync)
@@ -93,7 +93,7 @@ func Create() *echo.Echo {
 	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync, doubleSubmitCSRF)
 	authGroup.POST("/oauth/introspect", Auth.IntrospectOAuthToken, secure, preventUserDesync)
 
-    userGroup := router.Group("/user", secure, preventUserDesync)
+    userGroup := router.Group("/user", secure, preventUserDesync, noCache)
 
     userGroup.POST(rootPath, User.Create)
     userGroup.DELETE("/:uid", User.SoftDelete, doubleSubmitCSRF)
@@ -117,7 +117,7 @@ func Create() *echo.Echo {
 
     rolesGroup.GET("/:serviceID", Roles.GetAll)
 
-    cacheGroup := router.Group("/cache", secure, preventUserDesync)
+    cacheGroup := router.Group("/cache", secure, preventUserDesync, noCache)
 
     cacheGroup.DELETE(rootPath, Cache.Drop, doubleSubmitCSRF)
 
