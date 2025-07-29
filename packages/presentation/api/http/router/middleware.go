@@ -44,7 +44,7 @@ func checkOrigin(next echo.HandlerFunc) echo.HandlerFunc {
 
 		origin := req.Header.Get("Origin")
 
-		if origin != "" && slices.Contains(config.HTTP.AllowedOrigins, origin) {
+		if origin != "" && !slices.Contains(config.HTTP.AllowedOrigins, origin) {
 			middlewareLogger.Error("Invalid request origin", "Origin isn't allowed", request.GetMetadata(ctx))
 			return echo.NewHTTPError(
 				http.StatusForbidden,
