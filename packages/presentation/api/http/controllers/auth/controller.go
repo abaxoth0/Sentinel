@@ -1,8 +1,6 @@
 package authcontroller
 
 import (
-	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/base64"
 	"net/http"
 	"sentinel/packages/common/config"
@@ -12,7 +10,6 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
-	"sentinel/packages/infrastructure/auth/authz"
 	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
@@ -35,18 +32,10 @@ import (
 // @Failure			500 	{object} 	responsebody.Error
 // @Router			/auth/csrf-token [get]
 func GetCSRFToken(ctx echo.Context) error {
-	reqMeta := request.GetMetadata(ctx)
-
-	controller.Logger.Trace("Generating CSRF token...", reqMeta)
-
-	token := make([]byte, 32)
-    if _, err := rand.Read(token); err != nil {
-		controller.Logger.Error("Failed to generate CSRF token", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(Error.StatusInternalError)
-    }
-    tokenStr := base64.RawURLEncoding.EncodeToString(token)
-
-	controller.Logger.Trace("Generating CSRF token: OK", reqMeta)
+	tokenStr, err := controller.NewCSRFToken(ctx)
+	if err != nil {
+		return controller.ConvertErrorStatusToHTTP(err)
+	}
 
     // Set cookie
     ctx.SetCookie(&http.Cookie{
@@ -121,7 +110,7 @@ func Login(ctx echo.Context) error {
 			goto regularLogin
 		}
 
-		accessToken, refreshToken, err := updateSession(ctx, nil, user, payload)
+		accessToken, refreshToken, err := controller.UpdateSession(ctx, nil, user, payload)
 		if err != nil {
 			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
 			goto regularLogin
@@ -129,7 +118,7 @@ func Login(ctx echo.Context) error {
 
 		controller.Logger.Info("Updating user session: OK", reqMeta)
 
-		ctx.SetCookie(newAuthCookie(refreshToken))
+		ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
 		controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 
@@ -144,7 +133,7 @@ func Login(ctx echo.Context) error {
 	}
 	regularLogin:
 
-	deviceID, browser, err := getDeviceIDAndBrowser(ctx)
+	deviceID, browser, err := controller.GetDeviceIDAndBrowser(ctx)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
@@ -157,7 +146,7 @@ func Login(ctx echo.Context) error {
 		controller.Logger.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
 		controller.Logger.Info("Updating user session...", reqMeta)
 
-		accessToken, refreshToken, err := updateSession(ctx, session, user, &UserDTO.Payload{
+		accessToken, refreshToken, err := controller.UpdateSession(ctx, session, user, &UserDTO.Payload{
 			ID: user.ID,
 			Login: user.Login,
 			Roles: user.Roles,
@@ -167,7 +156,7 @@ func Login(ctx echo.Context) error {
 		if err == nil {
 			controller.Logger.Info("Updating user session: OK", reqMeta)
 
-			ctx.SetCookie(newAuthCookie(refreshToken))
+			ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
 			controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 
@@ -197,7 +186,7 @@ func Login(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	session, err = createSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
+	session, err = controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
 	if err != nil {
 		controller.Logger.Error("Failed to create session for user " + user.ID, err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
@@ -214,7 +203,7 @@ func Login(ctx echo.Context) error {
 
 	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-	if err := updateLocation(act, session.ID, session.IpAddress); err != nil {
+	if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
 		controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), reqMeta)
 
 		e := DB.Database.RevokeSession(act, session.ID)
@@ -225,7 +214,7 @@ func Login(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-    ctx.SetCookie(newAuthCookie(refreshToken))
+    ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
 	controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 
@@ -339,7 +328,7 @@ func Refresh(ctx echo.Context) error {
 
 	controller.Logger.Info("Updating user session...", reqMeta)
 
-	accessToken, refreshToken, err := updateSession(ctx, nil, user, payload)
+	accessToken, refreshToken, err := controller.UpdateSession(ctx, nil, user, payload)
     if err != nil {
 		controller.Logger.Error("Failed to update user session", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
@@ -347,7 +336,7 @@ func Refresh(ctx echo.Context) error {
 
 	controller.Logger.Info("Updating user session: OK", reqMeta)
 
-    ctx.SetCookie(newAuthCookie(refreshToken))
+    ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
 	controller.Logger.Info("Refreshing auth tokens: OK", reqMeta)
 
@@ -386,65 +375,6 @@ func Verify(ctx echo.Context) error {
 	controller.Logger.Info("Verifying access token: OK", reqMeta)
 
     return ctx.JSON(http.StatusOK, payload)
-}
-
-// @Summary 		OAuth 2.0 Token Introspection
-// @Description 	RFC 7662 (https://datatracker.ietf.org/doc/html/rfc7662). Valid token types are: access, refresh and activate.
-// @ID 				oauth-introspect
-// @Tags			auth
-// @Param 			Token body requestbody.Introspect true "OAuth2.0 token which must be introspected"
-// @Accept			json
-// @Produce			json
-// @Success			200 			{object} 	responsebody.Introspection
-// @Failure			400,401,500 	{object} 	responsebody.Error
-// @Router			/auth/oauth/introspect [post]
-// @Security		BearerAuth
-func IntrospectOAuthToken(ctx echo.Context) error {
-	act := controller.GetBasicAction(ctx)
-
-	if err := authz.User.OAuthIntrospect(act.RequesterRoles); err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	body := RequestBody.Introspect{}
-
-	if err := controller.BindAndValidate(ctx, &body); err != nil {
-		return err
-	}
-
-	var key ed25519.PublicKey
-
-	switch body.Type {
-	case "access":
-		key = config.Secret.AccessTokenPublicKey
-	case "refresh":
-		key = config.Secret.RefreshTokenPublicKey
-	case "activate":
-		key = config.Secret.ActivationTokenPublicKey
-	default:
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			`Invalid token type, valid types are: "access", "refresh" and "activate". But got: ` + body.Type,
-		)
-	}
-
-	tk, err := token.ParseSingedToken(body.Token, key)
-	if err != nil {
-		return echo.NewHTTPError(err.Status(), "Failed to parse specified token: " + err.Error())
-	}
-
-	claims := tk.Claims.(*token.Claims)
-
-	return ctx.JSON(http.StatusOK, ResponseBody.Introspection{
-		Active: 	true,
-		SessionID: 	claims.ID,
-		Subject: 	claims.Subject,
-		Issuer: 	claims.Issuer,
-		Audience: 	claims.Audience,
-		ExpiresAt: 	claims.ExpiresAt.Unix(),
-		IssuedAt: 	claims.IssuedAt.Unix(),
-		Scope: 		claims.Roles,
-	})
 }
 
 // @Summary 		Get JSON Web Keys (JWKs)

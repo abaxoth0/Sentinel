@@ -9,6 +9,7 @@ import (
 	Auth "sentinel/packages/presentation/api/http/controllers/auth"
 	Cache "sentinel/packages/presentation/api/http/controllers/cache"
 	Docs "sentinel/packages/presentation/api/http/controllers/docs"
+	OAuth "sentinel/packages/presentation/api/http/controllers/oauth"
 	Roles "sentinel/packages/presentation/api/http/controllers/roles"
 	User "sentinel/packages/presentation/api/http/controllers/user"
 	"sentinel/packages/presentation/api/http/request"
@@ -26,6 +27,8 @@ var routerLogger = logger.NewSource("ROUTER", logger.Default)
 const rootPath = ""
 
 func Create() *echo.Echo {
+	OAuth.Init()
+
 	if err := sentry.Init(sentry.ClientOptions{
 		Dsn: config.Secret.SentryDSN,
 		EnableTracing: true,
@@ -91,7 +94,12 @@ func Create() *echo.Echo {
     authGroup.DELETE(rootPath, Auth.Logout, doubleSubmitCSRF)
 	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync, doubleSubmitCSRF)
 	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync, doubleSubmitCSRF)
-	authGroup.POST("/oauth/introspect", Auth.IntrospectOAuthToken, secure, preventUserDesync)
+
+	oauthSubGroup := authGroup.Group("/oauth", noCache)
+
+	oauthSubGroup.POST("/introspect", OAuth.IntrospectOAuthToken, secure, preventUserDesync)
+	oauthSubGroup.GET("/google/login", OAuth.GoogleLogin)
+	oauthSubGroup.GET("/google/callback", OAuth.GoogleCallback)
 
     userGroup := router.Group("/user", secure, preventUserDesync, noCache)
 

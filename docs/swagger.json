@@ -358,6 +358,92 @@
                 }
             }
         },
+        "/auth/oauth/google/callback": {
+            "get": {
+                "description": "Do not access this endpoint manually, google API will automatically redirect to it. E-Mail of google account MUST be verified.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "third-party-auth",
+                    "oauth"
+                ],
+                "summary": "Actual handler for auth via google account",
+                "operationId": "google-login-handler",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User credentials and audience",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Token"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "408": {
+                        "description": "Request Timeout",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oauth/google/login": {
+            "get": {
+                "description": "Alternative login endpoint, redirects to the google OAuth2.0 endpoint.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "third-party-auth",
+                    "oauth"
+                ],
+                "summary": "Login/Signup into the service using google account",
+                "operationId": "google-login",
+                "responses": {
+                    "307": {
+                        "description": "Temporary Redirect"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/oauth/introspect": {
             "post": {
                 "security": [
@@ -373,7 +459,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "auth"
+                    "oauth"
                 ],
                 "summary": "OAuth 2.0 Token Introspection",
                 "operationId": "oauth-introspect",

@@ -11,7 +11,6 @@ import (
 	"sentinel/packages/infrastructure/auth/authn"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/email"
-	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
@@ -19,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 
-	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"github.com/labstack/echo/v4"
 )
 
@@ -51,22 +49,9 @@ func Create(ctx echo.Context) error {
     }
 
     if config.App.IsLoginEmail {
-        controller.Logger.Trace("Creating activation token...", reqMeta)
-
-        tk, err := token.NewActivationToken(
-            uid,
-            body.Login,
-            rbac.GetRolesNames(authz.Host.DefaultRoles),
-        )
-        if err != nil {
-            controller.Logger.Error("Failed to create new activation token", err.Error(), reqMeta)
-            return controller.ConvertErrorStatusToHTTP(err)
-        }
-
-        controller.Logger.Trace("Creating activation token: OK", reqMeta)
         controller.Logger.Trace("Creating and equeueing activation email...", reqMeta)
 
-        err = email.CreateAndEnqueueActivationEmail(body.Login, tk.String())
+        err = email.CreateAndEnqueueActivationEmail(uid, body.Login)
         if err != nil {
             controller.Logger.Error("Failed to create and enqueue activation email", err.Error(), reqMeta)
             return controller.ConvertErrorStatusToHTTP(err)

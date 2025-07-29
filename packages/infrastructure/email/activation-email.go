@@ -6,9 +6,12 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	"sentinel/packages/infrastructure/auth/authz"
+	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api"
 	"strings"
 
+	rbac "github.com/StepanAnanin/SentinelRBAC"
 	"gopkg.in/gomail.v2"
 )
 
@@ -43,13 +46,27 @@ type UserActivationEmail struct {
 }
 
 // Creates new activation email, on success immediatly pushes it to mailer queue.
-func CreateAndEnqueueActivationEmail(to string, token string) *Error.Status {
-    email, err := NewUserActivationEmail(to, token)
+func CreateAndEnqueueActivationEmail(uid, email string) *Error.Status {
+	emailLogger.Trace("Creating activation token...", nil)
+
+	tk, err := token.NewActivationToken(
+		uid,
+		email,
+		rbac.GetRolesNames(authz.Host.DefaultRoles),
+	)
+	if err != nil {
+		emailLogger.Error("Failed to create new activation token", err.Error(), nil)
+		return err
+	}
+
+	emailLogger.Trace("Creating activation token: OK", nil)
+
+    activationEmail, err := NewUserActivationEmail(email, tk.String())
     if err != nil {
         return err
     }
 
-    if err := MainMailer.Push(email); err != nil {
+    if err := MainMailer.Push(activationEmail); err != nil {
         emailLogger.Error("Failed to push email in queue", err.Error(), nil)
         return Error.StatusInternalError
     }

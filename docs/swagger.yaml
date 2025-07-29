@@ -606,6 +606,65 @@ paths:
       summary: Get CSRF token
       tags:
       - auth
+  /auth/oauth/google/callback:
+    get:
+      consumes:
+      - application/json
+      description: Do not access this endpoint manually, google API will automatically
+        redirect to it. E-Mail of google account MUST be verified.
+      operationId: google-login-handler
+      parameters:
+      - description: User credentials and audience
+        in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responsebody.Token'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "408":
+          description: Request Timeout
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Actual handler for auth via google account
+      tags:
+      - third-party-auth
+      - oauth
+  /auth/oauth/google/login:
+    get:
+      consumes:
+      - application/json
+      description: Alternative login endpoint, redirects to the google OAuth2.0 endpoint.
+      operationId: google-login
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: Temporary Redirect
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responsebody.Error'
+      summary: Login/Signup into the service using google account
+      tags:
+      - third-party-auth
+      - oauth
   /auth/oauth/introspect:
     post:
       consumes:
@@ -643,7 +702,7 @@ paths:
       - BearerAuth: []
       summary: OAuth 2.0 Token Introspection
       tags:
-      - auth
+      - oauth
   /auth/sessions/{uid}:
     delete:
       consumes:

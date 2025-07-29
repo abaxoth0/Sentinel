@@ -10,33 +10,36 @@ import (
 )
 
 type secrets struct {
-    PrimaryDatabaseHost       string             `validate:"required"`
-    PrimaryDatabasePort       string             `validate:"required"`
-    PrimaryDatabaseName       string             `validate:"required"`
-    PrimaryDatabaseUser       string             `validate:"required"`
-    PrimaryDatabasePassword   string             `validate:"required"`
+    PrimaryDatabaseHost     string `validate:"required"`
+    PrimaryDatabasePort     string `validate:"required"`
+    PrimaryDatabaseName     string `validate:"required"`
+    PrimaryDatabaseUser     string `validate:"required"`
+    PrimaryDatabasePassword string `validate:"required"`
 
-    ReplicaDatabaseHost       string             `validate:"required"`
-    ReplicaDatabasePort       string             `validate:"required"`
-    ReplicaDatabaseName       string             `validate:"required"`
-    ReplicaDatabaseUser       string             `validate:"required"`
-    ReplicaDatabasePassword   string             `validate:"required"`
+    ReplicaDatabaseHost     string `validate:"required"`
+    ReplicaDatabasePort     string `validate:"required"`
+    ReplicaDatabaseName     string `validate:"required"`
+    ReplicaDatabaseUser     string `validate:"required"`
+    ReplicaDatabasePassword string `validate:"required"`
 
     AccessTokenPrivateKey     ed25519.PrivateKey `validate:"required"`
     AccessTokenPublicKey      ed25519.PublicKey  `validate:"required"`
     RefreshTokenPrivateKey    ed25519.PrivateKey `validate:"required"`
     RefreshTokenPublicKey     ed25519.PublicKey  `validate:"required"`
     ActivationTokenPrivateKey ed25519.PrivateKey `validate:"required"`
-    ActivationTokenPublicKey  ed25519.PublicKey `validate:"required"`
+    ActivationTokenPublicKey  ed25519.PublicKey  `validate:"required"`
 
-    CacheURI                  string             `validate:"required"`
-    CachePassword             string             `validate:"required"`
-    CacheDB                   int                `validate:"exists"`
+    CacheURI            string `validate:"required"`
+    CachePassword       string `validate:"required"`
+    CacheDB             int    `validate:"exists"`
 
-    MailerEmailPassword       string             `validate:"required"`
-    MailerEmail               string             `validate:"required"`
+    MailerEmailPassword	string `validate:"required"`
+    MailerEmail         string `validate:"required"`
 
-	SentryDSN				  string 			 `validate:"required"`
+	SentryDSN			string `validate:"required"`
+
+	OAuthGoogleClientID 	string `validate:"required"`
+	OAuthGoogleClientSecret string `validate:"required"`
 }
 
 var Secret secrets
@@ -81,6 +84,9 @@ func loadSecrets() {
         "MAILER_EMAIL",
 
         "SENTRY_DSN",
+
+		"OAUTH_GOOGLE_CLIENT_ID",
+		"OAUTH_GOOGLE_CLIENT_SECRET",
     }
 
     // Check is all required env variables exists
@@ -120,6 +126,9 @@ func loadSecrets() {
 	Secret.MailerEmail = getEnv("MAILER_EMAIL")
 
 	Secret.SentryDSN = getEnv("SENTRY_DSN")
+
+	Secret.OAuthGoogleClientID = getEnv("OAUTH_GOOGLE_CLIENT_ID")
+	Secret.OAuthGoogleClientSecret = getEnv("OAUTH_GOOGLE_CLIENT_SECRET")
 
     // All must be 32 bytes long
     AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))

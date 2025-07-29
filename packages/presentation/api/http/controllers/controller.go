@@ -1,18 +1,21 @@
 package controller
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/logger"
 	"sentinel/packages/common/util"
+	ActionDTO "sentinel/packages/core/action/DTO"
+	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
+
 	"github.com/labstack/echo/v4"
-	"sentinel/packages/common/config"
-	ActionDTO "sentinel/packages/core/action/DTO"
-	UserDTO "sentinel/packages/core/user/DTO"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -155,7 +158,7 @@ func GetBasicAction(ctx echo.Context) *ActionDTO.Basic {
 	return getNonNilValueFromSecuredRequestContext[*ActionDTO.Basic](ctx, "basic_action")
 }
 
-const RefreshTokenCookieKey string = "refreshToken"
+const refreshTokenCookieKey string = "refreshToken"
 
 // Retrieves and validates refresh token.
 //
@@ -166,7 +169,7 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 
 	Logger.Trace("Getting refresh token from the request...", reqMeta)
 
-    cookie, err := ctx.Cookie(RefreshTokenCookieKey)
+    cookie, err := ctx.Cookie(refreshTokenCookieKey)
     if err != nil {
         if err == http.ErrNoCookie {
             return nil, Error.StatusUnauthorized
@@ -184,5 +187,22 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 	Logger.Trace("Getting refresh token from the request: OK", reqMeta)
 
 	return token, nil
+}
+
+func NewCSRFToken(ctx echo.Context) (string, *Error.Status) {
+	reqMeta := request.GetMetadata(ctx)
+
+	Logger.Trace("Generating CSRF token...", reqMeta)
+
+	token := make([]byte, 32)
+    if _, err := rand.Read(token); err != nil {
+		Logger.Error("Failed to generate CSRF token", err.Error(), reqMeta)
+        return "", Error.StatusInternalError
+    }
+    tokenStr := base64.RawURLEncoding.EncodeToString(token)
+
+	Logger.Trace("Generating CSRF token: OK", reqMeta)
+
+	return tokenStr, nil
 }
 

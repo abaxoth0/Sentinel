@@ -1,4 +1,4 @@
-package authcontroller
+package controller
 
 import (
 	"net"
@@ -11,7 +11,6 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/token"
-	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 	"strings"
 	"time"
@@ -28,7 +27,7 @@ const (
 	desktop 		  = "desktop"
 )
 
-func getDeviceIDAndBrowser(ctx echo.Context) (deviceID string, browser string, err *Error.Status) {
+func GetDeviceIDAndBrowser(ctx echo.Context) (deviceID string, browser string, err *Error.Status) {
 	ua, err := getUserAgent(ctx)
 	if err != nil {
 		return "", "", err
@@ -109,9 +108,9 @@ func getUserAgent(ctx echo.Context) (useragent.UserAgent, *Error.Status) {
 	return ua, nil
 }
 
-func createSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (*SessionDTO.Full, *Error.Status) {
+func CreateSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (*SessionDTO.Full, *Error.Status) {
 	if err := validation.UUID(ID); err != nil {
-		controller.Logger.Panic(
+		Logger.Panic(
 			"Failed to create user session",
 			err.ToStatus(
 				"Session ID is missing",
@@ -213,14 +212,14 @@ func actualizeSession(
 // TODO Review this function, it feels kinda weird
 
 // updates session of given user
-func updateSession(
+func UpdateSession(
 	ctx echo.Context,
 	session *SessionDTO.Full, // can be nil
 	user *UserDTO.Full,
 	payload *UserDTO.Payload, // from existing token claims
 ) (accessToken *token.SignedToken, refreshToken *token.SignedToken, err *Error.Status){
 	if user == nil {
-		controller.Logger.Panic(
+		Logger.Panic(
 			"Invalid updateSession call",
 			"user is nil (expected *UserDTO.Full)",
 			nil,
@@ -228,7 +227,7 @@ func updateSession(
 		return nil, nil, Error.StatusInternalError
 	}
 	if payload == nil {
-		controller.Logger.Panic(
+		Logger.Panic(
 			"Invalid updateSession call",
 			"payload is nil (expected *UserDTO.Payload)",
 			nil,
@@ -279,8 +278,8 @@ func updateSession(
 		return nil, nil, err
 	}
 
-	if err := updateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
-		controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), nil)
+	if err := UpdateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
+		Logger.Error("Failed to update location for session " + session.ID, err.Error(), nil)
 		return nil, nil, err
 	}
 
