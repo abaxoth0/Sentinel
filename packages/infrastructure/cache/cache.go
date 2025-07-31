@@ -3,6 +3,7 @@ package cache
 import (
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/cache/redis"
+	"time"
 )
 
 // Cache key must consist of 3 parts:
@@ -27,7 +28,10 @@ type client interface {
     Connect()
     Close() *Error.Status
     Get(key string) (string, bool)
+	// Uses default cache TTL (config.Cache.TTL())
     Set(key string, value any) *Error.Status
+	// Same as Set(), but uses custom TTL instead of default
+	SetWithTTL(key string, value any, ttl time.Duration) *Error.Status
     Delete(keys ...string) *Error.Status
     FlushAll() *Error.Status
     // Deletes cache entries whose keys match the pattern.

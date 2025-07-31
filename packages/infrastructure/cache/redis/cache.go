@@ -128,7 +128,7 @@ func (d *driver) Get(key string) (string, bool) {
 // IMPORTANT:
 // go-redis driver can handle only this types:
 // string, bool, []byte, int, int64, float64, time.Time
-func(d *driver) Set(key string, value any) *Error.Status {
+func(d *driver) set(key string, value any, ttl time.Duration) *Error.Status {
     // Alas, generics can't be used in methods
     // (it can be passed to a struct, but thats kinda strange and
     //  even so i failed to make it works as i want, so using type switch instead)
@@ -152,9 +152,17 @@ func(d *driver) Set(key string, value any) *Error.Status {
     ctx, cancel := defaultTimeoutContext()
     defer cancel()
 
-	err := d.client.Set(ctx, key, value, config.Cache.TTL()).Err()
+	err := d.client.Set(ctx, key, value, ttl).Err()
 
    return handleError("Set: " + key, err)
+}
+
+func (d *driver) Set(key string, value any) *Error.Status {
+	return d.set(key, value, config.Cache.TTL())
+}
+
+func (d *driver) SetWithTTL(key string, value any, ttl time.Duration) *Error.Status {
+	return d.set(key, value, ttl)
 }
 
 func (d *driver) Delete(keys ...string) *Error.Status {

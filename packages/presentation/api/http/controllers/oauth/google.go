@@ -69,6 +69,18 @@ func GoogleLogin(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
+	sessionID := uuid.New().String()
+	session := newOAuthSession(ctx.RealIP(), state, ctx.Request().UserAgent())
+	sessionStore.Save(googleProvider, sessionID, &session)
+
+	ctx.SetCookie(&http.Cookie{
+		Name: "oauth_session",
+		Value: sessionID,
+		HttpOnly: true,
+		Secure: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	url := googleOAuthConfig.AuthCodeURL(state)
 
 	return ctx.Redirect(http.StatusTemporaryRedirect, url)
@@ -125,7 +137,12 @@ func GoogleCallback(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
-	c, cancel := context.WithTimeout(context.Background(), time.Second * 5)
+	if err := validateOAuthSession(ctx, googleProvider); err != nil {
+		controller.Log.Error("Login failed: suspicious context change", err.Error(), reqMeta)
+		return echo.NewHTTPError(http.StatusForbidden, "Security vioalation detected")
+	}
+
+	c, cancel := context.WithTimeout(context.Background(), time.Second * 10)
 	defer cancel()
 
 	oauthToken, err := googleOAuthConfig.Exchange(c, code)
