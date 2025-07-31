@@ -183,7 +183,7 @@ func Login(ctx echo.Context) error {
 
 	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-	if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
+	if err := controller.UpdateOrCreateLocation(act, session.ID, session.IpAddress); err != nil {
 		if e := DB.Database.RevokeSession(act, session.ID); e != nil {
 			return controller.ConvertErrorStatusToHTTP(e)
 		}

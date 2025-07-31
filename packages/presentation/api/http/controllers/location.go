@@ -9,7 +9,9 @@ import (
 	"sentinel/packages/infrastructure/DB"
 )
 
-func UpdateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *Error.Status {
+// If location for session with specified ID already exists - updates this location.
+// If there are no location for this session - creates new location for it.
+func UpdateOrCreateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *Error.Status {
 	Log.Trace("Updating location for session "+sessionID+"...", nil)
 
 	location, err := DB.Database.GetLocationBySessionID(act, sessionID)

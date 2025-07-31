@@ -278,7 +278,7 @@ func UpdateSession(
 		return nil, nil, err
 	}
 
-	if err := UpdateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
+	if err := UpdateOrCreateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
 		return nil, nil, err
 	}
 

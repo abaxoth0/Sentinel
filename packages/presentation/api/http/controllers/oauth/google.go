@@ -252,7 +252,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 		act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-		if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
+		if err := controller.UpdateOrCreateLocation(act, session.ID, session.IpAddress); err != nil {
 			if e = DB.Database.RevokeSession(act, session.ID); e != nil {
 				return controller.ConvertErrorStatusToHTTP(e)
 			}
@@ -332,11 +332,11 @@ func GoogleCallback(ctx echo.Context) error {
 
 	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-	if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
-		if e = DB.Database.RevokeSession(act, session.ID); e != nil {
+	if e := controller.UpdateOrCreateLocation(act, session.ID, session.IpAddress); e != nil {
+		if e := DB.Database.RevokeSession(act, session.ID); e != nil {
 			return controller.ConvertErrorStatusToHTTP(e)
 		}
-		return controller.ConvertErrorStatusToHTTP(err)
+		return controller.ConvertErrorStatusToHTTP(e)
 	}
 
     ctx.SetCookie(controller.NewAuthCookie(refreshToken))
