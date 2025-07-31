@@ -28,7 +28,7 @@ func handleHttpError(err error, ctx echo.Context) {
         code = e.Code
         message = e.Message.(string)
     } else {
-		routerLogger.Warning(
+		log.Warning(
 			"Error is not *echo.HTTPError. It will be turned into the Internal Server Error",
 			request.GetMetadata(ctx),
 		)
@@ -45,7 +45,7 @@ func handleHttpError(err error, ctx echo.Context) {
 
 	reqMeta := request.GetMetadata(ctx)
 
-    controller.Logger.Error(message, statusText, reqMeta)
+    controller.Log.Error(message, statusText, reqMeta)
 
 	// if server error
 	if code >= 500 {

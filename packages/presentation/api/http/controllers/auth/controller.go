@@ -76,12 +76,10 @@ func Login(ctx echo.Context) error {
 
 	reqMeta := request.GetMetadata(ctx)
 
-	controller.Logger.Info("Authenticating user '"+body.Login+"'...", reqMeta)
+	controller.Log.Info("Authenticating user '"+body.Login+"'...", reqMeta)
 
-    user, err := DB.Database.FindUserByLogin(body.Login)
+    user, err := DB.Database.GetUserByLogin(body.Login)
     if err != nil {
-		controller.Logger.Error("Failed to authenticate user '"+body.Login, err.Error(), reqMeta)
-
         if err.Side() == Error.ClientSide {
             return controller.ConvertErrorStatusToHTTP(authn.InvalidAuthCreditinals)
         }
@@ -89,20 +87,16 @@ func Login(ctx echo.Context) error {
     }
 
     if err := authn.CompareHashAndPassword(user.Password, body.Password); err != nil {
-		controller.Logger.Error("Failed to authenticate user '"+body.Login+"'", err.Error(), reqMeta)
+		controller.Log.Error("Failed to authenticate user '"+body.Login+"'", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
 	// Trying to update existing session
-	if tk, err := controller.GetRefreshToken(ctx); err != nil {
-		controller.Logger.Error("Failed to get refresh token from request", err.Error(), reqMeta)
-	} else {
-		controller.Logger.Info("Updating user session...", reqMeta)
-
+	if tk, err := controller.GetRefreshToken(ctx); err == nil {
 		payload := UserMapper.PayloadFromClaims(tk.Claims.(*token.Claims))
 
 		if payload.ID != user.ID {
-			controller.Logger.Error(
+			controller.Log.Error(
 				"Failed to update user session. Switch to regular login process",
 				"Already logged-in user tries to login as another user",
 				reqMeta,
@@ -112,15 +106,13 @@ func Login(ctx echo.Context) error {
 
 		accessToken, refreshToken, err := controller.UpdateSession(ctx, nil, user, payload)
 		if err != nil {
-			controller.Logger.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
+			controller.Log.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
 			goto regularLogin
 		}
 
-		controller.Logger.Info("Updating user session: OK", reqMeta)
-
 		ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
-		controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
+		controller.Log.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 
 		return ctx.JSON(
 			http.StatusOK,
@@ -143,8 +135,7 @@ func Login(ctx echo.Context) error {
 	session, err := DB.Database.GetSessionByDeviceAndUserID(deviceID, user.ID)
 	if err == nil && session.Browser == browser {
 		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
-		controller.Logger.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
-		controller.Logger.Info("Updating user session...", reqMeta)
+		controller.Log.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
 
 		accessToken, refreshToken, err := controller.UpdateSession(ctx, session, user, &UserDTO.Payload{
 			ID: user.ID,
@@ -154,12 +145,8 @@ func Login(ctx echo.Context) error {
 			Version: user.Version,
 		})
 		if err == nil {
-			controller.Logger.Info("Updating user session: OK", reqMeta)
-
 			ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-
-			controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
-
+			controller.Log.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 			return ctx.JSON(
 				http.StatusOK,
 				ResponseBody.Token{
@@ -182,33 +169,22 @@ func Login(ctx echo.Context) error {
 
     accessToken, refreshToken, err := token.NewAuthTokens(payload)
     if err != nil {
-		controller.Logger.Error("Failed to authenticate user '"+body.Login+"'", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
 	session, err = controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
 	if err != nil {
-		controller.Logger.Error("Failed to create session for user " + user.ID, err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
 	if err := DB.Database.SaveSession(session); err != nil {
-		e := Error.NewStatusError(
-			"Failed to save session",
-			http.StatusInternalServerError,
-		)
-		controller.Logger.Error("Failed to save session", err.Error(), reqMeta)
-		return controller.ConvertErrorStatusToHTTP(e)
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
 	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
 	if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
-		controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), reqMeta)
-
-		e := DB.Database.RevokeSession(act, session.ID)
-		if e != nil {
-			controller.Logger.Error("Failed to revoke session " + session.ID, err.Error(), reqMeta)
+		if e := DB.Database.RevokeSession(act, session.ID); e != nil {
 			return controller.ConvertErrorStatusToHTTP(e)
 		}
 		return controller.ConvertErrorStatusToHTTP(err)
@@ -216,7 +192,7 @@ func Login(ctx echo.Context) error {
 
     ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
-	controller.Logger.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
+	controller.Log.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
 
     return ctx.JSON(
         http.StatusOK,
@@ -271,17 +247,16 @@ func Logout(ctx echo.Context) error {
 		sessionID = id
 	}
 
-	user, err := DB.Database.FindUserBySessionID(sessionID)
+	user, err := DB.Database.GetUserBySessionID(sessionID)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
 	act := ActionMapper.TargetedActionDTOFromClaims(user.ID, claims)
 
-	controller.Logger.Info("Logoutting user "+user.ID+"...", reqMeta)
+	controller.Log.Info("Logoutting user "+user.ID+"...", reqMeta)
 
 	if err := DB.Database.RevokeSession(act, sessionID); err != nil {
-		controller.Logger.Error("Failed to logout user "+user.ID, err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
@@ -289,7 +264,7 @@ func Logout(ctx echo.Context) error {
 		controller.DeleteCookie(ctx, authCookie)
 	}
 
-	controller.Logger.Info("Logoutting user "+user.ID+": OK", reqMeta)
+	controller.Log.Info("Logoutting user "+user.ID+": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -311,34 +286,28 @@ func Logout(ctx echo.Context) error {
 func Refresh(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
-	controller.Logger.Info("Refreshing auth tokens...", reqMeta)
+	controller.Log.Info("Refreshing auth tokens...", reqMeta)
 
     currentRefreshToken, err := controller.GetRefreshToken(ctx)
     if err != nil {
-		controller.Logger.Error("Failed to refresh auth tokens", err.Error(), reqMeta)
         return controller.HandleTokenError(ctx, err)
     }
 
 	payload := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(*token.Claims))
 
-	user, err := DB.Database.FindUserByID(payload.ID)
+	user, err := DB.Database.GetUserByID(payload.ID)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	controller.Logger.Info("Updating user session...", reqMeta)
-
 	accessToken, refreshToken, err := controller.UpdateSession(ctx, nil, user, payload)
     if err != nil {
-		controller.Logger.Error("Failed to update user session", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	controller.Logger.Info("Updating user session: OK", reqMeta)
-
     ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
-	controller.Logger.Info("Refreshing auth tokens: OK", reqMeta)
+	controller.Log.Info("Refreshing auth tokens: OK", reqMeta)
 
     return ctx.JSON(
         http.StatusOK,
@@ -366,15 +335,7 @@ func Refresh(ctx echo.Context) error {
 // @Router			/auth [get]
 // @Security		BearerAuth
 func Verify(ctx echo.Context) error {
-	reqMeta := request.GetMetadata(ctx)
-
-	controller.Logger.Info("Verifying access token...", reqMeta)
-
-    payload := controller.GetAccessTokenPayload(ctx)
-
-	controller.Logger.Info("Verifying access token: OK", reqMeta)
-
-    return ctx.JSON(http.StatusOK, payload)
+    return ctx.JSON(http.StatusOK, controller.GetUserPayload(ctx))
 }
 
 // @Summary 		Get JSON Web Keys (JWKs)
@@ -433,33 +394,33 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
 	uid := ctx.Param("uid")
-	if uid != "" {
-		if e := validation.UUID(uid); e != nil {
-			return e.ToStatus(
-				"User ID is missing", // this is not possible cuz uid already isn't empty stirng, but anyway...
-				"User has invalid format (expected UUID)",
-			)
-		}
+	if e := validation.UUID(uid); e != nil {
+		err := e.ToStatus(
+			// this shouldn't be possible cuz uid can't be empty stirng
+			// (since it won't access this endpoint if it's empty), but anyway...
+			"User ID is missing",
+			"User has invalid format (expected UUID)",
+		)
+		controller.Log.Error("Failed to revoke all user session", err.Error(), reqMeta)
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
-
-	controller.Logger.Info("Revoking all sessions of user "+uid+"...", reqMeta)
 
 	act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
 	var body RequestBody.ActionReason
 
-	controller.Logger.Info("Binding request...", reqMeta)
+	controller.Log.Info("Binding request...", reqMeta)
 
 	if err := ctx.Bind(&body); err != nil {
-		controller.Logger.Error("Failed to bind request", err.Error(), reqMeta)
+		// Action reason is optional, so even if binding failed this won't be a critical problem
+		controller.Log.Error("Failed to bind request", err.Error(), reqMeta)
 	} else {
-		controller.Logger.Info("Binding request: OK", reqMeta)
+		controller.Log.Info("Binding request: OK", reqMeta)
 	}
 
 	act.Reason = body.GetReason()
 
 	if err := DB.Database.RevokeAllUserSessions(act); err != nil {
-		controller.Logger.Error("Failed to revoking all sessions of user "+uid, err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
@@ -469,8 +430,6 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 			controller.DeleteCookie(ctx, authCookie)
 		}
 	}
-
-	controller.Logger.Info("Revoking all sessions of user "+uid+": OK", reqMeta)
 
 	return ctx.NoContent(http.StatusOK)
 }

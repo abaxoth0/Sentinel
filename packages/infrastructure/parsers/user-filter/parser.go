@@ -27,17 +27,17 @@ var cache = map[string]filter.Entity[user.Property]{}
 //
 // Value should be omitted if condition is either "is null", either "is not null"
 func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
+	parser.Log.Trace("Parsing user filter "+rawFilter+"...", nil)
+
 	if cached, hit := cache[rawFilter]; hit {
-		parser.Logger.Trace("Cache hit: " + rawFilter, nil)
+		parser.Log.Trace("Cache hit: " + rawFilter, nil)
 		return cached, nil
 	}
 
-	parser.Logger.Trace("Cache miss: " + rawFilter, nil)
+	parser.Log.Trace("Cache miss: " + rawFilter, nil)
 
 	var zero filter.Entity[user.Property]
 	var property user.Property
-
-	parser.Logger.Trace("Parsing user filter '"+rawFilter+"'...", nil)
 
 	for _, pref := range prefixes {
 		if strings.HasPrefix(rawFilter, pref) {
@@ -48,18 +48,16 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 	// if valid property wasn't found in prefix
 	if property == "" {
-		return zero, Error.NewStatusError(
-			"Filter does not begins with valid user property - " + rawFilter,
-			http.StatusBadRequest,
-		)
+		errMsg := "Filter does not begins with valid user property - " + rawFilter
+		parser.Log.Error("Failed to parse user filter "+rawFilter, errMsg, nil)
+		return zero, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
 	// if condition doesn't begins with ':'
 	if rawFilter[len(property)] != ':' {
-		return zero, Error.NewStatusError(
-			"Syntax error: missing ':' before condition in filter - " + rawFilter,
-			http.StatusBadRequest,
-		)
+		errMsg := "Syntax error: missing ':' before condition in filter - " + rawFilter
+		parser.Log.Error("Failed to parse user filter "+rawFilter, errMsg, nil)
+		return zero, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
 	cond, err := FilterMapper.GetCondFromStringPrefix(rawFilter[len(property)+1:])
@@ -68,6 +66,7 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 	}
 
 	if err := validatePropertyCond(property, cond); err != nil {
+		parser.Log.Error("Failed to parse user filter "+rawFilter, err.Error(), nil)
 		return zero, Error.NewStatusError(err.Error(), http.StatusBadRequest)
 	}
 
@@ -93,24 +92,21 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 		t, err := time.Parse(time.RFC3339, rawFilter[valueStart:])
 		if err != nil {
-			return zero, Error.NewStatusError(
-				"Filter has invalid time format (expected RFC3339) - " + rawFilter,
-				http.StatusBadRequest,
-			)
+			errMsg := "Filter has invalid time format (expected RFC3339) - " + rawFilter
+			parser.Log.Error("Failed to parse user filter "+rawFilter, errMsg, nil)
+			return zero, Error.NewStatusError(errMsg, http.StatusBadRequest)
 		}
 		value = t
 	default:
 		// property should be valid at this point, but an additional check won't be redundant
 		// (especially when this function will need to be refactored/fixed/reworked)
-		parser.Logger.Panic(
+		parser.Log.Panic(
 			"Faield to parse user filter",
 			"Unknown user property received: " + string(property),
 			nil,
 		)
 		return zero, Error.StatusInternalError
 	}
-
-	parser.Logger.Trace("Parsing user filter '"+rawFilter+"': OK", nil)
 
 	f := filter.Entity[user.Property]{
 		Property: property,
@@ -120,7 +116,9 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 	cache[rawFilter] = f
 
-	parser.Logger.Trace("Cache set: " + rawFilter, nil)
+	parser.Log.Trace("Cache set: " + rawFilter, nil)
+
+	parser.Log.Trace("Parsing user filter "+rawFilter+": OK", nil)
 
 	return f, nil
 }
@@ -130,7 +128,11 @@ var errorNoFilters = Error.NewStatusError(
 	http.StatusBadRequest,
 )
 
+// Calls Parse() function from this module for each element in rawFilter slice
 func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Status){
+	filtersStr := strings.Join(rawFilters, ", ")
+	parser.Log.Info("Parsing user filters: "+filtersStr+"...", nil)
+
 	if rawFilters == nil || len(rawFilters) == 0 {
 		return nil, errorNoFilters
 	}
@@ -144,6 +146,8 @@ func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Statu
 		}
 		filters[i] = filter
 	}
+
+	parser.Log.Info("Parsing user filters: "+filtersStr+": OK", nil)
 
 	return filters, nil
 }

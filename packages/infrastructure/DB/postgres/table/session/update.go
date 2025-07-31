@@ -5,11 +5,14 @@ import (
 	actiondto "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 )
 
 func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSession *SessionDTO.Full) *Error.Status {
+	log.DB.Trace("Updating session "+sessionID+"...", nil)
+
 	session, err := m.getSessionByID(sessionID, false)
 	if err != nil {
 		return err
@@ -39,13 +42,13 @@ func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSessi
 		return err
 	}
 
-	err = cache.Client.Delete(
+	// TODO handle error
+	cache.Client.Delete(
 		cache.KeyBase[cache.SessionByID] + sessionID,
 		cache.KeyBase[cache.UserBySessionID] + sessionID,
 	)
-	if err != nil {
-		sessionLogger.Error("Failed to delete cache", err.Error(), nil)
-	}
+
+	log.DB.Trace("Updating session "+sessionID+": OK", nil)
 
 	return nil
 }

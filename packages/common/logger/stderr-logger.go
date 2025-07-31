@@ -27,7 +27,7 @@ func (l *stderrLogger) log(entry *LogEntry) {
 }
 
 func (l *stderrLogger) Log(entry *LogEntry) {
-    if ok := logPreprocessing(entry, nil); !ok {
+    if ok := preprocess(entry, nil); !ok {
         return
     }
 

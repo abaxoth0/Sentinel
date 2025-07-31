@@ -47,16 +47,16 @@ var Secret secrets
 func getEnv(key string) string {
     env, _ := os.LookupEnv(key)
 
-    configLogger.Info("Loaded: " + key, nil)
+    log.Info("Loaded: " + key, nil)
 
     return env
 }
 
 func loadSecrets() {
-	configLogger.Info("Loading environment vairables...", nil)
+	log.Info("Loading environment vairables...", nil)
 
     if err := godotenv.Load(); err != nil {
-        configLogger.Fatal("Failed to load environment vairables", err.Error(), nil)
+        log.Fatal("Failed to load environment vairables", err.Error(), nil)
     }
 
     requiredEnvVars := []string{
@@ -92,7 +92,7 @@ func loadSecrets() {
     // Check is all required env variables exists
     for _, variable := range requiredEnvVars {
         if _, exists := os.LookupEnv(variable); !exists {
-            configLogger.Fatal(
+            log.Fatal(
                 "Failed to load environment variables",
 				"Missing required env variable: " + variable,
             	nil,
@@ -103,7 +103,7 @@ func loadSecrets() {
     cacheDB, err := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
 
     if err != nil {
-        configLogger.Fatal("Failed to parse CACHE_DB env variable", err.Error(), nil)
+        log.Fatal("Failed to parse CACHE_DB env variable", err.Error(), nil)
     }
 
     Secret.PrimaryDatabaseHost = getEnv("PRIMARY_DB_HOST")
@@ -149,9 +149,9 @@ func loadSecrets() {
     Secret.RefreshTokenPublicKey = Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
     Secret.ActivationTokenPublicKey = Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
 
-    configLogger.Info("Loading environment vairables: OK", nil)
+    log.Info("Loading environment vairables: OK", nil)
 
-    configLogger.Info("Validating secrets...", nil)
+    log.Info("Validating secrets...", nil)
 
     validate := validator.New()
 
@@ -160,15 +160,15 @@ func loadSecrets() {
     })
 
     if err := validate.Struct(Secret); err != nil {
-        configLogger.Fatal("Secrets validation failed", err.Error(), nil)
+        log.Fatal("Secrets validation failed", err.Error(), nil)
     }
 
-    configLogger.Info("Validating secrets: OK", nil)
+    log.Info("Validating secrets: OK", nil)
 }
 
 func verifyTokenLength(tokenName string, token []byte) {
     if len(token) != 32 {
-        configLogger.Fatal(
+        log.Fatal(
             "Invalid environment variable value",
             "Invalid length of "+tokenName+" secret (must be 32 bytes long)",
          	nil,

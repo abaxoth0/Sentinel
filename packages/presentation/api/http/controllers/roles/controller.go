@@ -32,15 +32,15 @@ func GetAll(ctx echo.Context) error {
     serviceID := ctx.Param("serviceID")
 
     if strings.ReplaceAll(serviceID, " ", "") == "" {
-		controller.Logger.Error("Failed to get service roles", serviceIdIsNotSpecified.Error(), reqMeta)
+		controller.Log.Error("Failed to get service roles", serviceIdIsNotSpecified.Error(), reqMeta)
         return serviceIdIsNotSpecified
     }
 
-	controller.Logger.Info("Getting roles for service '"+serviceID+"'...", reqMeta)
+	controller.Log.Info("Getting roles for service '"+serviceID+"'...", reqMeta)
 
     schema, err := authz.Host.GetSchema(serviceID)
     if err != nil {
-		controller.Logger.Error("Failed to get roles of service '"+serviceID+"'", err.Error(), reqMeta)
+		controller.Log.Error("Failed to get roles of service '"+serviceID+"'", err.Error(), reqMeta)
         return echo.NewHTTPError(http.StatusBadRequest, err.Message)
     }
 
@@ -50,7 +50,7 @@ func GetAll(ctx echo.Context) error {
         roles[i] = role.Name
     }
 
-	controller.Logger.Info("Getting roles for service '"+serviceID+"': OK", reqMeta)
+	controller.Log.Info("Getting roles for service '"+serviceID+"': OK", reqMeta)
 
     return ctx.JSON(http.StatusOK, roles)
 }

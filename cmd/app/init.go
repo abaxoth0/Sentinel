@@ -40,30 +40,30 @@ func InitDefault() {
 }
 
 func InitModules() {
-	appLogger.Info("Initializng modules...", nil)
+	log.Info("Initializng modules...", nil)
 
     authz.Init()
 
 	token.Init()
 
-	appLogger.Info("Initializng modules: OK", nil)
+	log.Info("Initializng modules: OK", nil)
 }
 
 func InitConnections() {
-	appLogger.Info("Initializng connections...", nil)
+	log.Info("Initializng connections...", nil)
 
     cache.Client.Connect()
 	DB.Database.Connect()
 
-	appLogger.Info("Initializng connections: OK", nil)
+	log.Info("Initializng connections: OK", nil)
 }
 
 func InitRouter() *echo.Echo {
-	appLogger.Info("Initializng router...", nil)
+	log.Info("Initializng router...", nil)
 
 	Router := router.Create()
 
-	appLogger.Info("Initializng router: OK", nil)
+	log.Info("Initializng router: OK", nil)
 
     return Router
 }

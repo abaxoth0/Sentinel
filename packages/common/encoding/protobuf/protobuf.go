@@ -10,7 +10,7 @@ import (
 )
 
 func marshall(pb any) ([]byte, error){
-	encoding.Logger.Trace("Marshalling user DTO into a protobuf...", nil)
+	encoding.Log.Trace("Marshalling data into a protobuf...", nil)
 
 	var message proto.Message
 
@@ -24,29 +24,33 @@ func marshall(pb any) ([]byte, error){
 		*pbgen.FullLocationDTO:
 		message = v.(proto.Message)
 	default:
-		return nil, fmt.Errorf("TYPE ERROR: Failed to marshall data into protobuf. Unexpected type: %T", v)
+		errMsg := fmt.Sprintf("Unexpected type: %T", v)
+		encoding.Log.Error("Failed to marshall data into protobuf", errMsg, nil)
+		return nil, errors.New(errMsg)
 	}
 
 	data, err := proto.Marshal(message)
 	if err != nil {
-		return nil, errors.New("Faield to marshall data in protobuf: " + err.Error())
+		encoding.Log.Error("Failed to marshall data into protobuf", err.Error(), nil)
+		return nil, errors.New("Faield to marshall data into protobuf: " + err.Error())
 	}
 
-	encoding.Logger.Trace("Marshalling data into a protobuf: OK", nil)
+	encoding.Log.Trace("Marshalling data into a protobuf: OK", nil)
 
 	return data, nil
 }
 
 func unmarshall[T proto.Message](message T, rawDTO []byte) (T, error) {
-	encoding.Logger.Trace("Unmarshalling data from protobuf...", nil)
+	encoding.Log.Trace("Unmarshalling data from protobuf...", nil)
 
 	var zero T
 
 	if err := proto.Unmarshal(rawDTO, message); err != nil {
+		encoding.Log.Error("Failed to unmarshall data from protobuf", err.Error(), nil)
 		return zero, errors.New("Faield to unmarshall data from protobuf: " + err.Error())
 	}
 
-	encoding.Logger.Trace("Unmarshalling data from protobuf: OK", nil)
+	encoding.Log.Trace("Unmarshalling data from protobuf: OK", nil)
 
 	return message, nil
 }

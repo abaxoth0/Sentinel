@@ -15,7 +15,7 @@ type database interface {
 }
 
 type connector interface {
-	Connect()
+	Connect() error
 	Disconnect() error
 }
 

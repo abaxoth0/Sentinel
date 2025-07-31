@@ -110,7 +110,7 @@ func getUserAgent(ctx echo.Context) (useragent.UserAgent, *Error.Status) {
 
 func CreateSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (*SessionDTO.Full, *Error.Status) {
 	if err := validation.UUID(ID); err != nil {
-		Logger.Panic(
+		Log.Panic(
 			"Failed to create user session",
 			err.ToStatus(
 				"Session ID is missing",
@@ -219,7 +219,7 @@ func UpdateSession(
 	payload *UserDTO.Payload, // from existing token claims
 ) (accessToken *token.SignedToken, refreshToken *token.SignedToken, err *Error.Status){
 	if user == nil {
-		Logger.Panic(
+		Log.Panic(
 			"Invalid updateSession call",
 			"user is nil (expected *UserDTO.Full)",
 			nil,
@@ -227,7 +227,7 @@ func UpdateSession(
 		return nil, nil, Error.StatusInternalError
 	}
 	if payload == nil {
-		Logger.Panic(
+		Log.Panic(
 			"Invalid updateSession call",
 			"payload is nil (expected *UserDTO.Payload)",
 			nil,
@@ -279,7 +279,6 @@ func UpdateSession(
 	}
 
 	if err := UpdateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
-		Logger.Error("Failed to update location for session " + session.ID, err.Error(), nil)
 		return nil, nil, err
 	}
 

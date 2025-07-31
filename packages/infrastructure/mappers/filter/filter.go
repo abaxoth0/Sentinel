@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sentinel/packages/core/filter"
+	mapper "sentinel/packages/infrastructure/mappers"
 	"strings"
 )
 
@@ -34,6 +35,8 @@ var condsStrings = []string{
 }
 
 func GetCondFromStringPrefix(s string) (filter.Condition, error) {
+	mapper.Log.Trace("Getting condition from sting prefix: "+s+"...", nil)
+
 	var cond filter.Condition
 
 	for _, condStr := range condsStrings {
@@ -44,8 +47,12 @@ func GetCondFromStringPrefix(s string) (filter.Condition, error) {
 	}
 
 	if cond == 0 {
-		return 0, errors.New("Failed to found valid filter condition: " + s)
+		errMsg := "Failed to found valid filter condition: " + s
+		mapper.Log.Error("Failed to get condition from sting prefix: "+s, errMsg, nil)
+		return 0, errors.New(errMsg)
 	}
+
+	mapper.Log.Trace("Getting condition from sting prefix: "+s+": OK", nil)
 
 	return cond, nil
 }
@@ -77,18 +84,26 @@ var stringToCondMap = map[string]filter.Condition {
 }
 
 func ParseCond(rawCond string) (filter.Condition, error) {
+	mapper.Log.Trace("Parsing filter condition: "+rawCond+"...", nil)
 	r := stringToCondMap[rawCond]
 	if r == 0 {
-		return 0, fmt.Errorf("Failed to parse filter condition '%s': no such condition", rawCond)
+		errMsg := "No such condition"
+		mapper.Log.Error("Parsing filter condition: "+rawCond, errMsg, nil)
+		return 0, errors.New(errMsg)
 	}
+	mapper.Log.Trace("Parsing filter condition: "+rawCond+": OK", nil)
 	return r, nil
 }
 
 func FormatCond(cond filter.Condition) (string, error) {
+	mapper.Log.Trace("Formatting filter condition into the string...", nil)
 	r := condToStringMap[cond]
 	if r == "" {
-		return "", fmt.Errorf("Failed to format filter condition with number '%d': no condition with such number", cond)
+		errMsg := fmt.Sprintf("There are no condition with number '%d'", cond)
+		mapper.Log.Error("Failed to format filter condition into the string", errMsg, nil)
+		return "", errors.New(errMsg)
 	}
+	mapper.Log.Trace("Formatting filter condition into the string: OK", nil)
 	return r, nil
 }
 

@@ -24,12 +24,12 @@ type geoIpResponseBody struct {
 
 // Returns user location in raw string format based on specified ip address
 func GetLocationFromIP(ip string) (*LocationDTO.Full, *Error.Status) {
+	log.Trace("Getting location for "+ip+"...", nil)
+
 	if config.Debug.Enabled && config.Debug.LocationIP != "" && ip != config.Debug.LocationIP {
 		log.Debug("IP changed: "+ip+" -> "+config.Debug.LocationIP, nil)
 		ip = config.Debug.LocationIP
 	}
-
-	log.Trace("Getting location for "+ip+"...", nil)
 
 	res, err := http.Get("http://ip-api.com/json/"+ip+fields)
 	if err != nil {
@@ -43,7 +43,6 @@ func GetLocationFromIP(ip string) (*LocationDTO.Full, *Error.Status) {
 
 	body, err := json.Decode[geoIpResponseBody](res.Body)
 	if err != nil {
-		log.Error("Failed to get location for "+ip, err.Error(), nil)
 		return nil, Error.NewStatusError(
 			"Failed to read response body from location provider",
 			http.StatusInternalServerError,

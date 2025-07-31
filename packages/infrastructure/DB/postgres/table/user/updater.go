@@ -9,6 +9,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -21,17 +22,22 @@ import (
 
 func invalidateBasicUserDtoCache(old, current *UserDTO.Full) {
 	invalidator := cache.NewBasicUserDtoInvalidator(old, current)
+	// TODO handle error
 	if err := invalidator.Invalidate(); err != nil {
-		userLogger.Error("Failed to invalidate cache", err.Error(), nil)
+		log.DB.Error("Failed to invalidate cache", err.Error(), nil)
 	}
 }
 
 func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
+	log.DB.Info("Changing login of user "+act.TargetUID+"...", nil)
+
     if err := act.ValidateUIDs(); err != nil {
+		log.DB.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
         return err
     }
 
     if err := user.ValidateLogin(newLogin); err != nil {
+		log.DB.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
         return err
     }
 
@@ -42,19 +48,18 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
 		return err
 	}
 
-    user, err := m.FindUserByID(act.TargetUID)
+    user, err := m.GetUserByID(act.TargetUID)
     if err != nil {
         return err
     }
 
     if user.Login == newLogin {
-        return Error.NewStatusError(
-            "Login not changed: Current login and new login are the same",
-            http.StatusConflict,
-        )
+		errMsg := "Login not changed: Current login and new login are the same"
+		log.DB.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
+        return Error.NewStatusError(errMsg, http.StatusConflict)
     }
 
-    if err := m.checkLogin(newLogin); err != nil {
+    if err := m.checkIfLoginInUse(newLogin); err != nil {
         return err
     }
 
@@ -75,15 +80,21 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
+	log.DB.Info("Changing login of user "+act.TargetUID+": OK", nil)
+
 	return nil
 }
 
 func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string) *Error.Status {
+	log.DB.Info("Changing password of user "+act.TargetUID+"...", nil)
+
     if err := act.ValidateUIDs(); err != nil {
+		log.DB.Error("Failed to change password of user "+act.TargetUID, err.Error(), nil)
         return err
     }
 
     if err := user.ValidatePassword(newPassword); err != nil {
+		log.DB.Error("Failed to change password of user "+act.TargetUID, err.Error(), nil)
         return err
     }
 
@@ -94,13 +105,14 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
 		return err
 	}
 
-    user, err := m.FindUserByID(act.TargetUID)
+    user, err := m.GetUserByID(act.TargetUID)
     if err != nil {
         return err
     }
 
 	hashedPassword, e := hashPassword(newPassword)
     if e != nil {
+		log.DB.Error("Failed to change password of user "+act.TargetUID, e.Error(), nil)
         return e
     }
 
@@ -121,10 +133,14 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
+	log.DB.Info("Changing password of user "+act.TargetUID+": OK", nil)
+
 	return nil
 }
 
 func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *Error.Status {
+	log.DB.Info("Changing roles of user "+act.TargetUID+"...", nil)
+
 	main_loop:
 	for _, newRole := range newRoles {
 		for _, role := range authz.Schema.Roles {
@@ -133,26 +149,26 @@ func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *E
 			}
 		}
 
-		return Error.NewStatusError(
-			"Role '"+newRole+"' doesn't exists",
-			http.StatusBadRequest,
-		)
+		errMsg := "Role '"+newRole+"' doesn't exists"
+		log.DB.Error("Failed to change roles of user "+act.TargetUID, errMsg, nil)
+		return Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
     if err := act.ValidateUIDs(); err != nil {
+		log.DB.Error("Failed to change roles of user "+act.TargetUID, err.Error(), nil)
         return err
     }
 
-    if act.TargetUID == act.RequesterUID &&
-       slices.Contains(act.RequesterRoles, "admin") &&
-       !slices.Contains(newRoles, "admin") {
-          return Error.NewStatusError(
-              "Нельзя снять роль администратора с самого себя",
-               http.StatusForbidden,
-          )
+	isRequesterAdmin := slices.Contains(act.RequesterRoles, "admin")
+	isAdminInNewRoles := slices.Contains(newRoles, "admin")
+
+    if act.TargetUID == act.RequesterUID && isRequesterAdmin && !isAdminInNewRoles {
+		errMsg := "Нельзя снять роль администратора с самого себя"
+		log.DB.Error("Failed to change roles of user "+act.TargetUID, errMsg, nil)
+		return Error.NewStatusError(errMsg, http.StatusForbidden)
     }
 
-    user, err := m.FindUserByID(act.TargetUID)
+    user, err := m.GetUserByID(act.TargetUID)
     if err != nil {
         return err
     }
@@ -181,10 +197,14 @@ func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *E
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
+	log.DB.Info("Changing roles of user "+act.TargetUID+": OK", nil)
+
 	return nil
 }
 
 func (m *Manager) Activate(tk string) *Error.Status {
+	log.DB.Info("Activating user...", nil)
+
     t, err := token.ParseSingedToken(tk, config.Secret.ActivationTokenPublicKey)
     if err != nil {
         return err
@@ -192,15 +212,14 @@ func (m *Manager) Activate(tk string) *Error.Status {
 
     payload := UserMapper.PayloadFromClaims(t.Claims.(*token.Claims))
 
-    user, err := m.FindUserByID(payload.ID)
+    user, err := m.GetUserByID(payload.ID)
     if err != nil {
         return err
     }
     if user.IsActive() {
-        return Error.NewStatusError(
-            "User already active",
-            http.StatusConflict,
-        )
+		errMsg := "User already active"
+		log.DB.Error("Failed activate user", errMsg, nil)
+        return Error.NewStatusError(errMsg, http.StatusConflict)
     }
 
     filter := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
@@ -219,7 +238,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
 
 	// This should be impossible, but additional check won't be redundant
 	if updatedUser == nil {
-		userLogger.Error(
+		log.DB.Error(
 			"Failed to activate user " + user.ID,
 			"User doesn't have role unconfirmed_user: " + strings.Join(user.Roles, ","),
 			nil,
@@ -240,6 +259,8 @@ func (m *Manager) Activate(tk string) *Error.Status {
     }
 
 	invalidateBasicUserDtoCache(user, updatedUser)
+
+	log.DB.Info("Activating user: OK", nil)
 
     return nil
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var mainLogger = logger.NewSource("MAIN", logger.Default)
+var log = logger.NewSource("MAIN", logger.Default)
 
 // @title 						Sentinel
 // @version 					1.0
@@ -54,7 +54,7 @@ func main() {
 
 	if !config.HTTP.Secured {
 		if !config.Debug.Enabled {
-			mainLogger.Fatal("Failed to start application", "HTTPS Can be disabled only in Debug mode", nil)
+			log.Fatal("Failed to start application", "HTTPS Can be disabled only in Debug mode", nil)
 		}
 	}
 
@@ -68,7 +68,7 @@ func main() {
     }()
     defer func() {
         if err := logger.Default.Stop(); err != nil {
-			mainLogger.Error("Failed to stop logger", err.Error(), nil)
+			log.Error("Failed to stop logger", err.Error(), nil)
         }
     }()
 

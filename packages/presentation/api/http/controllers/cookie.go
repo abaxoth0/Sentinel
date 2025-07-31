@@ -12,20 +12,26 @@ import (
 )
 
 func DeleteCookie(ctx echo.Context, cookie *http.Cookie) {
+	reqMeta := request.GetMetadata(ctx)
+
+	Log.Trace("Deleting cookie "+cookie.Name+"...", reqMeta)
+
     cookie.Expires = time.Now().Add(time.Hour * -1)
 
     ctx.SetCookie(cookie)
+
+	Log.Trace("Deleting cookie "+cookie.Name+": OK", reqMeta)
 }
 
 func GetAuthCookie(ctx echo.Context) (*http.Cookie, *echo.HTTPError) {
 	reqMeta := request.GetMetadata(ctx)
 
-	Logger.Trace("Getting auth cookie...", reqMeta)
+	Log.Trace("Getting auth cookie...", reqMeta)
 
     authCookie, err := ctx.Cookie(refreshTokenCookieKey)
 
     if err != nil {
-		Logger.Error("Failed to get auth cookie", err.Error(), reqMeta)
+		Log.Error("Failed to get auth cookie", err.Error(), reqMeta)
 
         if err == http.ErrNoCookie {
             return nil, ConvertErrorStatusToHTTP(Error.StatusUnauthorized)
@@ -33,7 +39,7 @@ func GetAuthCookie(ctx echo.Context) (*http.Cookie, *echo.HTTPError) {
         return nil, ConvertErrorStatusToHTTP(Error.StatusInternalError)
     }
 
-	Logger.Trace("Getting auth cookie: OK", reqMeta)
+	Log.Trace("Getting auth cookie: OK", reqMeta)
 
     return authCookie, nil
 }

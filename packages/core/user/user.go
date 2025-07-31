@@ -31,6 +31,16 @@ const (
     AnyState
 )
 
+var stateMap = map[State]string{
+	NotDeletedState: "not deleted",
+	DeletedState:	 "deleted",
+	AnyState:		 "any",
+}
+
+func (s State) String() string {
+	return stateMap[s]
+}
+
 const allowedSymbolsMsg = "Разрешённые символы: латинксие буквы, цифры от 0 до 9, спецсимволы '_', '-', '.', '@', '$', '!', '#'"
 
 var ErrInvalidPasswordLength = Error.NewStatusError(

@@ -14,7 +14,9 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-var errLogger = NewSource("LOG", Stderr)
+// Used for intenal logging (mostly for errors).
+// Send logs in stderr
+var fileLog = NewSource("FILE LOGGER", Stderr)
 
 const (
 	fallbackBatchSize = 500
@@ -145,7 +147,7 @@ func (l *FileLogger) handler(entry *LogEntry) {
 
 	stream.WriteVal(entry)
 	if stream.Error != nil {
-		errLogger.Error("failed to write log", stream.Error.Error(), nil)
+		fileLog.Error("failed to write log", stream.Error.Error(), nil)
 		return
 	}
 
@@ -169,7 +171,7 @@ func (l *FileLogger) log(entry *LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-    if !logPreprocessing(entry, l.transmissions) {
+    if !preprocess(entry, l.transmissions) {
 		return
     }
 

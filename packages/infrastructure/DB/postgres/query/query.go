@@ -9,22 +9,23 @@ import (
 var queryLogger = logger.NewSource("QUERY", logger.Default)
 
 type Query struct {
-    SQL 		string
-    Args 		[]any
+    SQL	 string
+    Args []any
 }
 
 func New(sql string, args ...any) *Query {
 	return &Query{
-		SQL: sql,
+		SQL:  sql,
 		Args: args,
 	}
 }
 
-func (q *Query) ConvertError(err error) *Error.Status {
+// Converts err into *Error.Status
+func (q *Query) ConvertAndLogError(err error) *Error.Status {
     defer queryLogger.Debug("Failed query: " + q.SQL, nil)
 
     if err == context.DeadlineExceeded {
-        queryLogger.Error("Query failed", "Query timeout", nil)
+        queryLogger.Error("Query failed", "Operation timeout", nil)
         return Error.StatusTimeout
     }
 

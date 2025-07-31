@@ -16,7 +16,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var cacheLogger = logger.NewSource("CACHE", logger.Default)
+var log = logger.NewSource("CACHE", logger.Default)
 
 type driver struct {
     client *redis.Client
@@ -29,10 +29,10 @@ func New() *driver {
 
 func (d *driver) Connect() {
     if d.isConnected {
-        cacheLogger.Panic("DB connection failed", "Connection already established", nil)
+        log.Panic("DB connection failed", "Connection already established", nil)
     }
 
-	cacheLogger.Info("Connecting to DB...", nil)
+	log.Info("Connecting to DB...", nil)
 
 	d.client = redis.NewClient(&redis.Options{
 		Addr:        config.Secret.CacheURI,
@@ -45,10 +45,10 @@ func (d *driver) Connect() {
     defer cancel()
 
     if err := d.client.Ping(ctx).Err(); err != nil {
-        cacheLogger.Panic("DB connection failed", err.Error(), nil)
+        log.Panic("DB connection failed", err.Error(), nil)
     }
 
-	cacheLogger.Info("Connecting to DB: OK", nil)
+	log.Info("Connecting to DB: OK", nil)
 
     d.isConnected = true
 }
@@ -61,7 +61,7 @@ func (d *driver) Close() *Error.Status {
         )
     }
 
-    cacheLogger.Info("Disconnecting from DB...", nil)
+    log.Info("Disconnecting from DB...", nil)
 
     if err := d.client.Close(); err != nil {
         return Error.NewStatusError(
@@ -70,7 +70,7 @@ func (d *driver) Close() *Error.Status {
         )
     }
 
-    cacheLogger.Info("Disconnecting from DB: OK", nil)
+    log.Info("Disconnecting from DB: OK", nil)
 
     d.isConnected = false
 
@@ -81,23 +81,24 @@ func defaultTimeoutContext() (context.Context, context.CancelFunc) {
     return context.WithTimeout(context.Background(), config.Cache.OperationTimeout())
 }
 
-// timeout is x5 of defaultTimeoutContext
+// x2 of defaultTimeoutContext()
 func longTimeoutContext() (context.Context, context.CancelFunc) {
-    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout() * 5)
+    return context.WithTimeout(context.Background(), config.Cache.OperationTimeout() * 2)
 }
 
-// Logs given action and error.
-// Returns err converted to *Error.Status.
-func logAndConvert(action string, err error) *Error.Status {
+// Performs logging.
+// Returns err converted to *Error.Status if err is not nil.
+// If err is nil then just logs given action (with trace level).
+func handleError(action string, err error) *Error.Status {
 	if err != nil {
         if err == context.DeadlineExceeded {
-            cacheLogger.Error(
+            log.Error(
                 "Request failed",
                 "TIMEOUT: " + action,
 				nil,
             )
         } else {
-            cacheLogger.Error(
+            log.Error(
                 "Request failed",
                 "Failed to "+action+": "+err.Error(),
 				nil,
@@ -106,7 +107,7 @@ func logAndConvert(action string, err error) *Error.Status {
         return Error.StatusInternalError
 	}
 
-    cacheLogger.Trace(action, nil)
+    log.Trace(action, nil)
 
     return nil
 }
@@ -117,11 +118,11 @@ func (d *driver) Get(key string) (string, bool) {
 
 	cachedData, err := d.client.Get(ctx, key).Result()
     if err == redis.Nil {
-        cacheLogger.Trace("Miss: " + key, nil)
+        log.Trace("Miss: " + key, nil)
         return "", false
     }
 
-    return cachedData, logAndConvert("Get: " + key, err) == nil
+    return cachedData, handleError("Get: " + key, err) == nil
 }
 
 // IMPORTANT:
@@ -136,16 +137,16 @@ func(d *driver) Set(key string, value any) *Error.Status {
         // Type allowed, do nothing and just go forward
 	case uint32:
 		if uint64(v) > uint64(math.MaxInt64) {
-			return logAndConvert("Set: ", fmt.Errorf("value overflows int64: %v", value))
+			return handleError("Set: ", fmt.Errorf("value overflows int64: %v", value))
 		}
 		value = int64(v)
 	case uint64:
 		if v > uint64(math.MaxInt64) {
-			return logAndConvert("Set: ", fmt.Errorf("value overflows int64: %v", value))
+			return handleError("Set: ", fmt.Errorf("value overflows int64: %v", value))
 		}
 		value = int64(v)
     default:
-        return logAndConvert("Set: ", fmt.Errorf("invalid cache value type: %T", value))
+        return handleError("Set: ", fmt.Errorf("invalid cache value type: %T", value))
     }
 
     ctx, cancel := defaultTimeoutContext()
@@ -153,7 +154,7 @@ func(d *driver) Set(key string, value any) *Error.Status {
 
 	err := d.client.Set(ctx, key, value, config.Cache.TTL()).Err()
 
-   return logAndConvert("Set: " + key, err)
+   return handleError("Set: " + key, err)
 }
 
 func (d *driver) Delete(keys ...string) *Error.Status {
@@ -162,7 +163,7 @@ func (d *driver) Delete(keys ...string) *Error.Status {
 
 	err := d.client.Unlink(ctx, keys...).Err()
 
-    return logAndConvert("Delete: " + strings.Join(keys, ","), err)
+    return handleError("Delete: " + strings.Join(keys, ","), err)
 }
 
 func (d *driver) FlushAll() *Error.Status {
@@ -171,17 +172,7 @@ func (d *driver) FlushAll() *Error.Status {
 
 	err := d.client.FlushAll(ctx).Err()
 
-    return logAndConvert("Flush All", err)
-}
-
-func (d *driver) DeleteOnNoError(err *Error.Status, keys ...string) *Error.Status {
-    if err == nil {
-        if e := d.Delete(keys...); e != nil {
-            return e
-        }
-    }
-
-    return err
+    return handleError("Flush All", err)
 }
 
 const deletePatternAction = "Delete Pattern: "
@@ -198,12 +189,12 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
     // Use SCAN to find all keys matching the pattern
     for {
         if err := ctx.Err(); err != nil {
-            return logAndConvert(deletePatternAction, err)
+            return handleError(deletePatternAction, err)
         }
 
         keys, cursor, err = d.client.Scan(ctx, cursor, pattern, 100).Result()
         if err != nil {
-			return logAndConvert(
+			return handleError(
 				deletePatternAction,
 				errors.New("Error scanning keys: " + err.Error()),
 			)
@@ -220,9 +211,9 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
             _, err = pipeline.Exec(ctx)
             if err != nil {
                 if ctxErr := ctx.Err(); ctxErr != nil {
-                    return logAndConvert(deletePatternAction, ctxErr)
+                    return handleError(deletePatternAction, ctxErr)
                 }
-				return logAndConvert(
+				return handleError(
 					deletePatternAction,
 					errors.New("Error deleting keys: " + err.Error()),
 				)
@@ -230,12 +221,12 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
 
             deleted := strconv.FormatInt(int64(len(keys)), 64)
 
-            cacheLogger.Trace("Deleted "+deleted+" keys with pattern: "+pattern, nil)
+            log.Trace("Deleted "+deleted+" keys with pattern: "+pattern, nil)
         }
 
         // Exit when cursor is 0 (no more keys to scan)
         if cursor == 0 {
-            return logAndConvert(deletePatternAction, nil)
+            return handleError(deletePatternAction, nil)
         }
     }
 }
@@ -255,15 +246,15 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
 
     for {
         if err := scanCtx.Err(); err != nil {
-            return logAndConvert(progressiveDeletePatternAction, err)
+            return handleError(progressiveDeletePatternAction, err)
         }
 
         keys, nextCursor, err := d.client.Scan(scanCtx, cursor, pattern, scanBatchSize).Result()
         if err != nil {
             if ctxErr := scanCtx.Err(); ctxErr != nil {
-                return logAndConvert(progressiveDeletePatternAction, err)
+                return handleError(progressiveDeletePatternAction, err)
             }
-			return logAndConvert(
+			return handleError(
 				progressiveDeletePatternAction,
 				errors.New("Redis scan failed: " + err.Error()),
 			)
@@ -279,9 +270,9 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
 
             if _, err := d.client.Unlink(ctx, batch...).Result(); err != nil {
                 if ctxErr := ctx.Err(); ctxErr != nil {
-                    return logAndConvert(progressiveDeletePatternAction, err)
+                    return handleError(progressiveDeletePatternAction, err)
                 }
-				return logAndConvert(
+				return handleError(
 					progressiveDeletePatternAction,
 					errors.New("Batch unlink failed: " + err.Error()),
 				)
@@ -293,7 +284,7 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
 
         if nextCursor == 0 {
             deleted := strconv.FormatInt(int64(keysDeleted), 64)
-            cacheLogger.Trace("Deleted "+deleted+" keys matching "+pattern, nil)
+            log.Trace("Deleted "+deleted+" keys matching "+pattern, nil)
             break
         }
 
@@ -316,7 +307,7 @@ func (d *driver) ProgressiveDelete(keys []string) *Error.Status {
 		defer cancel()
 
 		if _, err := d.client.Unlink(ctx, batch...).Result(); err != nil {
-			return logAndConvert(
+			return handleError(
 				progressiveDeleteKeysAction,
 				fmt.Errorf("batch %d-%d failed - %s", i, end, err.Error()),
 			)

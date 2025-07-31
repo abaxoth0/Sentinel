@@ -3,14 +3,20 @@ package locationtable
 import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
+	"sentinel/packages/common/util"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 )
 
 func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bool) *Error.Status {
+	logPrefix := util.Ternary(drop, "Hard ", "Soft ")
+
+	log.DB.Info(logPrefix+"deleting location "+id+"...", nil)
+
 	if act.TargetUID != act.RequesterUID {
 		if err := authz.User.DeleteLocation(act.RequesterRoles); err != nil {
 			return err
@@ -48,13 +54,13 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bo
 		return err
 	}
 
-	err = cache.Client.Delete(
+	// TODO handle error
+	cache.Client.Delete(
 		cache.KeyBase[cache.LocationByID] + id,
 		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,
 	)
-	if err != nil {
-		locationLogger.Error("Failed to delete cache", err.Error(), nil)
-	}
+
+	log.DB.Info(logPrefix+"deleting location "+id+": OK", nil)
 
 	return nil
 }

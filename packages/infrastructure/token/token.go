@@ -14,7 +14,7 @@ import (
 	Error "sentinel/packages/common/errors"
 )
 
-var tokenLogger = logger.NewSource("TOKEN", logger.Default)
+var log = logger.NewSource("TOKEN", logger.Default)
 
 // Must match RFC 9068
 // (https://datatracker.ietf.org/doc/rfc9068/)
@@ -59,17 +59,17 @@ var isInit = false
 
 func Init() {
 	if isInit {
-		panic("token module already initialized")
+		log.Panic("Failed to initialize Token module", "Token module already initialized", nil)
 	}
 
-	tokenLogger.Info("Initializing...", nil)
+	log.Info("Initializing...", nil)
 
     audienceLookup = make(map[string]struct{})
     for _, aud := range config.Auth.TokenAudience {
         audienceLookup[aud] = struct{}{}
     }
 
-	tokenLogger.Info("Initializing: OK", nil)
+	log.Info("Initializing: OK", nil)
 
 	isInit = true
 }
@@ -82,12 +82,12 @@ func newSignedToken(
 	headers tokenHeaders,
 ) (*SignedToken, *Error.Status) {
 	if audience == nil || len(audience) == 0 {
-		tokenLogger.Error("Failed to create signed token", TokenAudienceIsNotSpecified.Error(), nil)
+		log.Error("Failed to create signed token", TokenAudienceIsNotSpecified.Error(), nil)
 		return nil, TokenAudienceIsNotSpecified
 	}
 	for _, aud := range audience {
 		if _, exists := audienceLookup[aud]; !exists {
-			tokenLogger.Error(
+			log.Error(
 				"Failed to create signed token",
 				"Audience doesn't exists: " + aud,
 				nil,
@@ -120,7 +120,7 @@ func newSignedToken(
 
     tokenStr, err := token.SignedString(key)
     if err != nil {
-        tokenLogger.Error("Failed to sign token", err.Error(), nil)
+        log.Error("Failed to sign token", err.Error(), nil)
         return nil, Error.StatusInternalError
     }
 
@@ -128,7 +128,9 @@ func newSignedToken(
 }
 
 func NewAccessToken(payload *UserDTO.Payload) (*SignedToken, *Error.Status) {
-	return newSignedToken(
+	log.Trace("Creating new access token...", nil)
+
+	token, err := newSignedToken(
         payload,
         config.Auth.AccessTokenTTL(),
         config.Secret.AccessTokenPrivateKey,
@@ -137,16 +139,32 @@ func NewAccessToken(payload *UserDTO.Payload) (*SignedToken, *Error.Status) {
 			"typ": "at+jwt",
 		},
     )
+	if err != nil {
+		return nil, err
+	}
+
+	log.Trace("Creating new access token: OK", nil)
+
+	return token, nil
 }
 
 func NewRefreshToken(payload *UserDTO.Payload) (*SignedToken, *Error.Status) {
-    return newSignedToken(
+	log.Trace("Creating new refresh token...", nil)
+
+	token, err := newSignedToken(
         payload,
         config.Auth.RefreshTokenTTL(),
         config.Secret.RefreshTokenPrivateKey,
 		[]string{config.Auth.SelfAudience},
 		nil,
     )
+	if err != nil {
+		return nil, err
+	}
+
+	log.Trace("Creating new refresh token: OK", nil)
+
+	return token, nil
 }
 
 func NewAuthTokens(payload *UserDTO.Payload) (accessToken *SignedToken, refreshToken *SignedToken, err *Error.Status) {
@@ -164,7 +182,9 @@ func NewAuthTokens(payload *UserDTO.Payload) (accessToken *SignedToken, refreshT
 }
 
 func NewActivationToken(uid string, login string, roles []string) (*SignedToken, *Error.Status) {
-    return newSignedToken(
+	log.Trace("Creating new activation token...", nil)
+
+	token, err := newSignedToken(
         &UserDTO.Payload{
             ID: uid,
             Roles: roles,
@@ -174,6 +194,13 @@ func NewActivationToken(uid string, login string, roles []string) (*SignedToken,
 		[]string{config.Auth.SelfAudience},
 		nil,
     )
+	if err != nil {
+		return nil, err
+	}
+
+	log.Trace("Creating new activation token: OK", nil)
+
+	return token, nil
 }
 
 var jwtParserOptions = []jwt.ParserOption{
@@ -192,23 +219,31 @@ func ed25519KeyFunc(key ed25519.PublicKey) func (token *jwt.Token) (any, error) 
 
 // Parses and validates given token
 func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Error.Status) {
+	log.Trace("Parsing signed token...", nil)
+
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenStr, claims, ed25519KeyFunc(key), jwtParserOptions...)
     if err != nil {
+		var e *Error.Status
+
         switch {
         case errors.Is(err, jwt.ErrTokenMalformed):
-            return nil, TokenMalformed
+            e = TokenMalformed
         case errors.Is(err, jwt.ErrTokenExpired):
-            return nil, TokenExpired
+            e = TokenExpired
         case errors.Is(err, jwt.ErrTokenNotValidYet):
-            return nil, TokenModified
+            e = TokenModified
         case errors.Is(err, jwt.ErrTokenSignatureInvalid):
-            return nil, TokenInvalidSignature
+            e = TokenInvalidSignature
         default:
-            tokenLogger.Error("Failed to parse signed token", err.Error(), nil)
+            log.Error("Failed to parse signed token", err.Error(), nil)
             return nil, Error.StatusInternalError
         }
+
+		log.Error("Invalid token", e.Error(), nil)
+
+		return nil, e
     }
 
 	// RFC 9068 p2.2
@@ -218,14 +253,18 @@ func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Erro
 		claims.ExpiresAt == nil ||
 		claims.IssuedAt == nil ||
 		claims.ID == "" {
+		log.Error("Token validation failed", TokenMissingRequiredClaims.Error(), nil)
 		return nil, TokenMissingRequiredClaims
 	}
 
 	for _, tokenAud := range claims.Audience {
 		if _, exists := audienceLookup[tokenAud]; !exists {
+			log.Error("Token validation failed", TokenAudienceMismatch.Error(), nil)
 			return nil, TokenAudienceMismatch
 		}
 	}
+
+	log.Trace("Parsing signed token: OK", nil)
 
 	return token, nil
 }

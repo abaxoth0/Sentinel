@@ -8,6 +8,7 @@ import (
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -19,6 +20,8 @@ func NewRevokeAllUserSessionsQuery(act *ActionDTO.UserTargeted) *query.Query {
 }
 
 func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *Error.Status {
+	log.DB.Trace("Revoking user session...", nil)
+
 	if act.RequesterUID != act.TargetUID {
 		if err := authz.User.Logout(act.RequesterRoles); err != nil {
 			return err
@@ -41,13 +44,13 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 		return err
 	}
 
-	err = cache.Client.Delete(
+	// TODO handle error
+	cache.Client.Delete(
 		cache.KeyBase[cache.SessionByID] + sessionID,
 		cache.KeyBase[cache.UserBySessionID] + sessionID,
 	)
-	if err != nil {
-		sessionLogger.Error("Failed to delete cache", err.Error(), nil)
-	}
+
+	log.DB.Trace("Revoking user session: OK", nil)
 
 	return nil
 }
@@ -66,6 +69,8 @@ func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Full) *Error.Status
 const revokeAllUserSessionsSQL = `UPDATE "user_session" SET revoked_at = NOW() WHERE user_id = $1;`
 
 func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Status {
+	log.DB.Trace("Revoking all user sessions...", nil)
+
 	if act.RequesterUID != act.TargetUID {
 		if err := authz.User.Logout(act.RequesterRoles); err != nil {
 			return err
@@ -91,41 +96,40 @@ func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Stat
 		return err
 	}
 
-	if err := m.deleteSessionsCache(sessions); err != nil {
-		sessionLogger.Error("Failed to delete sessions cache for user "+act.TargetUID, err.Error(), nil)
-	}
+	// TODO handle error
+	m.deleteSessionsCache(sessions)
+
+	log.DB.Trace("Revoking all user sessions: OK", nil)
 
 	return nil
 }
 
 // Invalidates sessions cache of user with specified ID
 func (m *Manager) DeleteUserSessionsCache(UID string) *Error.Status {
-	sessionLogger.Trace("Deleting sessions cache for user "+UID+"...", nil)
+	log.DB.Trace("Deleting sessions cache for user "+UID+"...", nil)
 
 	if e := validation.UUID(UID); e != nil {
-		errMessage := "User ID must be a valid UUID: " + UID
-
-		sessionLogger.Error("Failed to delete sessions cache for user "+UID, errMessage, nil)
-
-		return Error.NewStatusError(errMessage, http.StatusBadRequest)
+		errMsg := "User ID must be a valid UUID: " + UID
+		log.DB.Error("Failed to delete sessions cache for user "+UID, errMsg, nil)
+		return Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
 	sessions, err := m.getUserSessions(UID)
 	if err != nil {
 		if err == Error.StatusNotFound {
-			sessionLogger.Trace("Failed to delete sessions cache for user: "+UID+": User has no sessions", nil)
+			log.DB.Trace("Failed to delete sessions cache for user: "+UID+": User has no sessions", nil)
 			return nil
 		}
-		sessionLogger.Error("Failed to delete sessions cache for user "+UID, err.Error(), nil)
+		log.DB.Error("Failed to delete sessions cache for user "+UID, err.Error(), nil)
 		return err
 	}
 
 	if err := m.deleteSessionsCache(sessions); err != nil {
-		sessionLogger.Error("Failed to delete sessions cache for user "+UID, err.Error(), nil)
+		log.DB.Error("Failed to delete sessions cache for user "+UID, err.Error(), nil)
 		return err
 	}
 
-	sessionLogger.Trace("Deleting sessions cache for user: "+UID+":OK", nil)
+	log.DB.Trace("Deleting sessions cache for user: "+UID+":OK", nil)
 
 	return nil
 }

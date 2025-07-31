@@ -6,12 +6,15 @@ import (
 	LocationDTO "sentinel/packages/core/location/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 )
 
 func (_ *Manager) getLocationByID(id string) (*LocationDTO.Full, *Error.Status) {
+	log.DB.Trace("Getting location "+id+"...", nil)
+
 	selectQuery := query.New(
 		`SELECT id, ip, session_id, country, region, city, latitude, longitude, isp, deleted_at, created_at
 		FROM "location" WHERE id = $1`,
@@ -27,12 +30,12 @@ func (_ *Manager) getLocationByID(id string) (*LocationDTO.Full, *Error.Status) 
 		return nil, err
 	}
 
+	log.DB.Trace("Getting location "+id+": OK", nil)
+
 	return dto, nil
 }
 
 func (l *Manager) GetLocationByID(act *ActionDTO.UserTargeted, id string) (*LocationDTO.Full, *Error.Status) {
-	// TODO add self targeted action? (e.g. banned_user won't be able to see his sessions)
-	//		(for all this kind of actions)
 	if act.TargetUID != act.RequesterUID {
 		if err := authz.User.GetSessionLocation(act.RequesterRoles); err != nil {
 			return nil, err
@@ -43,8 +46,8 @@ func (l *Manager) GetLocationByID(act *ActionDTO.UserTargeted, id string) (*Loca
 }
 
 func (l *Manager) GetLocationBySessionID(act *ActionDTO.UserTargeted, sessionID string) (*LocationDTO.Full, *Error.Status) {
-	// TODO add self targeted action? (e.g. banned_user won't be able to see his sessions)
-	//		(for all this kind of actions)
+	log.DB.Trace("Getting location for session "+sessionID+"...", nil)
+
 	if act.TargetUID != act.RequesterUID {
 		if err := authz.User.GetSessionLocation(act.RequesterRoles); err != nil {
 			return nil, err
@@ -65,6 +68,8 @@ func (l *Manager) GetLocationBySessionID(act *ActionDTO.UserTargeted, sessionID 
 	if err != nil {
 		return nil, err
 	}
+
+	log.DB.Trace("Getting location for session "+sessionID+": OK", nil)
 
 	return dto, nil
 }

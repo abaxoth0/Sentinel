@@ -9,6 +9,7 @@ import (
 	SessionDTO "sentinel/packages/core/session/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 
@@ -23,6 +24,8 @@ func collect[T any](
 	q *query.Query,
 	collectFunc func(pgx.CollectableRow) (T, error),
 ) ([]T, *Error.Status) {
+	log.DB.Trace("Collecting rows...", nil)
+
     rows, err := Rows(conType, q)
     if err != nil {
         return nil, err
@@ -30,12 +33,14 @@ func collect[T any](
 
 	dtos, e := pgx.CollectRows(rows, collectFunc)
     if e != nil {
-		executorLogger.Error("Failed to collect rows", e.Error(), nil)
-        return nil, q.ConvertError(e)
+		log.DB.Error("Failed to collect rows", e.Error(), nil)
+        return nil, q.ConvertAndLogError(e)
     }
 	if len(dtos) == 0 {
-		return nil, Error.StatusNotFound
+		return nil, q.ConvertAndLogError(Error.StatusNotFound)
 	}
+
+	log.DB.Trace("Collecting rows: OK", nil)
 
     return dtos, nil
 }
@@ -138,11 +143,8 @@ func FullUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Use
 		dto.CreatedAt = createdAt.Time
 	}
 
-	cached, e := pbencoding.MarshallFullUserDTO(dto)
-	if e != nil {
-		executorLogger.Error("Failed to encode user DTO", e.Error(), nil)
-	} else {
-    	cache.Client.Set(cacheKey, cached)
+	if cached, e := pbencoding.MarshallFullUserDTO(dto); e == nil {
+		cache.Client.Set(cacheKey, cached)
 	}
 
     return dto, nil
@@ -209,10 +211,7 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 	}
 	dto.IpAddress = addr
 
-	cached, e := pbencoding.MarshallFullSessionDTO(dto)
-	if e != nil {
-		executorLogger.Error("Failed to encode full session DTO", e.Error(), nil)
-	} else {
+	if cached, e := pbencoding.MarshallFullSessionDTO(dto); e == nil {
     	cache.Client.Set(cacheKey, cached)
 	}
 
@@ -315,10 +314,7 @@ func FullLocationDTO(conType connection.Type, q *query.Query, cacheKey string) (
 	}
 	dto.IP = addr
 
-	cached, e := pbencoding.MarshallFullLocationDTO(dto)
-	if e != nil {
-		executorLogger.Error("Failed to encode full location DTO", e.Error(), nil)
-	} else {
+	if cached, e := pbencoding.MarshallFullLocationDTO(dto); e == nil {
     	cache.Client.Set(cacheKey, cached)
 	}
 

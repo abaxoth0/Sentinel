@@ -12,7 +12,7 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-var emailLogger = logger.NewSource("EMAIL", logger.Default)
+var log = logger.NewSource("EMAIL", logger.Default)
 
 type Email interface {
     Send() *Error.Status
@@ -22,9 +22,13 @@ var MainMailer *Mailer
 var dialer *gomail.Dialer
 var isRunning = false
 
-func Run() {
+func Run() error {
+	log.Info("Initializing email module...", nil)
+
     if isRunning {
-        emailLogger.Fatal("Failed to start mailer", "Mailer already running", nil)
+		errMsg := "Mailer already running"
+        log.Error("Failed to start mailer", errMsg, nil)
+		return errors.New(errMsg)
     }
 
     initActivationEmailBody()
@@ -32,7 +36,9 @@ func Run() {
     validSMTPPorts := []int{587, 25, 465, 2525}
 
     if !slices.Contains(validSMTPPorts, config.Email.SmtpPort) {
-        emailLogger.Fatal("Failed to start mailer", "Invlid SMTP port", nil)
+		errMsg := "Invlid SMTP port"
+        log.Error("Failed to start mailer", errMsg, nil)
+		return errors.New(errMsg)
     }
 
     dialer = gomail.NewDialer(
@@ -49,12 +55,18 @@ func Run() {
     isRunning = true
 
     // give some time for MainMailer to start
-    time.Sleep(time.Millisecond * 50)
+    time.Sleep(time.Millisecond * 10)
+
+	log.Info("Initializing email module: OK", nil)
+
+	return nil
 }
 
 func Stop() error {
+	log.Info("Stopping email module...", nil)
+
     if !isRunning {
-        return errors.New("email module isn't running, hence can't be stopped")
+        return errors.New("email module isn't started, hence can't be stopped")
     }
 
     defer func(){ isRunning = false }()
@@ -62,6 +74,8 @@ func Stop() error {
     if err := MainMailer.Stop(); err != nil {
         return err
     }
+
+	log.Info("Stopping email module: OK", nil)
 
     return nil
 }

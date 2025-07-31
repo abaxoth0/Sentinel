@@ -16,7 +16,7 @@ var isInit = false
 
 func Init() {
 	if isInit {
-		controller.Logger.Panic("Failed to initialize OAuth controller", "Controller already initialized", nil)
+		controller.Log.Panic("Failed to initialize OAuth controller", "Controller already initialized", nil)
 		return
 	}
 

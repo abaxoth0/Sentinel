@@ -16,7 +16,6 @@ import (
 	RequestBody "sentinel/packages/presentation/data/request"
 	ResponseBody "sentinel/packages/presentation/data/response"
 	"strconv"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -40,27 +39,18 @@ func Create(ctx echo.Context) error {
 
     reqMeta := request.GetMetadata(ctx)
 
-    controller.Logger.Info("Creating new user...", reqMeta)
-
     uid, err := DB.Database.Create(body.Login, body.Password)
     if err != nil {
-        controller.Logger.Error("Failed to create new user", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
     if config.App.IsLoginEmail {
-        controller.Logger.Trace("Creating and equeueing activation email...", reqMeta)
-
-        err = email.CreateAndEnqueueActivationEmail(uid, body.Login)
-        if err != nil {
-            controller.Logger.Error("Failed to create and enqueue activation email", err.Error(), reqMeta)
+        if err = email.CreateAndEnqueueActivationEmail(uid, body.Login); err != nil {
             return controller.ConvertErrorStatusToHTTP(err)
         }
-
-        controller.Logger.Trace("Creating and equeueing activation email: OK", reqMeta)
     }
 
-    controller.Logger.Info("Creating new user: OK", reqMeta)
+    controller.Log.Info("Creating new user: OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -74,7 +64,7 @@ type updater = func (*ActionDTO.UserTargeted) *Error.Status
 func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessageBase string) error {
     reqMeta := request.GetMetadata(ctx)
 
-    controller.Logger.Info(logMessageBase + "...", reqMeta)
+    controller.Log.Info(logMessageBase + "...", reqMeta)
 
     var uid string
 
@@ -84,12 +74,13 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 
 	var body RequestBody.ActionReason
 
-	controller.Logger.Info("Binding request...", reqMeta)
+	controller.Log.Info("Binding request...", reqMeta)
 
 	if err := ctx.Bind(&body); err != nil {
-		controller.Logger.Error("Failed to bind request", err.Error(), reqMeta)
+		// Action reason is optional, so even if binding failed this won't be a critical problem
+		controller.Log.Error("Failed to bind request", err.Error(), reqMeta)
 	} else {
-		controller.Logger.Info("Binding request: OK", reqMeta)
+		controller.Log.Info("Binding request: OK", reqMeta)
 	}
 
     act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
@@ -100,7 +91,7 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	controller.Logger.Info(logMessageBase + ": OK", reqMeta)
+	controller.Log.Info(logMessageBase + ": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -186,10 +177,6 @@ func Drop(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func BulkSoftDelete(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Bulk soft deleting users...", reqMeta)
-
     act := controller.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
@@ -203,8 +190,6 @@ func BulkSoftDelete(ctx echo.Context) error {
     if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
-
-	controller.Logger.Info("Bulk soft deleting users: OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -227,10 +212,6 @@ func BulkSoftDelete(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func BulkRestore(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Bulk restoring users...", reqMeta)
-
     act := controller.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
@@ -244,8 +225,6 @@ func BulkRestore(ctx echo.Context) error {
     if err := DB.Database.BulkRestore(act, body.IDs); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
-
-	controller.Logger.Info("Bulk restoring users: OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -267,19 +246,11 @@ func BulkRestore(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func DropAllDeleted(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Dropping all soft deleted user...", reqMeta)
-
     act := controller.GetBasicAction(ctx)
 
     if err := DB.Database.DropAllSoftDeleted(act); err != nil {
-        controller.Logger.Error("Failed to drop all soft deleted user", err.Error(), reqMeta)
-
         return controller.ConvertErrorStatusToHTTP(err)
     }
-
-    controller.Logger.Info("Dropping all soft deleted user: Ok", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -291,7 +262,7 @@ func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.
             return echo.NewHTTPError(http.StatusBadRequest, err.Error())
         }
 
-        user, err := DB.Database.FindAnyUserByID(filter.TargetUID)
+        user, err := DB.Database.GetAnyUserByID(filter.TargetUID)
 
         if err != nil {
             return controller.ConvertErrorStatusToHTTP(err)
@@ -324,29 +295,29 @@ func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.
 func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string) error {
     reqMeta := request.GetMetadata(ctx)
 
-    controller.Logger.Info(logMessageBase + "...", reqMeta)
+    controller.Log.Info(logMessageBase + "...", reqMeta)
 
-    controller.Logger.Trace("Binding request...", reqMeta)
+    controller.Log.Trace("Binding request...", reqMeta)
 
     if err := ctx.Bind(body); err != nil {
-        controller.Logger.Error("Failed to bind request", err.Error(), reqMeta)
+        controller.Log.Error("Failed to bind request", err.Error(), reqMeta)
         return err
     }
 
-    controller.Logger.Trace("Binding request: OK", reqMeta)
+    controller.Log.Trace("Binding request: OK", reqMeta)
 
     uid := ctx.Param("uid")
 
     act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
-    controller.Logger.Trace("Validating user update request...", reqMeta)
+    controller.Log.Trace("Validating user update request...", reqMeta)
 
     if e := validateUpdateRequestBody(act, body); e != nil {
-        controller.Logger.Error("Invalid user update request", e.Error(), reqMeta)
+        controller.Log.Error("Invalid user update request", e.Error(), reqMeta)
         return e
     }
 
-    controller.Logger.Trace("Validating user update request: OK", reqMeta)
+    controller.Log.Trace("Validating user update request: OK", reqMeta)
 
 	if act.TargetUID != act.RequesterUID {
 		act.Reason = body.GetReason()
@@ -362,7 +333,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
     case *RequestBody.ChangeRoles:
         err = DB.Database.ChangeRoles(act, b.Roles)
     default:
-		controller.Logger.Panic(
+		controller.Log.Panic(
 			"Invalid update call",
 			fmt.Sprintf("Unexpected request body type - %T", body),
 			reqMeta,
@@ -371,11 +342,11 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
     }
 
     if err != nil {
-		controller.Logger.Info(logMessageBase + ": FAILED", reqMeta)
+		controller.Log.Info(logMessageBase + ": FAILED", reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	controller.Logger.Info(logMessageBase + ": OK", reqMeta)
+	controller.Log.Info(logMessageBase + ": OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
@@ -469,17 +440,10 @@ func GetRoles(ctx echo.Context) error {
 
     filter := controller.GetBasicAction(ctx).ToUserTargeted(uid)
 
-    reqMeta := request.GetMetadata(ctx)
-
-    controller.Logger.Info("Getting user roles...", reqMeta)
-
     roles, err := DB.Database.GetRoles(filter)
     if err != nil {
-        controller.Logger.Error("Failed to get user roles", err.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(err)
     }
-
-    controller.Logger.Info("Getting user roles: OK", reqMeta)
 
     return ctx.JSON(http.StatusOK, roles)
 }
@@ -503,24 +467,15 @@ func IsLoginAvailable(ctx echo.Context) error {
 
 	login := ctx.QueryParam("login")
 
-	controller.Logger.Info("Checking if login '"+login+"' available...", reqMeta)
-
     if login == "" {
 		message := "query param 'login' isn't specified"
 
-		controller.Logger.Error("Failed to check if login '"+login+"' available", message, reqMeta)
+		controller.Log.Error("Failed to check if login '"+login+"' available", message, reqMeta)
 
-        return echo.NewHTTPError(
-            http.StatusBadRequest,
-			message,
-        )
+        return echo.NewHTTPError(http.StatusBadRequest, message)
     }
 
-    available := DB.Database.IsLoginAvailable(login)
-
-	controller.Logger.Info(
-		"Checking if login '"+login+"' available: " + strconv.FormatBool(available), reqMeta,
-	)
+    available := DB.Database.IsLoginInUse(login)
 
     return ctx.JSON(
         http.StatusOK,
@@ -555,37 +510,40 @@ func SearchUsers(ctx echo.Context) error {
 	rawPageSize := ctx.QueryParam("pageSize")
 
 	if rawFilters == nil || len(rawFilters) == 0 {
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			"Filter is missing",
-		)
+		errMsg := "Filter is missing"
+		controller.Log.Error("Failed to search users", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 	if rawPage == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Query param 'page' is missing")
+		errMsg := "Query param 'page' is missing"
+		controller.Log.Error("Failed to search users", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 	if rawPageSize == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Query param 'pageSize' is missing")
+		errMsg := "Query param 'pageSize' is missing"
+		controller.Log.Error("Failed to search users", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
 	page, parseErr := strconv.Atoi(rawPage)
 	if parseErr != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "page must be an integer number")
+		errMsg := "page must be an integer number"
+		controller.Log.Error("Failed to search users", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 	pageSize, parseErr := strconv.Atoi(rawPageSize)
 	if parseErr != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "pageSize must be an integer number")
+		errMsg := "pageSize must be an integer number"
+		controller.Log.Error("Failed to search users", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
 	act := controller.GetBasicAction(ctx)
-
-	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters...", reqMeta)
 
 	dtos, err := DB.Database.SearchUsers(act, rawFilters, page, pageSize)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
-
-	controller.Logger.Info("Searching for users matching '"+strings.Join(rawFilters, ";")+"' filters: OK", reqMeta)
 
 	return ctx.JSON(http.StatusOK, dtos)
 }
@@ -611,25 +569,21 @@ func GetUserSessions(ctx echo.Context) error {
 	uid := ctx.Param("uid")
 
 	if e := validation.UUID(uid); e != nil {
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			e.ToStatus(
-				"User ID is missing in URL path",
-				"User ID has invalid format (expected UUID)",
-			).Error(),
-		)
+		errMsg := e.ToStatus(
+			"User ID is missing in URL path",
+			"User ID has invalid format (expected UUID)",
+		).Error()
+		controller.Log.Error("Failed to get user sessions", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
-	payload := controller.GetAccessTokenPayload(ctx)
-
-	controller.Logger.Info("Getting user sessions...", reqMeta)
+	payload := controller.GetUserPayload(ctx)
 
 	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
 	// Get locations for this sessions (in SQL query?)
 	sessions, err := DB.Database.GetUserSessions(act)
 	if err != nil {
-		controller.Logger.Error("Failed to get user sessions", err.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
@@ -644,8 +598,6 @@ func GetUserSessions(ctx echo.Context) error {
 			})
 		}
 	}
-
-	controller.Logger.Info("Getting user sessions: OK", reqMeta)
 
 	return ctx.JSON(http.StatusOK, res)
 }
@@ -671,18 +623,15 @@ func GetUser(ctx echo.Context) error {
 	uid := ctx.Param("uid")
 
 	if e := validation.UUID(uid); e != nil {
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			e.ToStatus(
-				"User ID is missing in URL path",
-				"User ID has invalid format (expected UUID)",
-			).Error(),
-		)
+		errMSg := e.ToStatus(
+			"User ID is missing in URL path",
+			"User ID has invalid format (expected UUID)",
+		).Error()
+		controller.Log.Error("Failed to get user", errMSg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMSg)
 	}
 
-	payload := controller.GetAccessTokenPayload(ctx)
-
-	controller.Logger.Info("Getting user sessions...", reqMeta)
+	payload := controller.GetUserPayload(ctx)
 
 	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
@@ -691,7 +640,7 @@ func GetUser(ctx echo.Context) error {
 		return err
 	}
 
-	user, err := DB.Database.FindUserByID(uid)
+	user, err := DB.Database.GetUserByID(uid)
 	if err != nil {
 		return err
 	}

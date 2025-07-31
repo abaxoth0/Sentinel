@@ -47,7 +47,7 @@ type UserActivationEmail struct {
 
 // Creates new activation email, on success immediatly pushes it to mailer queue.
 func CreateAndEnqueueActivationEmail(uid, email string) *Error.Status {
-	emailLogger.Trace("Creating activation token...", nil)
+	log.Trace("Creating activation token...", nil)
 
 	tk, err := token.NewActivationToken(
 		uid,
@@ -55,21 +55,25 @@ func CreateAndEnqueueActivationEmail(uid, email string) *Error.Status {
 		rbac.GetRolesNames(authz.Host.DefaultRoles),
 	)
 	if err != nil {
-		emailLogger.Error("Failed to create new activation token", err.Error(), nil)
+		log.Error("Failed to create new activation token", err.Error(), nil)
 		return err
 	}
 
-	emailLogger.Trace("Creating activation token: OK", nil)
+	log.Trace("Creating activation token: OK", nil)
 
     activationEmail, err := NewUserActivationEmail(email, tk.String())
     if err != nil {
         return err
     }
 
+	log.Trace("Pushing user activation email in mailer queue...", nil)
+
     if err := MainMailer.Push(activationEmail); err != nil {
-        emailLogger.Error("Failed to push email in queue", err.Error(), nil)
+        log.Error("Failed to push email in queue", err.Error(), nil)
         return Error.StatusInternalError
     }
+
+	log.Trace("Pushing user activation email in mailer queue: OK", nil)
 
     return nil
 }
@@ -77,16 +81,14 @@ func CreateAndEnqueueActivationEmail(uid, email string) *Error.Status {
 func NewUserActivationEmail(to string, token string) (*UserActivationEmail, *Error.Status) {
     if err := validation.Email(to); err != nil {
         if err == Error.InvalidValue {
-            return nil, Error.NewStatusError(
-                "Invlaid E-Mail format",
-                http.StatusBadRequest,
-            )
+			errMsg := "Invlaid E-Mail format"
+			log.Error("Failed to create user activation email", errMsg, nil)
+            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
         }
-        if err == Error.NoValue {
-            return nil, Error.NewStatusError(
-                "E-Mail is not specified",
-                http.StatusBadRequest,
-            )
+		if err == Error.NoValue {
+			errMsg := "E-Mail is not specified"
+			log.Error("Failed to create user activation email", errMsg, nil)
+            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
         }
     }
 
@@ -94,6 +96,8 @@ func NewUserActivationEmail(to string, token string) (*UserActivationEmail, *Err
 }
 
 func (e *UserActivationEmail) Send() *Error.Status {
+	log.Trace("Sending user activation email...", nil)
+
     email := gomail.NewMessage()
 
     email.SetHeader("From", config.Secret.MailerEmail)
@@ -105,11 +109,11 @@ func (e *UserActivationEmail) Send() *Error.Status {
     email.SetBody("text/html", body)
 
     if err := dialer.DialAndSend(email); err != nil {
-        return Error.NewStatusError(
-            "Failed to send email: " + err.Error(),
-            http.StatusInternalServerError,
-        )
+		log.Error("Failed to send user activation email", err.Error(), nil)
+        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
     }
+
+	log.Trace("Sending user activation email: OK", nil)
 
     return nil
 }

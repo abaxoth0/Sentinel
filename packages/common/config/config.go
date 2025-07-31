@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var configLogger = logger.NewSource("CONFIG",logger.Default)
+var log = logger.NewSource("CONFIG", logger.Default)
 
 // Wrapper for time.ParseDuration. Panics on error.
 func parseDuration(raw string) time.Duration {
@@ -130,31 +130,31 @@ var (
 var isInit bool = false
 
 func loadConfig(path string, dest *configs) {
-	configLogger.Info("Reading config file...", nil)
+	log.Info("Reading config file...", nil)
 
     file, err := os.Open(path)
 
     if err != nil {
-        configLogger.Fatal("Failed to open config file", err.Error(), nil)
+        log.Fatal("Failed to open config file", err.Error(), nil)
     }
 
     rawConfig, err := io.ReadAll(file)
 
     if err != nil {
-        configLogger.Fatal("Failed to read config file", err.Error(), nil)
+        log.Fatal("Failed to read config file", err.Error(), nil)
     }
 
-    configLogger.Info("Reading config file: OK", nil)
+    log.Info("Reading config file: OK", nil)
 
-    configLogger.Info("Parsing config file...", nil)
+    log.Info("Parsing config file...", nil)
 
     if err := yaml.Unmarshal(rawConfig, dest); err != nil {
-        configLogger.Fatal("Failed to parse config file", err.Error(), nil)
+        log.Fatal("Failed to parse config file", err.Error(), nil)
     }
 
-    configLogger.Info("Parsing config file: OK", nil)
+    log.Info("Parsing config file: OK", nil)
 
-    configLogger.Info("Validating config...", nil)
+    log.Info("Validating config...", nil)
 
     validate := validator.New()
 
@@ -163,24 +163,24 @@ func loadConfig(path string, dest *configs) {
     })
 
     if err := validate.Struct(dest); err != nil {
-        configLogger.Fatal("Failed to validate config", err.Error(), nil)
+        log.Fatal("Failed to validate config", err.Error(), nil)
         os.Exit(1)
     }
 
 	if !slices.Contains(dest.authConfing.TokenAudience, dest.authConfing.SelfAudience) {
-        configLogger.Fatal("Failed to validate config", "Value of 'self-audience' must exists in 'token-audience'", nil)
+        log.Fatal("Failed to validate config", "Value of 'self-audience' must exists in 'token-audience'", nil)
         os.Exit(1)
 	}
 
-    configLogger.Info("Validating config: OK", nil)
+    log.Info("Validating config: OK", nil)
 }
 
 func Init() {
     if isInit {
-        configLogger.Fatal("Failed to initialize config", "Config already initialized", nil)
+        log.Fatal("Failed to initialize config", "Config already initialized", nil)
     }
 
-	configLogger.Info("Initializing...", nil)
+	log.Info("Initializing...", nil)
 
     configs := new(configs)
 
@@ -198,7 +198,7 @@ func Init() {
     Email = &configs.emailConfig
 	Sentry = &configs.sentry
 
-	configLogger.Info("Initializing: OK", nil)
+	log.Info("Initializing: OK", nil)
 
     isInit = true
 }

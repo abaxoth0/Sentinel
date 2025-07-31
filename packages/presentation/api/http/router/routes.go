@@ -20,7 +20,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-var routerLogger = logger.NewSource("ROUTER", logger.Default)
+var log = logger.NewSource("ROUTER", logger.Default)
 
 // i could just explicitly pass empty string in routes when i need it
 // but it looks really awful, shitty and not obvious

@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"sentinel/packages/common/logger"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
 	LocationTable "sentinel/packages/infrastructure/DB/postgres/table/location"
@@ -9,8 +8,6 @@ import (
 	UserTable "sentinel/packages/infrastructure/DB/postgres/table/user"
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
 )
-
-var dbLogger = logger.NewSource("DB", logger.Default)
 
 // Cuz all this structs are named "Manager" they can't be directly put into postgres struct,
 // this will cause an error. So the most easy solution for this problem is to create type aliases for them.

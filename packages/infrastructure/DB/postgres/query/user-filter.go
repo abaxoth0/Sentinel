@@ -1,17 +1,27 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"sentinel/packages/core/filter"
 	"sentinel/packages/core/user"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"strconv"
 )
+
 type UserFilter struct {
 	Property  user.Property
 	Cond 	  filterCond
 	Value 	  any
 }
 
+// Creates valid SQL query condition based on this UserFilter.
+// n - number of argument, used for value placeholders.
+// If Cond is CondIsNull or CondIsNotNull then placeholder will be ommited.
+// Example output:
+// 	- "id = $1"
+//	- "roles @> $8"
+//	- "deleted_at IS NULL"
 func (f UserFilter) Build(n int) string {
 	base := string(f.Property) + " " + string(f.Cond)
 
@@ -23,34 +33,25 @@ func (f UserFilter) Build(n int) string {
 	return base + " $" + strconv.FormatInt(int64(n), 10)
 }
 
-func (f UserFilter) StringValue() string {
-	v, ok := f.Value.(string)
-	if !ok {
-		queryLogger.Panic(
-			"Failed to find user",
-			fmt.Sprintf("Query filter field 'value' has invalid type. Expected string, but got %T", f.Value),
-			nil,
-		)
-		return ""
-	}
-
-	return v
-}
-
 // Converts []filter.Entity[user.Property] to []QueryFilter.
-// Returns error if there are some validation error.
-func MapAndValidateUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error) {
+func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error) {
+	log.DB.Trace("Mapping user filters...", nil)
+
 	queryFilter := make([]UserFilter, len(filters))
 
 	for i, f := range filters {
 		if f.Property == "" || f.Cond == 0 {
-			return nil, fmt.Errorf(
-				"Filter property or condition has invalid value. Property value: %v; Condition value: %v",
+			errMsg := fmt.Sprintf(
+				"Filter property or condition has invalid value. Property: %v; Condition: %v",
 				f.Property, f.Cond,
 			)
+			log.DB.Error("Failed to map user filters", errMsg, nil)
+			return nil, errors.New(errMsg)
 		}
 		if f.Cond != filter.IsNull && f.Cond != filter.IsNotNull && f.Value == nil{
-			return nil, fmt.Errorf("Filter value is missing or nil")
+			errMsg := "Filter Value is missing or nil"
+			log.DB.Error("Failed to map user filters", errMsg, nil)
+			return nil, errors.New(errMsg)
 		}
 
 		queryFilter[i] = UserFilter{
@@ -59,6 +60,8 @@ func MapAndValidateUserFilters(filters []filter.Entity[user.Property]) ([]UserFi
 			Value: f.Value,
 		}
 	}
+
+	log.DB.Trace("Mapping user filters: OK", nil)
 
 	return queryFilter, nil
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var middlewareLogger = logger.NewSource("MIDDLEWARE", logger.Default)
+var middlewareLog = logger.NewSource("MIDDLEWARE", logger.Default)
 
 // Used to prevent sensitive data caching at transport layer
 func noCache(next echo.HandlerFunc) echo.HandlerFunc {
@@ -45,7 +45,7 @@ func checkOrigin(next echo.HandlerFunc) echo.HandlerFunc {
 		origin := req.Header.Get("Origin")
 
 		if origin != "" && !slices.Contains(config.HTTP.AllowedOrigins, origin) {
-			middlewareLogger.Error("Invalid request origin", "Origin isn't allowed", request.GetMetadata(ctx))
+			middlewareLog.Error("Invalid request origin", "Origin isn't allowed", request.GetMetadata(ctx))
 			return echo.NewHTTPError(
 				http.StatusForbidden,
 				"Invalid origin",
@@ -166,8 +166,8 @@ func secure(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		reqMeta := request.GetMetadata(ctx)
 
-		middlewareLogger.Debug("Route "+ctx.Request().Method+" "+ctx.Path()+" is secured", reqMeta)
-		middlewareLogger.Trace("Extracting access token from the request...", reqMeta)
+		middlewareLog.Debug("Route "+ctx.Request().Method+" "+ctx.Path()+" is secured", reqMeta)
+		middlewareLog.Trace("Extracting access token from the request...", reqMeta)
 
 		authHeader := ctx.Request().Header.Get("Authorization")
 		if strings.ReplaceAll(authHeader, " ", "") == "" {
@@ -198,11 +198,11 @@ func secure(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		ctx.Set("access_token", accessToken)
-		ctx.Set("access_token_payload", payload)
+		ctx.Set("user_payload", payload)
 		ctx.Set("basic_action", &act.Basic)
 		ctx.Set("Secured", true)
 
-		middlewareLogger.Trace("Extracting access token from the request: OK", reqMeta)
+		middlewareLog.Trace("Extracting access token from the request: OK", reqMeta)
 
 		return next(ctx)
 	}
@@ -225,16 +225,16 @@ func preventUserDesync(next echo.HandlerFunc) echo.HandlerFunc {
 		reqMeta := request.GetMetadata(ctx)
 
 		if secured := ctx.Get("Secured"); secured == nil || !secured.(bool) {
-			middlewareLogger.Panic(
+			middlewareLog.Panic(
 				"Failed to check user data synchronization",
 				"Invalid usage of preventUserDesync middleware: route/group must be secured via 'secure' middleware",
 				reqMeta,
 			)
 		}
 
-		middlewareLogger.Trace("Checking if user desynced...", reqMeta)
+		middlewareLog.Trace("Checking if user desynced...", reqMeta)
 
-		payload := controller.GetAccessTokenPayload(ctx)
+		payload := controller.GetUserPayload(ctx)
 
 		actualVersion, err := DB.Database.GetUserVersion(payload.ID)
 		if err != nil {
@@ -253,7 +253,7 @@ func preventUserDesync(next echo.HandlerFunc) echo.HandlerFunc {
 			)
 		}
 
-		middlewareLogger.Trace("Checking if user desynced: OK", reqMeta)
+		middlewareLog.Trace("Checking if user desynced: OK", reqMeta)
 
 		return next(ctx)
 	}

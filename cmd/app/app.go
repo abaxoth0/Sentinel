@@ -16,7 +16,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var appLogger = logger.NewSource("APP", logger.Default)
+var log = logger.NewSource("APP", logger.Default)
 
 func Start(Router *echo.Echo) {
     stop := make(chan os.Signal, 1)
@@ -24,7 +24,9 @@ func Start(Router *echo.Echo) {
     signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
     if config.App.IsLoginEmail {
-        email.Run()
+		if err := email.Run(); err != nil {
+			log.Fatal("Failed to start mailer", err.Error(), nil)
+		}
     }
 
     go func(){
@@ -36,7 +38,7 @@ func Start(Router *echo.Echo) {
 			err = Router.Start(":" + config.HTTP.Port)
 		}
 
-        appLogger.Info(err.Error(), nil)
+        log.Info(err.Error(), nil)
     }()
 
     printAppInfo()
@@ -44,38 +46,38 @@ func Start(Router *echo.Echo) {
     sig := <-stop
 
     println()
-    appLogger.Info(sig.String() + " signal received, shutting down...", nil)
+    log.Info(sig.String() + " signal received, shutting down...", nil)
 
     ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
     defer cancel()
 
     if err := Router.Shutdown(ctx); err != nil {
-        appLogger.Error("Failed to stop HTTP server", err.Error(), nil)
+        log.Error("Failed to stop HTTP server", err.Error(), nil)
     } else {
-        appLogger.Info("HTTP server stopped", nil)
+        log.Info("HTTP server stopped", nil)
     }
 
 	Shutdown()
 }
 
 func Shutdown() {
-    appLogger.Info("Shutting down...", nil)
+    log.Info("Shutting down...", nil)
 
     if err := DB.Database.Disconnect(); err != nil {
-        appLogger.Error("Failed to disconnect from DB", err.Error(), nil)
+        log.Error("Failed to disconnect from DB", err.Error(), nil)
     }
 
     if err := cache.Client.Close(); err != nil {
-        appLogger.Error("Failed to disconnect from DB", err.Error(), nil)
+        log.Error("Failed to disconnect from DB", err.Error(), nil)
     }
 
     if config.App.IsLoginEmail {
         if err := email.Stop(); err != nil {
-            appLogger.Error("Failed to stop mailer", err.Error(), nil)
+            log.Error("Failed to stop mailer", err.Error(), nil)
         }
     }
 
-    appLogger.Info("Shutted down", nil)
+    log.Info("Shutted down", nil)
 }
 
 func printAppInfo() {
@@ -97,11 +99,11 @@ func printAppInfo() {
     fmt.Printf("  Listening on port: %s\n\n", config.HTTP.Port)
 
     if config.Debug.Enabled {
-        appLogger.Warning("Debug mode enabled.", nil)
+        log.Warning("Debug mode enabled.", nil)
     }
 
 	if !config.HTTP.Secured {
-		appLogger.Warning("HTTPS Disabled", nil)
+		log.Warning("HTTPS Disabled", nil)
 	}
 
 	print("\n\n")

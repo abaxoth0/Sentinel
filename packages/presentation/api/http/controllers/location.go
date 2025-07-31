@@ -10,7 +10,7 @@ import (
 )
 
 func UpdateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *Error.Status {
-	Logger.Trace("Updating location for session "+sessionID+"...", nil)
+	Log.Trace("Updating location for session "+sessionID+"...", nil)
 
 	location, err := DB.Database.GetLocationBySessionID(act, sessionID)
 	if err != nil {
@@ -25,20 +25,16 @@ func UpdateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *E
 
 		newLocation.SessionID = sessionID
 
-		Logger.Trace("Saving new location for session "+sessionID+"...", nil)
-
 		if err := DB.Database.SaveLocation(newLocation); err != nil {
 			return err
 		}
-
-		Logger.Trace("Saving new location for session "+sessionID+": OK", nil)
 	} else {
 		if config.Debug.Enabled && config.Debug.LocationIP != "" {
-			Logger.Debug("Request IP changed: "+ip.To4().String()+" -> "+config.Debug.LocationIP, nil)
+			Log.Debug("Request IP changed: "+ip.To4().String()+" -> "+config.Debug.LocationIP, nil)
 			ip = net.ParseIP(config.Debug.LocationIP)
 		}
 		if ip.Equal(location.IP) {
-			Logger.Trace("Location update skipped: location IP and request IP are the same", nil)
+			Log.Info("Location update skipped: IP address of location hasn't changed", nil)
 			return nil
 		}
 
@@ -49,16 +45,12 @@ func UpdateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *E
 
 		newLocation.SessionID = sessionID
 
-		Logger.Trace("Updating existing location for session "+sessionID+"...", nil)
-
 		if err := DB.Database.UpdateLocation(location.ID, newLocation); err != nil {
 			return err
 		}
-
-		Logger.Trace("Updating existing location for session "+sessionID+": OK", nil)
 	}
 
-	Logger.Trace("Updating location for session "+sessionID+":OK", nil)
+	Log.Trace("Updating location for session "+sessionID+":OK", nil)
 
 	return nil
 }

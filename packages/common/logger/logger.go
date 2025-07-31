@@ -78,7 +78,7 @@ type TransmittingLogger interface {
 type logHandler = func (*LogEntry)
 
 // Returns false if log must not be processed
-func logPreprocessing(entry *LogEntry, transmissions []Logger) bool {
+func preprocess(entry *LogEntry, transmissions []Logger) bool {
     if entry.rawLevel == DebugLogLevel && !Debug.Load() {
         return false
     }

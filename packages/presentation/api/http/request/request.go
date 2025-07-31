@@ -36,13 +36,16 @@ func Middleware(next echo.HandlerFunc) echo.HandlerFunc {
 // Retrieves metadata from the context.
 // Will panic if request.Middleware wasn't applied to the router.
 func GetMetadata(ctx echo.Context) logger.Meta {
-	switch m := ctx.Get(metaKey).(type) {
+	transport.Log.Trace("Getting request metadata...", nil)
+
+	switch meta := ctx.Get(metaKey).(type) {
 	case logger.Meta:
-		return m
+		transport.Log.Trace("Getting request metadata: OK", nil)
+		return meta
 	case nil:
 		id := ctx.Response().Header().Get("X-Request-Id")
 
-		transport.Logger.Panic(
+		transport.Log.Panic(
 			"Failed to get metadata from context",
 			"Request meta wasn't set (check if middleware applied correctly)",
 			newMeta(id, ctx.Request()),
@@ -51,11 +54,12 @@ func GetMetadata(ctx echo.Context) logger.Meta {
 	default:
 		id := ctx.Response().Header().Get("X-Request-Id")
 
-		transport.Logger.Panic(
+		transport.Log.Panic(
 			"Failed to get metadata from context",
-			fmt.Sprintf("Request meta has invalid type. Expected logger.Meta, but got %T", m),
+			fmt.Sprintf("Request meta has invalid type. Expected logger.Meta, but got %T", meta),
 			newMeta(id, ctx.Request()),
 		)
+
 		return nil
 	}
 }

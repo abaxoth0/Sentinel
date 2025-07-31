@@ -60,7 +60,7 @@ func GoogleLogin(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
 	if !isInit {
-		controller.Logger.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
+		controller.Log.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
 		return controller.ConvertErrorStatusToHTTP(Error.StatusInternalError)
 	}
 
@@ -111,7 +111,7 @@ func GoogleCallback(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
 	if !isInit {
-		controller.Logger.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
+		controller.Log.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
 		return echo.NewHTTPError(
 			Error.StatusInternalError.Status(),
 			Error.StatusInternalError.Error(),
@@ -120,10 +120,9 @@ func GoogleCallback(ctx echo.Context) error {
 
 	code := ctx.QueryParam("code")
 	if code == "" {
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			"Missing query param: code",
-		)
+		errMsg := "Missing query param: code"
+		controller.Log.Error("Login failed", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
 	c, cancel := context.WithTimeout(context.Background(), time.Second * 5)
@@ -131,7 +130,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 	oauthToken, err := googleOAuthConfig.Exchange(c, code)
 	if err != nil {
-		controller.Logger.Error("Cringe", err.Error(), reqMeta)
+		controller.Log.Error("Login failed", err.Error(), reqMeta)
 		return echo.NewHTTPError(
 			Error.StatusInternalError.Status(),
 			Error.StatusInternalError.Error(),
@@ -142,7 +141,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 	userInfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		controller.Logger.Error("Failed to get user info from google API", err.Error(), reqMeta)
+		controller.Log.Error("Failed to get user info from google API", err.Error(), reqMeta)
 		return echo.NewHTTPError(
 			Error.StatusInternalError.Status(),
 			Error.StatusInternalError.Error(),
@@ -159,20 +158,19 @@ func GoogleCallback(ctx echo.Context) error {
 	}
 
 	if !body.IsEmailVerified {
-		return echo.NewHTTPError(
-			http.StatusForbidden,
-			"Your email isn't verified by google",
-		)
+		errMsg := "Your email isn't verified by google"
+		controller.Log.Error("Login failed", errMsg, reqMeta)
+		return echo.NewHTTPError(http.StatusForbidden, errMsg)
 	}
 
-	user, e := DB.Database.FindUserByLogin(body.Email)
+	user, e := DB.Database.GetUserByLogin(body.Email)
 	if e != nil && e != Error.StatusNotFound {
 		return controller.ConvertErrorStatusToHTTP(e)
 	}
 
 	// User with this email doesn't exists -> create new user
 	if e == Error.StatusNotFound {
-		controller.Logger.Info("Creating new user...", reqMeta)
+		controller.Log.Trace("Generating password for new user...", reqMeta)
 
 		password, err := pwgen.Generate(&pwgen.Config{
 			Length: 32,
@@ -181,19 +179,17 @@ func GoogleCallback(ctx echo.Context) error {
 			Upper: true,
 		})
 		if err != nil {
-			return echo.NewHTTPError(
-				http.StatusInternalServerError,
-				"Failed to generate password",
-			)
+			errMsg := "Failed to generate password"
+			controller.Log.Error("Failed to generate password for new user", errMsg, reqMeta)
+			return echo.NewHTTPError(http.StatusInternalServerError, errMsg)
 		}
+
+		controller.Log.Trace("Generating password for new user: OK", reqMeta)
 
 		uid, e := DB.Database.Create(body.Email, password)
 		if e != nil {
-			controller.Logger.Error("Failed to create new user", e.Error(), reqMeta)
 			return controller.ConvertErrorStatusToHTTP(e)
 		}
-
-		controller.Logger.Info("Creating new user: OK", reqMeta)
 
 		// There are may occur a problem since DB.Database.Create() creates user in primary DB,
 		// but DB.Database.FindUserByID() tries to find user in replica DB.
@@ -205,7 +201,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 		// Max wait time = maxRetries * retryWaitTime
 		for retries <= maxRetries {
-			user, e = DB.Database.FindUserByID(uid)
+			user, e = DB.Database.GetUserByID(uid)
 			if e != nil && e != Error.StatusNotFound {
 				return controller.ConvertErrorStatusToHTTP(e)
 			}
@@ -217,10 +213,10 @@ func GoogleCallback(ctx echo.Context) error {
 			retries++
 		}
 
-		controller.Logger.Trace("Retries of searching for a created user: " + strconv.Itoa(retries), reqMeta)
+		controller.Log.Trace("Retries of searching for a created user: " + strconv.Itoa(retries), reqMeta)
 
 		if retries == maxRetries {
-			controller.Logger.Error(
+			controller.Log.Error(
 				"Failed to find created user",
 				"Timeout: replica DB didn't have enough time to synchronize with primary DB",
 				reqMeta,
@@ -242,33 +238,22 @@ func GoogleCallback(ctx echo.Context) error {
 
 		accessToken, refreshToken, e := token.NewAuthTokens(payload)
 		if e != nil {
-			controller.Logger.Error("Failed to authenticate user '"+body.Email+"'", e.Error(), reqMeta)
 			return controller.ConvertErrorStatusToHTTP(e)
 		}
 
 		session, e := controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
 		if e != nil {
-			controller.Logger.Error("Failed to create session for user " + user.ID, e.Error(), reqMeta)
 			return controller.ConvertErrorStatusToHTTP(e)
 		}
 
 		if e := DB.Database.SaveSession(session); e != nil {
-			controller.Logger.Error("Failed to save session", e.Error(), reqMeta)
-			er := Error.NewStatusError(
-				"Failed to save session",
-				http.StatusInternalServerError,
-			)
-			return controller.ConvertErrorStatusToHTTP(er)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
 		}
 
 		act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
 		if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
-			controller.Logger.Error("Failed to update location for session " + session.ID, err.Error(), reqMeta)
-
-			e := DB.Database.RevokeSession(act, session.ID)
-			if e != nil {
-				controller.Logger.Error("Failed to revoke session " + session.ID, err.Error(), reqMeta)
+			if e = DB.Database.RevokeSession(act, session.ID); e != nil {
 				return controller.ConvertErrorStatusToHTTP(e)
 			}
 			return controller.ConvertErrorStatusToHTTP(err)
@@ -297,8 +282,7 @@ func GoogleCallback(ctx echo.Context) error {
 	session, e := DB.Database.GetSessionByDeviceAndUserID(deviceID, user.ID)
 	if e == nil && session.Browser == browser {
 		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
-		controller.Logger.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
-		controller.Logger.Info("Updating user session...", reqMeta)
+		controller.Log.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
 
 		accessToken, refreshToken, err := controller.UpdateSession(ctx, session, user, &UserDTO.Payload{
 			ID: user.ID,
@@ -308,11 +292,9 @@ func GoogleCallback(ctx echo.Context) error {
 			Version: user.Version,
 		})
 		if err == nil {
-			controller.Logger.Info("Updating user session: OK", reqMeta)
-
 			ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
-			controller.Logger.Info("Authenticating user '"+body.Email+"': OK", reqMeta)
+			controller.Log.Info("Authenticating user '"+body.Email+"': OK", reqMeta)
 
 			return ctx.JSON(
 				http.StatusOK,
@@ -336,41 +318,30 @@ func GoogleCallback(ctx echo.Context) error {
 
     accessToken, refreshToken, e := token.NewAuthTokens(payload)
     if e != nil {
-		controller.Logger.Error("Failed to authenticate user '"+body.Email+"'", e.Error(), reqMeta)
         return controller.ConvertErrorStatusToHTTP(e)
     }
 
 	session, e = controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
 	if e != nil {
-		controller.Logger.Error("Failed to create session for user " + user.ID, e.Error(), reqMeta)
 		return controller.ConvertErrorStatusToHTTP(e)
 	}
 
 	if err := DB.Database.SaveSession(session); err != nil {
-		controller.Logger.Error("Failed to save session", err.Error(), reqMeta)
-		e := Error.NewStatusError(
-			"Failed to save session",
-			http.StatusInternalServerError,
-		)
-		return controller.ConvertErrorStatusToHTTP(e)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
 	}
 
 	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-	if e := controller.UpdateLocation(act, session.ID, session.IpAddress); e != nil {
-		controller.Logger.Error("Failed to update location for session " + session.ID, e.Error(), reqMeta)
-
-		e := DB.Database.RevokeSession(act, session.ID)
-		if e != nil {
-			controller.Logger.Error("Failed to revoke session " + session.ID, e.Error(), reqMeta)
+	if err := controller.UpdateLocation(act, session.ID, session.IpAddress); err != nil {
+		if e = DB.Database.RevokeSession(act, session.ID); e != nil {
 			return controller.ConvertErrorStatusToHTTP(e)
 		}
-		return controller.ConvertErrorStatusToHTTP(e)
+		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
     ctx.SetCookie(controller.NewAuthCookie(refreshToken))
 
-	controller.Logger.Info("Authenticating user '"+body.Email+"': OK", reqMeta)
+	controller.Log.Info("Authenticating user '"+body.Email+"': OK", reqMeta)
 
     return ctx.JSON(
         http.StatusOK,

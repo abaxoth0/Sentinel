@@ -1,6 +1,6 @@
-package mappers
+package mapper
 
 import "sentinel/packages/common/logger"
 
-var Logger = logger.NewSource("MAPPER", logger.Default)
+var Log = logger.NewSource("MAPPER", logger.Default)
 

@@ -20,24 +20,24 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var Logger = logger.NewSource("CONTROLLER", logger.Default)
+var Log = logger.NewSource("CONTROLLER", logger.Default)
 
 func BindAndValidate[T RequestBody.Validator](ctx echo.Context, dest T) error {
     reqMeta := request.GetMetadata(ctx)
 
-    Logger.Trace("Binding and validating request...", reqMeta)
+    Log.Trace("Binding and validating request...", reqMeta)
 
     if err := ctx.Bind(&dest); err != nil {
-        Logger.Error("Failed to bind request", err.Error(), reqMeta)
+        Log.Error("Failed to bind request", err.Error(), reqMeta)
         return err
     }
 
     if err := dest.Validate(); err != nil {
-        Logger.Error("Request validation failed", err.Error(), reqMeta)
+        Log.Error("Request validation failed", err.Error(), reqMeta)
         return echo.NewHTTPError(http.StatusBadRequest, err.Error())
     }
 
-    Logger.Trace("Binding and validating request: OK", reqMeta)
+    Log.Trace("Binding and validating request: OK", reqMeta)
 
     return nil
 }
@@ -58,7 +58,7 @@ func applyWWWAuthenticate(ctx echo.Context, params *wwwAuthenticateParamas) {
 func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
 	reqMeta := request.GetMetadata(ctx)
 
-	Logger.Trace("Handling token error...", reqMeta)
+	Log.Trace("Handling token error...", reqMeta)
 
     // token persist, but invalid
     if token.IsTokenError(err) {
@@ -70,7 +70,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
 
         authCookie, err := GetAuthCookie(ctx)
         if err != nil {
-			Logger.Trace("Handling token error: OK", reqMeta)
+			Log.Trace("Handling token error: OK", reqMeta)
             return err
         }
 
@@ -84,7 +84,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
         })
     }
 
-	Logger.Trace("Handling token error: OK", reqMeta)
+	Log.Trace("Handling token error: OK", reqMeta)
 
     return ConvertErrorStatusToHTTP(err)
 }
@@ -102,19 +102,19 @@ func getNonNilValueFromSecuredRequestContext[T any](ctx echo.Context, key string
 		secured := ctx.Get("Secured")
 		switch s := secured.(type) {
 		case bool:
-			Logger.Panic(
+			Log.Panic(
 				"Failed to get value from request context",
 				fmt.Sprintf("Route %s %s isn't secured", ctx.Request().Method, ctx.Path()),
 				nil,
 			)
 		default:
-			Logger.Panic(
+			Log.Panic(
 				"Failed to get value from request context",
 				fmt.Sprintf("Secured has invalid type: Expected bool, but got %T", s),
 				nil,
 			)
 		}
-		Logger.Panic(
+		Log.Panic(
 			"Failed to get value from request context",
 			"value is nil",
 			nil,
@@ -125,7 +125,7 @@ func getNonNilValueFromSecuredRequestContext[T any](ctx echo.Context, key string
 	case T:
 		return v
 	default:
-		Logger.Panic(
+		Log.Panic(
 			"Failed to get value from request context",
 			fmt.Sprintf("value has invalid type: %T", v),
 			nil,
@@ -146,8 +146,8 @@ func GetAccessToken(ctx echo.Context) *jwt.Token {
 // Otherwise, using this function will cause panic.
 //
 // Returned value guaranteed to be non-nil.
-func GetAccessTokenPayload(ctx echo.Context) *UserDTO.Payload {
-	return getNonNilValueFromSecuredRequestContext[*UserDTO.Payload](ctx, "access_token_payload")
+func GetUserPayload(ctx echo.Context) *UserDTO.Payload {
+	return getNonNilValueFromSecuredRequestContext[*UserDTO.Payload](ctx, "user_payload")
 }
 
 // IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
@@ -167,15 +167,14 @@ const refreshTokenCookieKey string = "refreshToken"
 func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 	reqMeta := request.GetMetadata(ctx)
 
-	Logger.Trace("Getting refresh token from the request...", reqMeta)
+	Log.Trace("Getting refresh token from the request...", reqMeta)
 
     cookie, err := ctx.Cookie(refreshTokenCookieKey)
     if err != nil {
+		Log.Error("Failed to get refresh token from cookie", err.Error(), reqMeta)
         if err == http.ErrNoCookie {
             return nil, Error.StatusUnauthorized
         }
-
-        Logger.Error("Failed to get auth cookie", err.Error(), reqMeta)
         return nil, Error.StatusInternalError
     }
 
@@ -184,7 +183,7 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
         return nil, e
     }
 
-	Logger.Trace("Getting refresh token from the request: OK", reqMeta)
+	Log.Trace("Getting refresh token from the request: OK", reqMeta)
 
 	return token, nil
 }
@@ -192,16 +191,16 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 func NewCSRFToken(ctx echo.Context) (string, *Error.Status) {
 	reqMeta := request.GetMetadata(ctx)
 
-	Logger.Trace("Generating CSRF token...", reqMeta)
+	Log.Trace("Generating CSRF token...", reqMeta)
 
 	token := make([]byte, 32)
     if _, err := rand.Read(token); err != nil {
-		Logger.Error("Failed to generate CSRF token", err.Error(), reqMeta)
+		Log.Error("Failed to generate CSRF token", err.Error(), reqMeta)
         return "", Error.StatusInternalError
     }
     tokenStr := base64.RawURLEncoding.EncodeToString(token)
 
-	Logger.Trace("Generating CSRF token: OK", reqMeta)
+	Log.Trace("Generating CSRF token: OK", reqMeta)
 
 	return tokenStr, nil
 }

@@ -4,6 +4,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	LocationDTO "sentinel/packages/core/location/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 )
@@ -11,11 +12,14 @@ import (
 // TODO add private method for updating without authz and add authz for this method, do the same for sessions
 // 		(also need to request ActionDTO.Targeted instead of location id)
 func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Error.Status {
+	log.DB.Trace("Updating locaiton "+id+"...", nil)
+
 	location, err := m.getLocationByID(id)
 	if err != nil {
 		return err
 	}
 	if !location.DeletedAt.IsZero() {
+		log.DB.Error("Failed to update locaiton "+id, Error.StatusNotFound.Error(), nil)
 		return Error.StatusNotFound
 	}
 
@@ -40,13 +44,13 @@ func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Erro
 		return err
 	}
 
-	err = cache.Client.Delete(
+	// TODO handle error
+	cache.Client.Delete(
 		cache.KeyBase[cache.LocationByID] + id,
 		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,
 	)
-	if err != nil {
-		locationLogger.Error("Failed to delete cache", err.Error(), nil)
-	}
+
+	log.DB.Trace("Updating locaiton "+id+"...", nil)
 
 	return nil
 }

@@ -45,7 +45,7 @@ func (m *Mailer) Run() error {
     m.isRunning = true
     m.mut.Unlock()
 
-    emailLogger.Info("Mailer '"+m.name+"' started", nil)
+    log.Info("Mailer '"+m.name+"' started", nil)
 
     for {
         select {
@@ -62,16 +62,16 @@ func (m *Mailer) Run() error {
                 continue
             }
 
-			emailLogger.Trace("Mailer '"+m.name+"': sending email...", nil)
+			log.Trace("Mailer '"+m.name+"': sending email...", nil)
 
             if err := email.Send(); err != nil {
                 // Try to send email again if first attempt failed
                 if err := email.Send(); err != nil {
-					emailLogger.Error("Mailer '"+m.name+"': failed to send email", err.Error(), nil)
+					log.Error("Mailer '"+m.name+"': failed to send email", err.Error(), nil)
                 }
             }
 
-			emailLogger.Trace("Mailer '"+m.name+"': sending email: OK", nil)
+			log.Trace("Mailer '"+m.name+"': sending email: OK", nil)
         }
     }
 }
@@ -79,7 +79,7 @@ func (m *Mailer) Run() error {
 // Stops mailer loop.
 // Doesn't wait for all emails to be send.
 func (m *Mailer) Stop() error {
-	emailLogger.Info("Mailer '"+m.name+"': shutting down...", nil)
+	log.Info("Mailer '"+m.name+"': shutting down...", nil)
 
     m.mut.Lock()
 
@@ -92,19 +92,19 @@ func (m *Mailer) Stop() error {
 
     m.mut.Unlock()
 
-	emailLogger.Info("Mailer '"+m.name+"': waiting till queue is empty...", nil)
+	log.Info("Mailer '"+m.name+"': waiting till queue is empty...", nil)
 
     if timeout := m.queue.WaitTillEmpty(time.Second * 5); timeout != nil {
-        emailLogger.Error(
+        log.Error(
 			"Mailer '"+m.name+"': failed to wait till queue is empty",
 			"Operation timeout waiting",
 			nil,
 		)
     } else {
-		emailLogger.Info("Mailer '"+m.name+"': waiting till queue is empty: OK", nil)
+		log.Info("Mailer '"+m.name+"': waiting till queue is empty: OK", nil)
     }
 
-	emailLogger.Info("Mailer '"+m.name+"': waiting till current work is finished...", nil)
+	log.Info("Mailer '"+m.name+"': waiting till current work is finished...", nil)
 
     // at this point mailer loop still can process some email so...
     m.cancel()
@@ -113,8 +113,8 @@ func (m *Mailer) Stop() error {
         select {
         // ...wait till mailer loop will finish it's current work...
         case <-m.done:
-			emailLogger.Info("Mailer '"+m.name+"': waiting till current work is finished: OK", nil)
-            emailLogger.Info(
+			log.Info("Mailer '"+m.name+"': waiting till current work is finished: OK", nil)
+            log.Info(
 				fmt.Sprintf("Mailer '"+m.name+"': shut down with %d pending emails", m.queue.Size()),
 				nil,
             )
@@ -122,7 +122,7 @@ func (m *Mailer) Stop() error {
             return nil
         // ... or after some long time roll back queue and return timeout error.
         case <-time.After(time.Second * 5):
-            emailLogger.Error(
+            log.Error(
 				"Mailer '"+m.name+"': failed to wait till all current job is done, queue will be rolled back",
 				"Operation timeout",
 				nil,

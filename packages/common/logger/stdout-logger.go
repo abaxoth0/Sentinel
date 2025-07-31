@@ -25,7 +25,7 @@ func (l stdoutLogger) log(entry *LogEntry) {
 }
 
 func (l stdoutLogger) Log(entry *LogEntry) {
-    if ok := logPreprocessing(entry, nil); !ok {
+    if ok := preprocess(entry, nil); !ok {
         return
     }
 

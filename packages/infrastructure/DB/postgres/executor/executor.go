@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
-	"sentinel/packages/common/logger"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"strconv"
 	"strings"
@@ -17,27 +17,23 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-var executorLogger = logger.NewSource("EXECUTOR", logger.Default)
-
 var conManager *connection.Manager
 
 func Init(manager *connection.Manager) {
 	if manager == nil {
-		executorLogger.Panic(
-			"Failed to initlized DB executor module",
-			"Connetion manager can't be nil",
+		log.DB.Panic(
+			"Failed to initlized database query executor",
+			"Connetion manager is nil",
 			nil,
 		)
 	}
 	conManager = manager
 }
 
-// Prepares query for execution by acquiring connection and creating contex.
-// Also initializes q.free(), which is used to release connection and close context.
-//
-// Will cause panic if query was already prepared.
-func prepare(conType connection.Type, q *query.Query) (*executionContext, context.CancelFunc, *Error.Status) {
-    con, err := conManager.GetConnection(conType)
+// Creates new execution context.
+// Instead of newExecutionContext() which just creates it, this function make it ready-to-use.
+func initExecutionContext(conType connection.Type, q *query.Query) (*executionContext, context.CancelFunc, *Error.Status) {
+    con, err := conManager.AcquireConnection(conType)
     if err != nil {
         return nil, nil, err
     }
@@ -72,7 +68,7 @@ func prepare(conType connection.Type, q *query.Query) (*executionContext, contex
 			}
 		}
 
-		executorLogger.Debug("Running query:\n" + q.SQL + "\n * Query args: " + strings.Join(args, "; "), nil)
+		log.DB.Debug("Running query:\n" + q.SQL + "\n * Query args: " + strings.Join(args, "; "), nil)
 	}
 
 	ctx, cancel := newExecutionContext(context.Background(), time.Second * 5, con)
@@ -81,7 +77,7 @@ func prepare(conType connection.Type, q *query.Query) (*executionContext, contex
 }
 
 func Rows(conType connection.Type, query *query.Query) (pgx.Rows, *Error.Status) {
-	ctx, cancel, err := prepare(conType, query)
+	ctx, cancel, err := initExecutionContext(conType, query)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +85,7 @@ func Rows(conType connection.Type, query *query.Query) (pgx.Rows, *Error.Status)
 
 	r, e := ctx.Connection.Query(ctx, query.SQL, query.Args...)
 	if e != nil {
-		return nil, query.ConvertError(err)
+		return nil, query.ConvertAndLogError(e)
 	}
 
 	return r, nil
@@ -104,7 +100,7 @@ type rowScanner = func(dests ...any) *Error.Status
 
 // Wrapper for '*pgxpool.Con.QueryRow'
 func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status) {
-	ctx, cancel, err := prepare(conType, query)
+	ctx, cancel, err := initExecutionContext(conType, query)
 	if err != nil {
 		return nil, err
 	}
@@ -113,12 +109,14 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 	row := ctx.Connection.QueryRow(ctx, query.SQL, query.Args...)
 
     return func (dests ...any) *Error.Status {
+		log.DB.Trace("Scanning row...", nil)
+
 		if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
 			for _, dest := range dests {
 				typeof := reflect.TypeOf(dest)
 
 				if typeof.Kind() != reflect.Ptr {
-					executorLogger.Panic(
+					log.DB.Panic(
 						"Query scan failed",
 						"Destination for scanning must be a pointer, but got '"+typeof.String()+"'",
 						nil,
@@ -129,10 +127,12 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 
 		if e := row.Scan(dests...); e != nil {
 			if errors.Is(e, pgx.ErrNoRows) {
-				return Error.StatusNotFound
+				return query.ConvertAndLogError(Error.StatusNotFound)
 			}
-			return query.ConvertError(e)
+			return query.ConvertAndLogError(e)
 		}
+
+		log.DB.Trace("Scanning row: OK", nil)
 
 		return nil
 	}, nil
@@ -140,14 +140,14 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 
 // Wrapper for '*pgxpool.Con.Exec'
 func Exec(conType connection.Type, query *query.Query) (*Error.Status) {
-	ctx, cancel, err := prepare(conType, query)
+	ctx, cancel, err := initExecutionContext(conType, query)
 	if err != nil {
 		return err
 	}
 	defer cancel()
 
 	if _, err := ctx.Connection.Exec(ctx, query.SQL, query.Args...); err != nil {
-		return query.ConvertError(err)
+		return query.ConvertAndLogError(err)
 	}
 
     return nil

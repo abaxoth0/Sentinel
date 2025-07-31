@@ -29,21 +29,21 @@ import (
 func Drop(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
-	controller.Logger.Info("Crealing cache...", reqMeta)
+	controller.Log.Info("Dropping all cache...", reqMeta)
 
     act := controller.GetBasicAction(ctx)
 
 	if err := authz.User.DropCache(act.RequesterRoles); err != nil {
-		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
+		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)
 		return err
 	}
 
     if err := cache.Client.FlushAll(); err != nil {
-		controller.Logger.Error("Failed to clear cache", err.Error(), reqMeta)
+		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)
         return err
     }
 
-	controller.Logger.Info("Crealing cache: OK", reqMeta)
+	controller.Log.Info("Dropping all cache: OK", reqMeta)
 
     return ctx.NoContent(http.StatusOK)
 }
