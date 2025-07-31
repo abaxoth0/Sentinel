@@ -127,7 +127,7 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 
 		if e := row.Scan(dests...); e != nil {
 			if errors.Is(e, pgx.ErrNoRows) {
-				return query.ConvertAndLogError(Error.StatusNotFound)
+				return Error.StatusNotFound
 			}
 			return query.ConvertAndLogError(e)
 		}
