@@ -27,7 +27,7 @@ var tokenIsMissing = echo.NewHTTPError(
 // @Produce			json
 // @Success			200
 // @Failure			400,401,500	{object} responsebody.Error
-// @Router			/user/activate/{token} [get]
+// @Router			/v1/user/activate/{token} [get]
 func Activate(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -54,7 +54,7 @@ func Activate(ctx echo.Context) error {
 // @Produce			json
 // @Success			200
 // @Failure			400,401,500	{object} responsebody.Error
-// @Router			/user/activate/resend [put]
+// @Router			/v1/user/activate/resend [put]
 func Resend(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

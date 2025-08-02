@@ -22,7 +22,7 @@ import (
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/cache [delete]
+// @Router			/v1/cache [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie

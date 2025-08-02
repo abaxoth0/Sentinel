@@ -30,7 +30,7 @@ import (
 // @Produce			json
 // @Success			200 	{object} 	responsebody.CSRF
 // @Failure			500 	{object} 	responsebody.Error
-// @Router			/auth/csrf-token [get]
+// @Router			/v1/auth/csrf-token [get]
 func GetCSRFToken(ctx echo.Context) error {
 	tokenStr, err := controller.NewCSRFToken(ctx)
 	if err != nil {
@@ -65,7 +65,7 @@ func GetCSRFToken(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/auth [post]
+// @Router			/v1/auth [post]
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func Login(ctx echo.Context) error {
@@ -215,8 +215,8 @@ func Login(ctx echo.Context) error {
 // @Failure			400,401,500 	{object} 	responsebody.Error
 // @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
-// @Router			/auth [delete]
-// @Router			/auth/{sessionID} [delete]
+// @Router			/v1/auth [delete]
+// @Router			/v1/auth/{sessionID} [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -280,7 +280,7 @@ func Logout(ctx echo.Context) error {
 // @Failure			400,401,500 	{object} 	responsebody.Error
 // @Failure			491 			{object} 	responsebody.Error		"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 		"Set to 'true' if current user session was revoked"
-// @Router			/auth [put]
+// @Router			/v1/auth [put]
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func Refresh(ctx echo.Context) error {
@@ -332,7 +332,7 @@ func Refresh(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/auth [get]
+// @Router			/v1/auth [get]
 // @Security		BearerAuth
 func Verify(ctx echo.Context) error {
     return ctx.JSON(http.StatusOK, controller.GetUserPayload(ctx))
@@ -345,7 +345,7 @@ func Verify(ctx echo.Context) error {
 // @Produce			json
 // @Success			200 	{object} 	responsebody.JWKs
 // @Failure			500 	{object} 	responsebody.Error
-// @Router			/.well-known/jwks.json [get]
+// @Router			/v1/.well-known/jwks.json [get]
 func GetJWKs(ctx echo.Context) error {
 	res := ResponseBody.JWKs{
 		Keys: []ResponseBody.JSONWebKey{
@@ -386,7 +386,7 @@ func GetJWKs(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/auth/sessions/{uid} [delete]
+// @Router			/v1/auth/sessions/{uid} [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie

@@ -29,7 +29,7 @@ import (
 // @Produce			json
 // @Success			200
 // @Failure			400,401,500 	{object} 	responsebody.Error
-// @Router			/user [post]
+// @Router			/v1/user [post]
 func Create(ctx echo.Context) error {
 	var body RequestBody.LoginAndPassword
 
@@ -109,7 +109,7 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid} [delete]
+// @Router			/v1/user/{uid} [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -130,7 +130,7 @@ func SoftDelete(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/restore [put]
+// @Router			/v1/user/{uid}/restore [put]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -151,7 +151,7 @@ func Restore(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/drop [delete]
+// @Router			/v1/user/{uid}/drop [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -172,7 +172,7 @@ func Drop(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user [delete]
+// @Router			/v1/user [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -207,7 +207,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user [put]
+// @Router			/v1/user [put]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -241,7 +241,7 @@ func BulkRestore(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/drop/all [delete]
+// @Router			/v1/user/drop/all [delete]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -366,7 +366,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/login [patch]
+// @Router			/v1/user/{uid}/login [patch]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -389,7 +389,7 @@ func ChangeLogin(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/password [patch]
+// @Router			/v1/user/{uid}/password [patch]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -412,7 +412,7 @@ func ChangePassword(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/roles [patch]
+// @Router			/v1/user/{uid}/roles [patch]
 // @Security		BearerAuth
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
@@ -433,7 +433,7 @@ func ChangeRoles(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/roles [get]
+// @Router			/v1/user/{uid}/roles [get]
 // @Security		BearerAuth
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
@@ -461,7 +461,7 @@ func GetRoles(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/login/available [get]
+// @Router			/v1/user/login/available [get]
 func IsLoginAvailable(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -500,7 +500,7 @@ func IsLoginAvailable(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/search [get]
+// @Router			/v1/user/search [get]
 // @Security		BearerAuth
 func SearchUsers(ctx echo.Context) error {
     reqMeta := request.GetMetadata(ctx)
@@ -561,7 +561,7 @@ func SearchUsers(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid}/sessions [get]
+// @Router			/v1/user/{uid}/sessions [get]
 // @Security		BearerAuth
 func GetUserSessions(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
@@ -615,7 +615,7 @@ func GetUserSessions(ctx echo.Context) error {
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
 // @Failure			491 			{object} 	responsebody.Error 			"Session revoked"
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
-// @Router			/user/{uid} [get]
+// @Router			/v1/user/{uid} [get]
 // @Security		BearerAuth
 func GetUser(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)

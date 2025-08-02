@@ -13,8 +13,8 @@ var log = logger.NewSource("MAIN", logger.Default)
 // @version 					1.0
 // @description 				Authentication/Authorization Service
 // @BasePath 					/
-// @license.name 				AGPL-3.0 (With additional terms, see NOTICE file)
-// @license.url					https://www.gnu.org/licenses/agpl-3.0.html
+// @license.name 				AGPL-3.0 (With additional terms, see NOTICE file in official repository)
+// @license.url					https://github.com/abaxoth0/Sentinel/blob/master/LICENSE
 
 // @securityDefinitions.apikey	BearerAuth
 // @in							header
@@ -30,6 +30,11 @@ var log = logger.NewSource("MAIN", logger.Default)
 // @in							cookie
 // @name						_csrf
 // @description 				CSRF token in cookie. Required for state-changing requests, must match with token in X-CSRF-Token header
+
+// @securityDefinitions.apikey 	OAuthSession
+// @in							cookie
+// @name						oauth_session
+// @description 				OAuth state token in cookie. Must match with token in "state" query param.
 func main() {
 	app.Args.Parse()
 

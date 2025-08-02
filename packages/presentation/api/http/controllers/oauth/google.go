@@ -35,7 +35,7 @@ var passwordGenerationOptions = &pwgen.Config{
 
 func initGoogle() {
 	googleOAuthConfig = &oauth2.Config{
-		RedirectURL: api.GetBaseURL() + "/auth/oauth/google/callback",
+		RedirectURL: api.GetBaseURL() + "/v1/auth/oauth/google/callback",
 		ClientID: config.Secret.OAuthGoogleClientID,
 		ClientSecret: config.Secret.OAuthGoogleClientSecret,
 		Scopes: []string{
@@ -55,7 +55,7 @@ func initGoogle() {
 // @Produce			json
 // @Success			307
 // @Failure			500 	{object} 	responsebody.Error
-// @Router			/auth/oauth/google/login [get]
+// @Router			/v1/auth/oauth/google/login [get]
 func GoogleLogin(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
@@ -113,12 +113,14 @@ type googleUserInfoPartialResponse struct {
 // @Description 	Do not access this endpoint manually, google API will automatically redirect to it. E-Mail of google account MUST be verified.
 // @ID 				google-login-handler
 // @Tags			third-party-auth,oauth
-// @Param 			code query string true "User credentials and audience"
+// @Param 			code query string true "Short-lived, temporary authorization code issued by Google's authorization server"
+// @Param 			state query string true "OAuth state token"
 // @Accept			json
 // @Produce			json
 // @Success			200 			{object} 	responsebody.Token
 // @Failure			400,403,408,500	{object} 	responsebody.Error
-// @Router			/auth/oauth/google/callback [get]
+// @Router			/v1/auth/oauth/google/callback [get]
+// @Security 		OAuthSession
 func GoogleCallback(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

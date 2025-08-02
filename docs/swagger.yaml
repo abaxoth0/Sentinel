@@ -334,12 +334,12 @@ info:
   contact: {}
   description: Authentication/Authorization Service
   license:
-    name: AGPL-3.0 (With additional terms, see NOTICE file)
-    url: https://www.gnu.org/licenses/agpl-3.0.html
+    name: AGPL-3.0 (With additional terms, see NOTICE file in official repository)
+    url: https://github.com/abaxoth0/Sentinel/blob/master/LICENSE
   title: Sentinel
   version: "1.0"
 paths:
-  /.well-known/jwks.json:
+  /v1/.well-known/jwks.json:
     get:
       consumes:
       - application/json
@@ -357,7 +357,7 @@ paths:
           schema:
             $ref: '#/definitions/responsebody.Error'
       summary: Get JSON Web Keys (JWKs)
-  /auth:
+  /v1/auth:
     delete:
       consumes:
       - application/json
@@ -542,7 +542,7 @@ paths:
       summary: Refreshes auth tokens
       tags:
       - auth
-  /auth/{sessionID}:
+  /v1/auth/{sessionID}:
     delete:
       consumes:
       - application/json
@@ -586,7 +586,7 @@ paths:
       summary: Revoke user session
       tags:
       - auth
-  /auth/csrf-token:
+  /v1/auth/csrf-token:
     get:
       consumes:
       - application/json
@@ -606,7 +606,7 @@ paths:
       summary: Get CSRF token
       tags:
       - auth
-  /auth/oauth/google/callback:
+  /v1/auth/oauth/google/callback:
     get:
       consumes:
       - application/json
@@ -614,9 +614,15 @@ paths:
         redirect to it. E-Mail of google account MUST be verified.
       operationId: google-login-handler
       parameters:
-      - description: User credentials and audience
+      - description: Short-lived, temporary authorization code issued by Google's
+          authorization server
         in: query
         name: code
+        required: true
+        type: string
+      - description: OAuth state token
+        in: query
+        name: state
         required: true
         type: string
       produces:
@@ -642,11 +648,13 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/responsebody.Error'
+      security:
+      - OAuthSession: []
       summary: Actual handler for auth via google account
       tags:
       - third-party-auth
       - oauth
-  /auth/oauth/google/login:
+  /v1/auth/oauth/google/login:
     get:
       consumes:
       - application/json
@@ -665,7 +673,7 @@ paths:
       tags:
       - third-party-auth
       - oauth
-  /auth/oauth/introspect:
+  /v1/auth/oauth/introspect:
     post:
       consumes:
       - application/json
@@ -703,7 +711,7 @@ paths:
       summary: OAuth 2.0 Token Introspection
       tags:
       - oauth
-  /auth/sessions/{uid}:
+  /v1/auth/sessions/{uid}:
     delete:
       consumes:
       - application/json
@@ -759,7 +767,7 @@ paths:
       summary: Revokes all user sessions
       tags:
       - auth
-  /cache:
+  /v1/cache:
     delete:
       consumes:
       - application/json
@@ -810,7 +818,7 @@ paths:
       summary: Flush cache
       tags:
       - cache
-  /roles/{serviceID}:
+  /v1/roles/{serviceID}:
     get:
       consumes:
       - application/json
@@ -846,7 +854,7 @@ paths:
       summary: Get all service roles
       tags:
       - roles
-  /user:
+  /v1/user:
     delete:
       consumes:
       - application/json
@@ -992,7 +1000,7 @@ paths:
       summary: Restore several soft deleted users
       tags:
       - user
-  /user/{uid}:
+  /v1/user/{uid}:
     delete:
       consumes:
       - application/json
@@ -1103,7 +1111,7 @@ paths:
       summary: Users search
       tags:
       - user
-  /user/{uid}/drop:
+  /v1/user/{uid}/drop:
     delete:
       consumes:
       - application/json
@@ -1159,7 +1167,7 @@ paths:
       summary: Hard delete user
       tags:
       - user
-  /user/{uid}/login:
+  /v1/user/{uid}/login:
     patch:
       consumes:
       - application/json
@@ -1227,7 +1235,7 @@ paths:
       summary: Change user login
       tags:
       - user
-  /user/{uid}/password:
+  /v1/user/{uid}/password:
     patch:
       consumes:
       - application/json
@@ -1295,7 +1303,7 @@ paths:
       summary: Change user password
       tags:
       - user
-  /user/{uid}/restore:
+  /v1/user/{uid}/restore:
     put:
       consumes:
       - application/json
@@ -1351,7 +1359,7 @@ paths:
       summary: Restore soft delete user
       tags:
       - user
-  /user/{uid}/roles:
+  /v1/user/{uid}/roles:
     get:
       consumes:
       - application/json
@@ -1476,7 +1484,7 @@ paths:
       summary: Change user roles
       tags:
       - user
-  /user/{uid}/sessions:
+  /v1/user/{uid}/sessions:
     get:
       consumes:
       - application/json
@@ -1534,7 +1542,7 @@ paths:
       summary: Get user sessions
       tags:
       - user
-  /user/activate/{token}:
+  /v1/user/activate/{token}:
     get:
       consumes:
       - application/json
@@ -1566,7 +1574,7 @@ paths:
       summary: Activate user
       tags:
       - activation
-  /user/activate/resend:
+  /v1/user/activate/resend:
     put:
       consumes:
       - application/json
@@ -1599,7 +1607,7 @@ paths:
       summary: Resend activation token
       tags:
       - activation
-  /user/drop/all:
+  /v1/user/drop/all:
     delete:
       consumes:
       - application/json
@@ -1649,7 +1657,7 @@ paths:
       summary: Drop all delete users
       tags:
       - user
-  /user/login/available:
+  /v1/user/login/available:
     get:
       consumes:
       - application/json
@@ -1699,7 +1707,7 @@ paths:
       summary: Check login availability
       tags:
       - user
-  /user/search:
+  /v1/user/search:
     get:
       consumes:
       - application/json
@@ -1784,5 +1792,11 @@ securityDefinitions:
       must match with token in cookie
     in: header
     name: X-CSRF-Token
+    type: apiKey
+  OAuthSession:
+    description: OAuth state token in cookie. Must match with token in "state" query
+      param.
+    in: cookie
+    name: oauth_session
     type: apiKey
 swagger: "2.0"

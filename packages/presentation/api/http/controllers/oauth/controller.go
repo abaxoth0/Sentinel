@@ -34,7 +34,7 @@ func Init() {
 // @Produce			json
 // @Success			200 			{object} 	responsebody.Introspection
 // @Failure			400,401,500 	{object} 	responsebody.Error
-// @Router			/auth/oauth/introspect [post]
+// @Router			/v1/auth/oauth/introspect [post]
 // @Security		BearerAuth
 func IntrospectOAuthToken(ctx echo.Context) error {
 	act := controller.GetBasicAction(ctx)

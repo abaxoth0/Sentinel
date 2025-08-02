@@ -82,10 +82,12 @@ func Create() *echo.Echo {
         router.Use(middleware.Logger())
     }
 
-	// Path is strange, but it's convention from OpenID Connect Discovery (OIDC)
-	router.GET("/.well-known/jwks.json", Auth.GetJWKs)
+	apiV1 := router.Group("/v1")
 
-    authGroup := router.Group("/auth", noCache)
+	// Path is strange, but it's convention from OpenID Connect Discovery (OIDC)
+	apiV1.GET("/.well-known/jwks.json", Auth.GetJWKs)
+
+    authGroup := apiV1.Group("/auth", noCache)
 
 	authGroup.GET("/csrf-token", Auth.GetCSRFToken)
     authGroup.GET(rootPath, Auth.Verify, secure, preventUserDesync)
@@ -101,7 +103,7 @@ func Create() *echo.Echo {
 	oauthSubGroup.GET("/google/login", OAuth.GoogleLogin)
 	oauthSubGroup.GET("/google/callback", OAuth.GoogleCallback)
 
-    userGroup := router.Group("/user", secure, preventUserDesync, noCache)
+    userGroup := apiV1.Group("/user", secure, preventUserDesync, noCache)
 
     userGroup.POST(rootPath, User.Create)
     userGroup.DELETE("/:uid", User.SoftDelete, doubleSubmitCSRF)
@@ -121,11 +123,11 @@ func Create() *echo.Echo {
 	userGroup.GET("/:uid/sessions", User.GetUserSessions)
 	userGroup.GET("/:uid", User.GetUser)
 
-    rolesGroup := router.Group("/roles", secure, preventUserDesync)
+    rolesGroup := apiV1.Group("/roles", secure, preventUserDesync)
 
     rolesGroup.GET("/:serviceID", Roles.GetAll)
 
-    cacheGroup := router.Group("/cache", secure, preventUserDesync, noCache)
+    cacheGroup := apiV1.Group("/cache", secure, preventUserDesync, noCache)
 
     cacheGroup.DELETE(rootPath, Cache.Drop, doubleSubmitCSRF)
 

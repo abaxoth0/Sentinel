@@ -8,6 +8,7 @@ http-secured: true
 http-allowed-origins:
   - "127.0.0.1:4321"
   - "http://localhost:3000"
+  - "https://localhost:8080"
 
 ### DATABASE ###
 db-default-queuery-timeout: 5s

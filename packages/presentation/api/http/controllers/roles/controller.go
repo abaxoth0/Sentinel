@@ -25,7 +25,7 @@ var serviceIdIsNotSpecified = echo.NewHTTPError(
 // @Produce			json
 // @Success			200 			{array} 	string
 // @Failure			400,401,500 	{object} 	responsebody.Error
-// @Router			/roles/{serviceID} [get]
+// @Router			/v1/roles/{serviceID} [get]
 func GetAll(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 

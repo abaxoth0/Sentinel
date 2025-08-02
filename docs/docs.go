@@ -11,15 +11,15 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "contact": {},
         "license": {
-            "name": "AGPL-3.0 (With additional terms, see NOTICE file)",
-            "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+            "name": "AGPL-3.0 (With additional terms, see NOTICE file in official repository)",
+            "url": "https://github.com/abaxoth0/Sentinel/blob/master/LICENSE"
         },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/.well-known/jwks.json": {
+        "/v1/.well-known/jwks.json": {
             "get": {
                 "description": "RFC 7517 (https://datatracker.ietf.org/doc/html/rfc7517)",
                 "consumes": [
@@ -46,7 +46,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth": {
+        "/v1/auth": {
             "get": {
                 "security": [
                     {
@@ -335,7 +335,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/csrf-token": {
+        "/v1/auth/csrf-token": {
             "get": {
                 "description": "Generates CSRF token and sets correspond \"_csrf\" cookie",
                 "consumes": [
@@ -365,8 +365,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/oauth/google/callback": {
+        "/v1/auth/oauth/google/callback": {
             "get": {
+                "security": [
+                    {
+                        "OAuthSession": []
+                    }
+                ],
                 "description": "Do not access this endpoint manually, google API will automatically redirect to it. E-Mail of google account MUST be verified.",
                 "consumes": [
                     "application/json"
@@ -383,8 +388,15 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User credentials and audience",
+                        "description": "Short-lived, temporary authorization code issued by Google's authorization server",
                         "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "OAuth state token",
+                        "name": "state",
                         "in": "query",
                         "required": true
                     }
@@ -423,7 +435,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/oauth/google/login": {
+        "/v1/auth/oauth/google/login": {
             "get": {
                 "description": "Alternative login endpoint, redirects to the google OAuth2.0 endpoint.",
                 "consumes": [
@@ -451,7 +463,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/oauth/introspect": {
+        "/v1/auth/oauth/introspect": {
             "post": {
                 "security": [
                     {
@@ -509,7 +521,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/sessions/{uid}": {
+        "/v1/auth/sessions/{uid}": {
             "delete": {
                 "security": [
                     {
@@ -598,7 +610,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/{sessionID}": {
+        "/v1/auth/{sessionID}": {
             "delete": {
                 "security": [
                     {
@@ -669,7 +681,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/cache": {
+        "/v1/cache": {
             "delete": {
                 "security": [
                     {
@@ -749,7 +761,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/roles/{serviceID}": {
+        "/v1/roles/{serviceID}": {
             "get": {
                 "description": "Get list of all roles that exists in the specified service",
                 "consumes": [
@@ -803,7 +815,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user": {
+        "/v1/user": {
             "put": {
                 "security": [
                     {
@@ -1031,7 +1043,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/activate/resend": {
+        "/v1/user/activate/resend": {
             "put": {
                 "description": "Create and send new activation token to user",
                 "consumes": [
@@ -1081,7 +1093,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/activate/{token}": {
+        "/v1/user/activate/{token}": {
             "get": {
                 "description": "Activate user",
                 "consumes": [
@@ -1129,7 +1141,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/drop/all": {
+        "/v1/user/drop/all": {
             "delete": {
                 "security": [
                     {
@@ -1209,7 +1221,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/login/available": {
+        "/v1/user/login/available": {
             "get": {
                 "description": "Check is login free to use",
                 "consumes": [
@@ -1284,7 +1296,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/search": {
+        "/v1/user/search": {
             "get": {
                 "security": [
                     {
@@ -1387,7 +1399,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}": {
+        "/v1/user/{uid}": {
             "get": {
                 "security": [
                     {
@@ -1560,7 +1572,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}/drop": {
+        "/v1/user/{uid}/drop": {
             "delete": {
                 "security": [
                     {
@@ -1649,7 +1661,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}/login": {
+        "/v1/user/{uid}/login": {
             "patch": {
                 "security": [
                     {
@@ -1755,7 +1767,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}/password": {
+        "/v1/user/{uid}/password": {
             "patch": {
                 "security": [
                     {
@@ -1861,7 +1873,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}/restore": {
+        "/v1/user/{uid}/restore": {
             "put": {
                 "security": [
                     {
@@ -1950,7 +1962,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}/roles": {
+        "/v1/user/{uid}/roles": {
             "get": {
                 "security": [
                     {
@@ -2143,7 +2155,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/{uid}/sessions": {
+        "/v1/user/{uid}/sessions": {
             "get": {
                 "security": [
                     {
@@ -2724,6 +2736,12 @@ const docTemplate = `{
             "type": "apiKey",
             "name": "X-CSRF-Token",
             "in": "header"
+        },
+        "OAuthSession": {
+            "description": "OAuth state token in cookie. Must match with token in \"state\" query param.",
+            "type": "apiKey",
+            "name": "oauth_session",
+            "in": "cookie"
         }
     }
 }`
