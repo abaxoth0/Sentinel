@@ -8,5 +8,5 @@ cmd/migrate/.env
 cmd/main
 
 # place for testing some random stuff
-testing/*
+playground/*
 
