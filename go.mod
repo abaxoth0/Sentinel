@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/StepanAnanin/SentinelRBAC v1.1.0
+	github.com/abaxoth0/SentinelRBAC v1.2.0
 	github.com/abaxoth0/go-pwgen v1.0.2
 	github.com/akamensky/argparse v1.4.0
 	github.com/getsentry/sentry-go v0.34.1

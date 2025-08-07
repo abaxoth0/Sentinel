@@ -2,105 +2,98 @@ package authz
 
 import (
 	Error "sentinel/packages/common/errors"
-	"sentinel/packages/common/util"
 )
 
 type user struct {
 	//
 }
 
-// Used for authorizing user to perform some action
+// Used for users authorization
 var User = user{}
 
 func (u user) SoftDeleteUser(self bool, roles []string) *Error.Status {
-	return authorize(
-		util.Ternary(self, softDeleteSelfAction, softDeleteAction),
-		userResource,
-		roles,
-	)
+	if self {
+		return authorize(&userSoftDeleteSelfContext, roles)
+	}
+	return authorize(&userSoftDeleteUserContext, roles)
 }
 
 func (u user) RestoreUser(roles []string) *Error.Status {
-	return authorize(restoreAction, userResource, roles)
+	return authorize(&userRestoreUserContext, roles)
 }
 
 func (u user) DropUser(roles []string) *Error.Status {
-	return authorize(dropAction, userResource, roles)
+	return authorize(&userDropUserContext, roles)
 }
 
 func (u user) DropAllSoftDeletedUsers(roles []string) *Error.Status {
-	return authorize(dropAllSoftDeletedAction, userResource, roles)
+	return authorize(&userDropAllSoftDeletedUsersContext, roles)
 }
 
 func (u user) ChangeUserLogin(self bool, roles []string) *Error.Status {
-	return authorize(
-		util.Ternary(self, changeSelfLoginAction, changeLoginAction),
-		userResource,
-		roles,
-	)
+	if self {
+		return authorize(&userChangeSelfLoginContext, roles)
+	}
+	return authorize(&userChangeUserLoginContext, roles)
 }
 
 func (u user) ChangeUserPassword(self bool, roles []string) *Error.Status {
-	return authorize(
-		util.Ternary(self, changeSelfPasswordAction, changePasswordAction),
-		userResource,
-		roles,
-	)
+	if self {
+		return authorize(&userChangeSelfPasswordContext, roles)
+	}
+	return authorize(&userChangeUserPasswordContext, roles)
 }
 
 func (u user) ChangeUserRoles(self bool, roles []string) *Error.Status {
-	return authorize(
-		util.Ternary(self, changeSelfRolesAction, changeRolesAction),
-		userResource,
-		roles,
-	)
+	if self {
+		return authorize(&userChangeSelfRolesContext, roles)
+	}
+	return authorize(&userChangeUserRolesContext, roles)
 }
 
 func (u user) GetUserRoles(roles []string) *Error.Status {
-	return authorize(getRolesAction, userResource, roles)
+	return authorize(&userGetUserRolesContext, roles)
 }
 
 func (u user) SearchUsers(roles []string) *Error.Status {
-	return authorize(searchUsersAction, userResource, roles)
+	return authorize(&userSearchUsersContext, roles)
 }
 
 func (u user) Logout(roles []string) *Error.Status {
-	return authorize(logoutUserAction, userResource, roles)
+	return authorize(&userLogoutUserContext, roles)
 }
 
 func (u user) GetUserSession(self bool, roles []string) *Error.Status {
-	return authorize(
-		util.Ternary(self, getSelfSessionAction, getSessionAction),
-		userResource,
-		roles,
-	)
+	if self {
+		return authorize(&userGetSelfSessionContext, roles)
+	}
+	return authorize(&userGetSessionContext, roles)
 }
 
 func (u user) DropCache(roles []string) *Error.Status {
-	return authorize(dropAction, cacheResource, roles)
+	return authorize(&userDropCacheContext, roles)
 }
 
 func (u user) AccessAPIDocs(roles []string) *Error.Status {
-	return authorize(accessAPIDocs, docsResource, roles)
+	return authorize(&userAccessAPIDocsContext, roles)
 }
 
 func (u user) GetSessionLocation(roles []string) *Error.Status {
-	return authorize(getSessionLocation, userResource, roles)
+	return authorize(&userGetSessionLocationContext, roles)
 }
 
 func (u user) DeleteLocation(roles []string) *Error.Status {
-	return authorize(getSessionLocation, userResource, roles)
+	return authorize(&userGetSessionLocationContext, roles)
 }
 
 func (u user) GetUser(self bool, roles []string) *Error.Status {
-	return authorize(
-		util.Ternary(self, getSelf, getUser),
-		userResource,
-		roles,
-	)
+	if self {
+		return authorize(&userGetSelfContext, roles)
+	}
+	return authorize(&userGetUserContext, roles)
 }
 
 func (u user) OAuthIntrospect(roles []string) *Error.Status {
-	return authorize(oauthIntrospect, userResource, roles)
+	return authorize(&userIntrospectOAuthTokenContext, roles)
 }
 

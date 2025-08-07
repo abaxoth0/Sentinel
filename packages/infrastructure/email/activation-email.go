@@ -11,7 +11,7 @@ import (
 	"sentinel/packages/presentation/api"
 	"strings"
 
-	rbac "github.com/StepanAnanin/SentinelRBAC"
+	rbac "github.com/abaxoth0/SentinelRBAC"
 	"gopkg.in/gomail.v2"
 )
 

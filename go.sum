@@ -6,8 +6,8 @@ github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/StepanAnanin/SentinelRBAC v1.1.0 h1:fcj8hlz3ZhyuawLgNgUyV7paixZWqwd1U/Y5gQpcshE=
-github.com/StepanAnanin/SentinelRBAC v1.1.0/go.mod h1:k4oDM9MmRgSveTvpdjpLMnNjptV1/5BrTDO4Y7AM1o4=
+github.com/abaxoth0/SentinelRBAC v1.2.0 h1:Vh+7j27zaW8M5nwlTMRwQmZ1LB5Ya92+0XLo07DSzMc=
+github.com/abaxoth0/SentinelRBAC v1.2.0/go.mod h1:jKJthxnoNT5NjxMPhIAtTL86UPZlNAmsZXlX9lJX9/M=
 github.com/abaxoth0/go-pwgen v1.0.2 h1:w8jFE+4zWhCMoCfwff7hB1cfJ8MiU9qHR5XuSkA1cY0=
 github.com/abaxoth0/go-pwgen v1.0.2/go.mod h1:4AJPVFHr4QAum+u15aWhi+NnDS5dSjPBQ4vUN/K2mLU=
 github.com/akamensky/argparse v1.4.0 h1:YGzvsTqCvbEZhL8zZu2AiA5nq805NZh75JNj4ajn1xc=

@@ -10,7 +10,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 
-	rbac "github.com/StepanAnanin/SentinelRBAC"
+	rbac "github.com/abaxoth0/SentinelRBAC"
 	"github.com/google/uuid"
 )
 
