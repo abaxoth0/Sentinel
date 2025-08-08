@@ -7,7 +7,7 @@
             "name": "unconfirmed_user",
             "permissions": {
                 "read": false,
-                "self-read": false,
+                "self-read": true,
                 "create": false,
                 "self-create": false,
                 "update": false,
