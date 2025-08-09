@@ -42,7 +42,6 @@ func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSessi
 		return err
 	}
 
-	// TODO handle error
 	cache.Client.Delete(
 		cache.KeyBase[cache.SessionByID] + sessionID,
 		cache.KeyBase[cache.UserBySessionID] + sessionID,

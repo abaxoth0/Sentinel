@@ -44,7 +44,6 @@ func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Erro
 		return err
 	}
 
-	// TODO handle error
 	cache.Client.Delete(
 		cache.KeyBase[cache.LocationByID] + id,
 		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,

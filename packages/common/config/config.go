@@ -58,13 +58,13 @@ func (c *authConfing) RefreshTokenTTL() time.Duration {
 }
 
 type cacheConfig struct {
-    RawSocketTimeout    string `yaml:"cache-socket-timeout" validate:"required"`
+    RawPoolTimeout    	string `yaml:"cache-pool-timeout" validate:"required"`
     RawOperationTimeout string `yaml:"cache-operation-timeout" validate:"required"`
     RawTTL              string `yaml:"cache-ttl" validate:"required"`
 }
 
-func (c *cacheConfig) SocketTimeout() time.Duration {
-    return parseDuration(c.RawSocketTimeout)
+func (c *cacheConfig) PoolTimeout() time.Duration {
+    return parseDuration(c.RawPoolTimeout)
 }
 
 func (c *cacheConfig) OperationTimeout() time.Duration {

@@ -26,7 +26,7 @@ token-audience:
 self-audience: "urn:api:auth" # Audience for this service (must exists in token-audience)
 
 ### CACHE ###
-cache-socket-timeout: 3s
+cache-pool-timeout: 3s
 
 cache-operation-timeout: 1s
 

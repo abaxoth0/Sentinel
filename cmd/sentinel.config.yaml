@@ -28,11 +28,11 @@ token-audience:
 self-audience: "urn:api:auth" # Audience for this service (must exists in token-audience)
 
 ### CACHE ###
-cache-socket-timeout: 3s
+cache-pool-timeout: 200ms
 
-cache-operation-timeout: 1s
+cache-operation-timeout: 100ms
 
-cache-ttl: 0
+cache-ttl: 5m
 
 ### DEBUG ####
 debug-mode: true

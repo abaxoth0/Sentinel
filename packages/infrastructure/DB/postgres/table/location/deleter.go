@@ -54,7 +54,6 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bo
 		return err
 	}
 
-	// TODO handle error
 	cache.Client.Delete(
 		cache.KeyBase[cache.LocationByID] + id,
 		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,

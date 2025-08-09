@@ -22,7 +22,6 @@ import (
 
 func invalidateBasicUserDtoCache(old, current *UserDTO.Full) {
 	invalidator := cache.NewBasicUserDtoInvalidator(old, current)
-	// TODO handle error
 	if err := invalidator.Invalidate(); err != nil {
 		log.DB.Error("Failed to invalidate cache", err.Error(), nil)
 	}

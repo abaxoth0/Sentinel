@@ -206,7 +206,6 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 		}
 	}
 
-	// TODO handle error
 	cache.BulkInvalidateBasicUserDTO(UIDs, logins)
 
 	return nil

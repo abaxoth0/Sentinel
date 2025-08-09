@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"net/http"
+	"runtime"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/logger"
@@ -35,10 +37,13 @@ func (d *driver) Connect() {
 	log.Info("Connecting to DB...", nil)
 
 	d.client = redis.NewClient(&redis.Options{
-		Addr:        config.Secret.CacheURI,
-		Password:    config.Secret.CachePassword,
-		DB:          config.Secret.CacheDB,
-		ReadTimeout: config.Cache.SocketTimeout(),
+		PoolSize: 		20 * runtime.NumCPU(),
+		MinIdleConns: 	10,
+		Addr:        	config.Secret.CacheURI,
+		Password:    	config.Secret.CachePassword,
+		DB:          	config.Secret.CacheDB,
+		ReadTimeout: 	config.Cache.PoolTimeout() / 2,
+		PoolTimeout: 	config.Cache.PoolTimeout(),
     })
 
     ctx, cancel := defaultTimeoutContext()
@@ -125,16 +130,44 @@ func (d *driver) Get(key string) (string, bool) {
     return cachedData, handleError("Get: " + key, err) == nil
 }
 
+const maxRetries = 4
+
+func (d *driver) retry(fn func(ctx context.Context) error) error {
+	var lastErr error
+
+	for i := range maxRetries {
+		ctx, cancel := defaultTimeoutContext()
+		defer cancel()
+
+		err := fn(ctx)
+		if err == nil {
+			log.Trace("Operation succeeded with "+strconv.Itoa(i)+" retry(-s)", nil)
+			return nil
+		}
+
+		lastErr = err
+
+		// Exponential time gap between retries
+		backoff := time.Duration(math.Pow(2, float64(i))) * time.Millisecond
+		// Random value that will be added to backoff to get total time gap
+		jitter := time.Duration(rand.Intn(10)) * time.Millisecond
+
+		time.Sleep(backoff + jitter)
+	}
+
+	return lastErr
+}
+
 // IMPORTANT:
 // go-redis driver can handle only this types:
 // string, bool, []byte, int, int64, float64, time.Time
 func(d *driver) set(key string, value any, ttl time.Duration) *Error.Status {
-    // Alas, generics can't be used in methods
-    // (it can be passed to a struct, but thats kinda strange and
-    //  even so i failed to make it works as i want, so using type switch instead)
+	// Alas, generics can't be used in methods
+	// (it can be passed to a struct, but thats kinda strange and
+	//  even so i failed to make it works as i want, so using type switch instead)
 	switch v := value.(type) {
-    case string, bool, []byte, int, int64, float64, time.Time:
-        // Type allowed, do nothing and just go forward
+	case string, bool, []byte, int, int64, float64, time.Time:
+	// Type allowed, do nothing and just go forward
 	case uint32:
 		if uint64(v) > uint64(math.MaxInt64) {
 			return handleError("Set: ", fmt.Errorf("value overflows int64: %v", value))
@@ -145,16 +178,15 @@ func(d *driver) set(key string, value any, ttl time.Duration) *Error.Status {
 			return handleError("Set: ", fmt.Errorf("value overflows int64: %v", value))
 		}
 		value = int64(v)
-    default:
-        return handleError("Set: ", fmt.Errorf("invalid cache value type: %T", value))
-    }
+	default:
+		return handleError("Set: ", fmt.Errorf("invalid cache value type: %T", value))
+	}
 
-    ctx, cancel := defaultTimeoutContext()
-    defer cancel()
+	err := d.retry(func(ctx context.Context) error {
+		return d.client.Set(ctx, key, value, ttl).Err()
+	})
 
-	err := d.client.Set(ctx, key, value, ttl).Err()
-
-   return handleError("Set: " + key, err)
+	return handleError("Set: " + key, err)
 }
 
 func (d *driver) Set(key string, value any) *Error.Status {
@@ -166,20 +198,16 @@ func (d *driver) SetWithTTL(key string, value any, ttl time.Duration) *Error.Sta
 }
 
 func (d *driver) Delete(keys ...string) *Error.Status {
-    ctx, cancel := defaultTimeoutContext()
-    defer cancel()
-
-	err := d.client.Unlink(ctx, keys...).Err()
-
+	err := d.retry(func(ctx context.Context) error {
+		return d.client.Unlink(ctx, keys...).Err()
+	})
     return handleError("Delete: " + strings.Join(keys, ","), err)
 }
 
 func (d *driver) FlushAll() *Error.Status {
-    ctx, cancel := defaultTimeoutContext()
-    defer cancel()
-
-	err := d.client.FlushAll(ctx).Err()
-
+	err := d.retry(func(ctx context.Context) error {
+		return d.client.FlushAll(ctx).Err()
+	})
     return handleError("Flush All", err)
 }
 
@@ -216,7 +244,10 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
                 pipeline.Unlink(ctx, key)
             }
 
-            _, err = pipeline.Exec(ctx)
+			err := d.retry(func(ctx context.Context) error {
+				_, err = pipeline.Exec(ctx)
+				return err
+			})
             if err != nil {
                 if ctxErr := ctx.Err(); ctxErr != nil {
                     return handleError(deletePatternAction, ctxErr)
@@ -234,7 +265,8 @@ func (d *driver) DeletePattern(pattern string) *Error.Status {
 
         // Exit when cursor is 0 (no more keys to scan)
         if cursor == 0 {
-            return handleError(deletePatternAction, nil)
+			log.Trace("Delete Pattern: OK", nil)
+            return nil
         }
     }
 }
@@ -271,20 +303,20 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
         batch = append(batch, keys...)
 
         if len(batch) > 0 && (len(batch) >= unlinkBatchSize || nextCursor == 0) {
-            timeout := time.Duration(max(1, len(batch)/100)) * time.Millisecond
+			err := d.retry(func(ctx context.Context) error {
+				err := d.client.Unlink(ctx, batch...).Err()
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return err
+				}
+				if err == nil {
+					return nil
+				}
+				return errors.New("Batch unlink failed: " + err.Error())
+			})
 
-            ctx, cancel := context.WithTimeout(context.Background(), timeout)
-            defer cancel()
-
-            if _, err := d.client.Unlink(ctx, batch...).Result(); err != nil {
-                if ctxErr := ctx.Err(); ctxErr != nil {
-                    return handleError(progressiveDeletePatternAction, err)
-                }
-				return handleError(
-					progressiveDeletePatternAction,
-					errors.New("Batch unlink failed: " + err.Error()),
-				)
-            }
+			if err != nil {
+				return handleError(progressiveDeletePatternAction, err)
+			}
 
             keysDeleted += len(batch)
             batch = batch[:0] // reset batch
@@ -292,7 +324,7 @@ func (d *driver) ProgressiveDeletePattern(pattern string) *Error.Status {
 
         if nextCursor == 0 {
             deleted := strconv.FormatInt(int64(keysDeleted), 64)
-            log.Trace("Deleted "+deleted+" keys matching "+pattern, nil)
+            log.Trace("Deleted "+deleted+" key(-s) matching "+pattern, nil)
             break
         }
 
@@ -311,16 +343,19 @@ func (d *driver) ProgressiveDelete(keys []string) *Error.Status {
 		end := min(len(keys), i + batchSize)
 
 		batch := keys[i:end]
-		ctx, cancel := longTimeoutContext()
-		defer cancel()
 
-		if _, err := d.client.Unlink(ctx, batch...).Result(); err != nil {
+		err := d.retry(func(ctx context.Context) error {
+			return d.client.Unlink(ctx, batch...).Err()
+		})
+		if err != nil {
 			return handleError(
 				progressiveDeleteKeysAction,
 				fmt.Errorf("batch %d-%d failed - %s", i, end, err.Error()),
 			)
 		}
 	}
+
+	log.Trace("Deleted "+strconv.Itoa(len(keys))+" key(-s)", nil)
 
 	return nil
 }

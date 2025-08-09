@@ -44,7 +44,6 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 		return err
 	}
 
-	// TODO handle error
 	cache.Client.Delete(
 		cache.KeyBase[cache.SessionByID] + sessionID,
 		cache.KeyBase[cache.UserBySessionID] + sessionID,
@@ -96,7 +95,6 @@ func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Stat
 		return err
 	}
 
-	// TODO handle error
 	m.deleteSessionsCache(sessions)
 
 	log.DB.Trace("Revoking all user sessions: OK", nil)

@@ -316,7 +316,6 @@ func (_ *Manager) GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status
         return nil, e
     }
 
-	// TODO handle error
     cache.Client.Set(cache.KeyBase[cache.UserRolesById] + act.TargetUID, strings.Join(roles, ","))
 
 	log.DB.Info("Getting roles of user "+act.TargetUID+": OK", nil)
@@ -355,7 +354,6 @@ func (_ *Manager) GetUserVersion(UID string) (uint32, *Error.Status) {
 		return 0, err
 	}
 
-	// TODO handle error
 	cache.Client.Set(cacheKey, version)
 
 	log.DB.Info("Getting version of user "+UID+": OK", nil)
