@@ -5,8 +5,6 @@ import (
 	Error "sentinel/packages/common/errors"
 )
 
-// TODO handle all this errors
-
 var TokenMalformed = Error.NewStatusError(
     "Token is malformed or has invalid format",
     // According to RFC 7235 (https://datatracker.ietf.org/doc/html/rfc7235#section-3.1)
