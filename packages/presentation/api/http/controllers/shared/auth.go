@@ -19,8 +19,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// TODO currently creates new session for each auth attempt
-
 func AuthenticateWithNewSession(ctx echo.Context, user *UserDTO.Full, audience []string) error {
 	payload := &UserDTO.Payload{
 		ID: user.ID,
