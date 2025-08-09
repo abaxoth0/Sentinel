@@ -61,7 +61,9 @@ func GoogleLogin(ctx echo.Context) error {
 
 	sessionID := uuid.New().String()
 	session := newOAuthSession(ctx.RealIP(), state, ctx.Request().UserAgent())
-	sessionStore.Save(googleProvider, sessionID, &session)
+	if err := sessionStore.Save(googleProvider, sessionID, &session); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
 
 	ctx.SetCookie(&http.Cookie{
 		Name: "oauth_session",

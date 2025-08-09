@@ -56,14 +56,17 @@ type oauthSessionStore struct {
 
 var oauthSessionTTL = time.Minute * 5
 
-func (s *oauthSessionStore) Save(provider authProvider, id string, session *oauthSession) {
+func (s *oauthSessionStore) Save(provider authProvider, id string, session *oauthSession) error {
 	id = provider.String()+"_"+id
 	value := session.IP+"\n"+session.State+"\n"+session.UserAgent
 
-	// TODO handle error
 	if err := cache.Client.SetWithTTL(id, value, oauthSessionTTL); err != nil {
-		controller.Log.Error("Failed to store oauth session", err.Error(), nil)
+		errMsg := "Failed to store oauth session"
+		controller.Log.Error(errMsg, err.Error(), nil)
+		return errors.New(errMsg)
 	}
+
+	return nil
 }
 
 // IMPORTANT: This method will delete session from store if specified id was found
