@@ -4,6 +4,7 @@ import (
 	"sentinel/packages/common/config"
 	"sentinel/packages/infrastructure/auth/authz"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -16,7 +17,7 @@ import (
 // @Security		CSRF_Cookie
 func Swagger(ctx echo.Context) error {
 	if !config.Debug.Enabled {
-		payload := controller.GetUserPayload(ctx)
+		payload := SharedController.GetUserPayload(ctx)
 
 		if err := authz.User.AccessAPIDocs(payload.Roles); err != nil {
 			return controller.ConvertErrorStatusToHTTP(err)
@@ -25,3 +26,4 @@ func Swagger(ctx echo.Context) error {
 
 	return echoSwagger.WrapHandler(ctx)
 }
+

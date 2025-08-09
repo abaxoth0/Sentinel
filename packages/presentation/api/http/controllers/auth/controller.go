@@ -6,19 +6,18 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
-	ActionDTO "sentinel/packages/core/action/DTO"
-	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
 	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
+	"sentinel/packages/presentation/api/http/cookie"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
 	ResponseBody "sentinel/packages/presentation/data/response"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,7 +31,7 @@ import (
 // @Failure			500 	{object} 	responsebody.Error
 // @Router			/v1/auth/csrf-token [get]
 func GetCSRFToken(ctx echo.Context) error {
-	tokenStr, err := controller.NewCSRFToken(ctx)
+	tokenStr, err := SharedController.NewCSRFToken(ctx)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
@@ -91,117 +90,7 @@ func Login(ctx echo.Context) error {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-	// Trying to update existing session
-	if tk, err := controller.GetRefreshToken(ctx); err == nil {
-		payload := UserMapper.PayloadFromClaims(tk.Claims.(*token.Claims))
-
-		if payload.ID != user.ID {
-			controller.Log.Error(
-				"Failed to update user session. Switch to regular login process",
-				"Already logged-in user tries to login as another user",
-				reqMeta,
-			)
-			goto regularLogin
-		}
-
-		accessToken, refreshToken, err := controller.UpdateSession(ctx, nil, user, payload)
-		if err != nil {
-			controller.Log.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
-			goto regularLogin
-		}
-
-		ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-
-		controller.Log.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
-
-		return ctx.JSON(
-			http.StatusOK,
-			ResponseBody.Token{
-				Message: "Пользователь успешно авторизован",
-				AccessToken: accessToken.String(),
-				ExpiresIn: int(accessToken.TTL()) / 1000,
-			},
-		)
-	}
-	regularLogin:
-
-	deviceID, browser, err := controller.GetDeviceIDAndBrowser(ctx)
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	// If session with this device is already exists and user tries to login from the same browser
-	// (this is guard against cases when auth cookie was lost for some reasons)
-	session, err := DB.Database.GetSessionByDeviceAndUserID(deviceID, user.ID)
-	if err == nil && session.Browser == browser {
-		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
-		controller.Log.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
-
-		accessToken, refreshToken, err := controller.UpdateSession(ctx, session, user, &UserDTO.Payload{
-			ID: user.ID,
-			Login: user.Login,
-			Roles: user.Roles,
-			SessionID: session.ID,
-			Version: user.Version,
-		})
-		if err == nil {
-			ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-			controller.Log.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
-			return ctx.JSON(
-				http.StatusOK,
-				ResponseBody.Token{
-					Message: "Пользователь успешно авторизован",
-					AccessToken: accessToken.String(),
-					ExpiresIn: int(accessToken.TTL()) / 1000,
-				},
-			)
-		}
-	}
-
-    payload := &UserDTO.Payload{
-        ID: user.ID,
-        Login: user.Login,
-        Roles: user.Roles,
-		SessionID: uuid.NewString(),
-		Version: user.Version,
-		Audience: body.Audience,
-    }
-
-    accessToken, refreshToken, err := token.NewAuthTokens(payload)
-    if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
-    }
-
-	session, err = controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
-	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	if err := DB.Database.SaveSession(session); err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
-
-	if err := controller.UpdateOrCreateLocation(act, session.ID, session.IpAddress); err != nil {
-		if e := DB.Database.RevokeSession(act, session.ID); e != nil {
-			return controller.ConvertErrorStatusToHTTP(e)
-		}
-		return controller.ConvertErrorStatusToHTTP(err)
-	}
-
-    ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-
-	controller.Log.Info("Authenticating user '"+body.Login+"': OK", reqMeta)
-
-    return ctx.JSON(
-        http.StatusOK,
-        ResponseBody.Token{
-            Message: "Пользователь успешно авторизован",
-            AccessToken: accessToken.String(),
-            ExpiresIn: int(accessToken.TTL()) / 1000,
-        },
-    )
+	return SharedController.Authenticate(ctx, user, body.Audience)
 }
 
 // @Summary 		Revoke user session
@@ -223,12 +112,12 @@ func Login(ctx echo.Context) error {
 func Logout(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
-    authCookie, e := controller.GetAuthCookie(ctx)
+    authCookie, e := cookie.GetAuthCookie(ctx)
     if e != nil {
-        return e
+        return controller.ConvertErrorStatusToHTTP(e)
     }
 
-	refreshToken, err := controller.GetRefreshToken(ctx)
+	refreshToken, err := SharedController.GetRefreshToken(ctx)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
@@ -261,7 +150,7 @@ func Logout(ctx echo.Context) error {
 	}
 
 	if act.TargetUID == act.RequesterUID {
-		controller.DeleteCookie(ctx, authCookie)
+		cookie.DeleteCookie(ctx, authCookie)
 	}
 
 	controller.Log.Info("Logoutting user "+user.ID+": OK", reqMeta)
@@ -288,7 +177,7 @@ func Refresh(ctx echo.Context) error {
 
 	controller.Log.Info("Refreshing auth tokens...", reqMeta)
 
-    currentRefreshToken, err := controller.GetRefreshToken(ctx)
+    currentRefreshToken, err := SharedController.GetRefreshToken(ctx)
     if err != nil {
         return controller.HandleTokenError(ctx, err)
     }
@@ -300,12 +189,12 @@ func Refresh(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	accessToken, refreshToken, err := controller.UpdateSession(ctx, nil, user, payload)
+	accessToken, refreshToken, err := SharedController.UpdateSession(ctx, nil, user, payload)
     if err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
     }
 
-    ctx.SetCookie(controller.NewAuthCookie(refreshToken))
+    ctx.SetCookie(cookie.NewAuthCookie(refreshToken))
 
 	controller.Log.Info("Refreshing auth tokens: OK", reqMeta)
 
@@ -335,7 +224,7 @@ func Refresh(ctx echo.Context) error {
 // @Router			/v1/auth [get]
 // @Security		BearerAuth
 func Verify(ctx echo.Context) error {
-    return ctx.JSON(http.StatusOK, controller.GetUserPayload(ctx))
+    return ctx.JSON(http.StatusOK, SharedController.GetUserPayload(ctx))
 }
 
 // @Summary 		Get JSON Web Keys (JWKs)
@@ -405,7 +294,7 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
 
-	act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
+	act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
 
 	var body RequestBody.ActionReason
 
@@ -425,9 +314,9 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 	}
 
 	if act.TargetUID == act.RequesterUID {
-		authCookie, err := controller.GetAuthCookie(ctx)
+		authCookie, err := cookie.GetAuthCookie(ctx)
 		if err == nil {
-			controller.DeleteCookie(ctx, authCookie)
+			cookie.DeleteCookie(ctx, authCookie)
 		}
 	}
 

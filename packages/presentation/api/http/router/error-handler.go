@@ -5,6 +5,7 @@ import (
 	"net/http"
 	Error "sentinel/packages/common/errors"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	"sentinel/packages/presentation/api/http/cookie"
 	"sentinel/packages/presentation/api/http/request"
 	ResponseBody "sentinel/packages/presentation/data/response"
 
@@ -38,8 +39,8 @@ func handleHttpError(err error, ctx echo.Context) {
 
 	if code == Error.SessionRevoked {
 		ctx.Response().Header().Set("X-Session-Revoked", "true")
-		if authCookie, err := controller.GetAuthCookie(ctx); err == nil {
-			controller.DeleteCookie(ctx, authCookie)
+		if authCookie, err := cookie.GetAuthCookie(ctx); err == nil {
+			cookie.DeleteCookie(ctx, authCookie)
 		}
 	}
 

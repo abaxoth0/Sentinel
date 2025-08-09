@@ -1,4 +1,9 @@
-package controller
+package sharedcontroller
+
+// 0xd34df00d
+// 0xd4b4c507
+// 0x0d34d10c
+// 0x001e5a5a
 
 import (
 	"net"
@@ -11,6 +16,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/token"
+	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 	"strings"
 	"time"
@@ -22,12 +28,12 @@ import (
 type deviceType string
 
 const (
-	mobile deviceType = "mobile"
-	tablet  		  = "tablet"
-	desktop 		  = "desktop"
+	mobile 	deviceType = "mobile"
+	tablet 	deviceType = "tablet"
+	desktop deviceType = "desktop"
 )
 
-func GetDeviceIDAndBrowser(ctx echo.Context) (deviceID string, browser string, err *Error.Status) {
+func getDeviceIDAndBrowser(ctx echo.Context) (deviceID string, browser string, err *Error.Status) {
 	ua, err := getUserAgent(ctx)
 	if err != nil {
 		return "", "", err
@@ -108,9 +114,9 @@ func getUserAgent(ctx echo.Context) (useragent.UserAgent, *Error.Status) {
 	return ua, nil
 }
 
-func CreateSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (*SessionDTO.Full, *Error.Status) {
+func createSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (*SessionDTO.Full, *Error.Status) {
 	if err := validation.UUID(ID); err != nil {
-		Log.Panic(
+		controller.Log.Panic(
 			"Failed to create user session",
 			err.ToStatus(
 				"Session ID is missing",
@@ -219,7 +225,7 @@ func UpdateSession(
 	payload *UserDTO.Payload, // from existing token claims
 ) (accessToken *token.SignedToken, refreshToken *token.SignedToken, err *Error.Status){
 	if user == nil {
-		Log.Panic(
+		controller.Log.Panic(
 			"Invalid updateSession call",
 			"user is nil (expected *UserDTO.Full)",
 			nil,
@@ -227,7 +233,7 @@ func UpdateSession(
 		return nil, nil, Error.StatusInternalError
 	}
 	if payload == nil {
-		Log.Panic(
+		controller.Log.Panic(
 			"Invalid updateSession call",
 			"payload is nil (expected *UserDTO.Payload)",
 			nil,
@@ -278,7 +284,7 @@ func UpdateSession(
 		return nil, nil, err
 	}
 
-	if err := UpdateOrCreateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
+	if err := updateOrCreateLocation(act, newSession.ID, newSession.IpAddress); err != nil {
 		return nil, nil, err
 	}
 

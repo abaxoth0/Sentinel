@@ -1,4 +1,4 @@
-package controller
+package sharedcontroller
 
 import (
 	"net"
@@ -7,12 +7,13 @@ import (
 	LocationProvider "sentinel/packages/common/location"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/infrastructure/DB"
+	controller "sentinel/packages/presentation/api/http/controllers"
 )
 
 // If location for session with specified ID already exists - updates this location.
 // If there are no location for this session - creates new location for it.
-func UpdateOrCreateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *Error.Status {
-	Log.Trace("Updating location for session "+sessionID+"...", nil)
+func updateOrCreateLocation(act *ActionDTO.UserTargeted, sessionID string, ip net.IP) *Error.Status {
+	controller.Log.Trace("Updating location for session "+sessionID+"...", nil)
 
 	location, err := DB.Database.GetLocationBySessionID(act, sessionID)
 	if err != nil {
@@ -32,11 +33,11 @@ func UpdateOrCreateLocation(act *ActionDTO.UserTargeted, sessionID string, ip ne
 		}
 	} else {
 		if config.Debug.Enabled && config.Debug.LocationIP != "" {
-			Log.Debug("Request IP changed: "+ip.To4().String()+" -> "+config.Debug.LocationIP, nil)
+			controller.Log.Debug("Request IP changed: "+ip.To4().String()+" -> "+config.Debug.LocationIP, nil)
 			ip = net.ParseIP(config.Debug.LocationIP)
 		}
 		if ip.Equal(location.IP) {
-			Log.Info("Location update skipped: IP address of location hasn't changed", nil)
+			controller.Log.Info("Location update skipped: IP address of location hasn't changed", nil)
 			return nil
 		}
 
@@ -52,7 +53,7 @@ func UpdateOrCreateLocation(act *ActionDTO.UserTargeted, sessionID string, ip ne
 		}
 	}
 
-	Log.Trace("Updating location for session "+sessionID+":OK", nil)
+	controller.Log.Trace("Updating location for session "+sessionID+":OK", nil)
 
 	return nil
 }

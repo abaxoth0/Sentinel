@@ -5,6 +5,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	"sentinel/packages/presentation/api/http/request"
 
 	"github.com/labstack/echo/v4"
@@ -31,7 +32,7 @@ func Drop(ctx echo.Context) error {
 
 	controller.Log.Info("Dropping all cache...", reqMeta)
 
-    act := controller.GetBasicAction(ctx)
+    act := SharedController.GetBasicAction(ctx)
 
 	if err := authz.User.DropCache(act.RequesterRoles); err != nil {
 		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)

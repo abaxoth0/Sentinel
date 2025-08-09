@@ -11,6 +11,7 @@ import (
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	"sentinel/packages/presentation/api/http/request"
 	"slices"
 	"strings"
@@ -234,7 +235,7 @@ func preventUserDesync(next echo.HandlerFunc) echo.HandlerFunc {
 
 		middlewareLog.Trace("Checking if user desynced...", reqMeta)
 
-		payload := controller.GetUserPayload(ctx)
+		payload := SharedController.GetUserPayload(ctx)
 
 		actualVersion, err := DB.Database.GetUserVersion(payload.ID)
 		if err != nil {

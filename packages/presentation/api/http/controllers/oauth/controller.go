@@ -7,8 +7,10 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	RequestBody "sentinel/packages/presentation/data/request"
 	ResponseBody "sentinel/packages/presentation/data/response"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -37,7 +39,7 @@ func Init() {
 // @Router			/v1/auth/oauth/introspect [post]
 // @Security		BearerAuth
 func IntrospectOAuthToken(ctx echo.Context) error {
-	act := controller.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
 	if err := authz.User.OAuthIntrospect(act.RequesterRoles); err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)

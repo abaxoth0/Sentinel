@@ -66,12 +66,12 @@ func stringFromContext(ctx *rbac.AuthorizationContext) string {
 	return ctx.Entity.Name()+":"+ctx.Action.String()+":"+ctx.Resource.Name()
 }
 
-var insufficientPermissions = Error.NewStatusError(
+var InsufficientPermissions = Error.NewStatusError(
     "Недостаточно прав для выполнения данной операции",
     http.StatusForbidden,
 )
 
-var deniedByActionGatePolicy = Error.NewStatusError(
+var DeniedByActionGatePolicy = Error.NewStatusError(
 	"Authorization has been denied by Action Gate Policy",
 	http.StatusForbidden,
 )
@@ -104,13 +104,13 @@ func authorize(ctx *rbac.AuthorizationContext, rolesNames []string) *Error.Statu
 		log.Error("Failed to authorize "+ctxString, err.Error(), nil)
 
         if err == rbac.InsufficientPermissions {
-            return insufficientPermissions
+            return InsufficientPermissions
         }
 		switch err {
 		case rbac.InsufficientPermissions:
-            return insufficientPermissions
+            return InsufficientPermissions
 		case rbac.ActionDeniedByAGP:
-            return deniedByActionGatePolicy
+            return DeniedByActionGatePolicy
 		default:
 			msg := fmt.Sprintf(
 				"Unexpected error occured during authorization of %s with %s",

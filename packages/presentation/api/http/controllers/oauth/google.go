@@ -6,14 +6,11 @@ import (
 	"sentinel/packages/common/config"
 	"sentinel/packages/common/encoding/json"
 	Error "sentinel/packages/common/errors"
-	ActionDTO "sentinel/packages/core/action/DTO"
-	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
-	"sentinel/packages/infrastructure/token"
 	"sentinel/packages/presentation/api"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	"sentinel/packages/presentation/api/http/request"
-	ResponseBody "sentinel/packages/presentation/data/response"
 	"strconv"
 	"time"
 
@@ -64,7 +61,7 @@ func GoogleLogin(ctx echo.Context) error {
 		return controller.ConvertErrorStatusToHTTP(Error.StatusInternalError)
 	}
 
-	state, err := controller.NewCSRFToken(ctx)
+	state, err := SharedController.NewCSRFToken(ctx)
 	if err != nil {
 		return controller.ConvertErrorStatusToHTTP(err)
 	}
@@ -106,7 +103,6 @@ type googleUserInfoPartialResponse struct {
 	IsEmailVerified bool 	`json:"email_verified"`
 }
 
-// TODO A ton a lot of code duplication (~200 lines) from other controllers, get rid of that
 // TODO Send user password on creating account using this endpoint (cuz they won't be able to get it somehow else, and won't be able to change password, cuz on changing password of their own account current password also must be included in the request)
 
 // @Summary 		Actual handler for auth via google account
@@ -126,10 +122,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 	if !isInit {
 		controller.Log.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
-		return echo.NewHTTPError(
-			Error.StatusInternalError.Status(),
-			Error.StatusInternalError.Error(),
-		)
+		return controller.InternalServerError
 	}
 
 	code := ctx.QueryParam("code")
@@ -150,10 +143,7 @@ func GoogleCallback(ctx echo.Context) error {
 	oauthToken, err := googleOAuthConfig.Exchange(c, code)
 	if err != nil {
 		controller.Log.Error("Login failed", err.Error(), reqMeta)
-		return echo.NewHTTPError(
-			Error.StatusInternalError.Status(),
-			Error.StatusInternalError.Error(),
-		)
+		return controller.InternalServerError
 	}
 
 	client := oauth2.NewClient(c, googleOAuthConfig.TokenSource(c, oauthToken))
@@ -161,19 +151,13 @@ func GoogleCallback(ctx echo.Context) error {
 	userInfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
 		controller.Log.Error("Failed to get user info from google API", err.Error(), reqMeta)
-		return echo.NewHTTPError(
-			Error.StatusInternalError.Status(),
-			Error.StatusInternalError.Error(),
-		)
+		return controller.InternalServerError
 	}
 	defer userInfo.Body.Close()
 
 	body, err := json.Decode[googleUserInfoPartialResponse](userInfo.Body)
 	if err != nil {
-		return echo.NewHTTPError(
-			Error.StatusInternalError.Status(),
-			Error.StatusInternalError.Error(),
-		)
+		return controller.InternalServerError
 	}
 
 	if !body.IsEmailVerified {
@@ -191,6 +175,7 @@ func GoogleCallback(ctx echo.Context) error {
 	if e == Error.StatusNotFound {
 		controller.Log.Trace("Generating password for new user...", reqMeta)
 
+		// TODO update version of pwgen lib
 		password, err := pwgen.Generate(&pwgen.Config{
 			Length: 32,
 			Digits: true,
@@ -242,133 +227,13 @@ func GoogleCallback(ctx echo.Context) error {
 			)
 			return echo.NewHTTPError(
 				Error.StatusTimeout.Status(),
-				"The account was created, but it was not possible to log in immediately.",
+				"Account has been created, but login failed.",
 			)
 		}
 
-		payload := &UserDTO.Payload{
-			ID: user.ID,
-			Login: user.Login,
-			Roles: user.Roles,
-			SessionID: uuid.NewString(),
-			Version: user.Version,
-			Audience: []string{config.Auth.SelfAudience}, // TODO Request scopes somehow?
-		}
-
-		accessToken, refreshToken, e := token.NewAuthTokens(payload)
-		if e != nil {
-			return controller.ConvertErrorStatusToHTTP(e)
-		}
-
-		session, e := controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
-		if e != nil {
-			return controller.ConvertErrorStatusToHTTP(e)
-		}
-
-		if e := DB.Database.SaveSession(session); e != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
-		}
-
-		act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
-
-		if err := controller.UpdateOrCreateLocation(act, session.ID, session.IpAddress); err != nil {
-			if e = DB.Database.RevokeSession(act, session.ID); e != nil {
-				return controller.ConvertErrorStatusToHTTP(e)
-			}
-			return controller.ConvertErrorStatusToHTTP(err)
-		}
-
-		ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-
-		return ctx.JSON(
-			http.StatusOK,
-			ResponseBody.Token{
-				Message: "Пользователь успешно создан и авторизован",
-				AccessToken: accessToken.String(),
-				ExpiresIn: int(accessToken.TTL()) / 1000,
-			},
-		)
+		return SharedController.AuthenticateWithNewSession(ctx, user, []string{config.Auth.SelfAudience})
 	}
 
-	// If user was found -> log-in already existed user
-	deviceID, browser, e := controller.GetDeviceIDAndBrowser(ctx)
-	if e != nil {
-		return controller.ConvertErrorStatusToHTTP(e)
-	}
-
-	// If session with this device is already exists and user tries to login from the same browser
-	// (this is guard against cases when auth cookie was lost for some reasons)
-	session, e := DB.Database.GetSessionByDeviceAndUserID(deviceID, user.ID)
-	if e == nil && session.Browser == browser {
-		// TODO code inside this block is very similar with the one that is several lines above, try to fix that
-		controller.Log.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
-
-		accessToken, refreshToken, err := controller.UpdateSession(ctx, session, user, &UserDTO.Payload{
-			ID: user.ID,
-			Login: user.Login,
-			Roles: user.Roles,
-			SessionID: session.ID,
-			Version: user.Version,
-		})
-		if err == nil {
-			ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-
-			controller.Log.Info("Authenticating user '"+body.Email+"': OK", reqMeta)
-
-			return ctx.JSON(
-				http.StatusOK,
-				ResponseBody.Token{
-					Message: "Пользователь успешно авторизован",
-					AccessToken: accessToken.String(),
-					ExpiresIn: int(accessToken.TTL()) / 1000,
-				},
-			)
-		}
-	}
-
-    payload := &UserDTO.Payload{
-        ID: user.ID,
-        Login: user.Login,
-        Roles: user.Roles,
-		SessionID: uuid.NewString(),
-		Version: user.Version,
-		Audience: []string{config.Auth.SelfAudience}, // TODO Request scopes somehow?
-    }
-
-    accessToken, refreshToken, e := token.NewAuthTokens(payload)
-    if e != nil {
-        return controller.ConvertErrorStatusToHTTP(e)
-    }
-
-	session, e = controller.CreateSession(ctx, payload.SessionID, user.ID, config.Auth.RefreshTokenTTL())
-	if e != nil {
-		return controller.ConvertErrorStatusToHTTP(e)
-	}
-
-	if err := DB.Database.SaveSession(session); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save session")
-	}
-
-	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
-
-	if e := controller.UpdateOrCreateLocation(act, session.ID, session.IpAddress); e != nil {
-		if e := DB.Database.RevokeSession(act, session.ID); e != nil {
-			return controller.ConvertErrorStatusToHTTP(e)
-		}
-		return controller.ConvertErrorStatusToHTTP(e)
-	}
-
-    ctx.SetCookie(controller.NewAuthCookie(refreshToken))
-
-	controller.Log.Info("Authenticating user '"+body.Email+"': OK", reqMeta)
-
-    return ctx.JSON(
-        http.StatusOK,
-        ResponseBody.Token{
-            Message: "Пользователь успешно авторизован",
-            AccessToken: accessToken.String(),
-            ExpiresIn: int(accessToken.TTL()) / 1000,
-        },
-    )
+	return SharedController.Authenticate(ctx, user, []string{config.Auth.SelfAudience})
 }
 

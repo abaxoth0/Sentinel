@@ -12,6 +12,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/email"
 	controller "sentinel/packages/presentation/api/http/controllers"
+	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
 	ResponseBody "sentinel/packages/presentation/data/response"
@@ -83,7 +84,7 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 		controller.Log.Info("Binding request: OK", reqMeta)
 	}
 
-    act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
+    act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
 
 	act.Reason = body.Reason
 
@@ -177,7 +178,7 @@ func Drop(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func BulkSoftDelete(ctx echo.Context) error {
-    act := controller.GetBasicAction(ctx)
+    act := SharedController.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
 
@@ -212,7 +213,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func BulkRestore(ctx echo.Context) error {
-    act := controller.GetBasicAction(ctx)
+    act := SharedController.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
 
@@ -246,7 +247,7 @@ func BulkRestore(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func DropAllDeleted(ctx echo.Context) error {
-    act := controller.GetBasicAction(ctx)
+    act := SharedController.GetBasicAction(ctx)
 
     if err := DB.Database.DropAllSoftDeleted(act); err != nil {
         return controller.ConvertErrorStatusToHTTP(err)
@@ -308,7 +309,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 
     uid := ctx.Param("uid")
 
-    act := controller.GetBasicAction(ctx).ToUserTargeted(uid)
+    act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
 
     controller.Log.Trace("Validating user update request...", reqMeta)
 
@@ -438,7 +439,7 @@ func ChangeRoles(ctx echo.Context) error {
 func GetRoles(ctx echo.Context) error {
     uid := ctx.Param("uid")
 
-    filter := controller.GetBasicAction(ctx).ToUserTargeted(uid)
+    filter := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
 
     roles, err := DB.Database.GetRoles(filter)
     if err != nil {
@@ -538,7 +539,7 @@ func SearchUsers(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
-	act := controller.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
 	dtos, err := DB.Database.SearchUsers(act, rawFilters, page, pageSize)
 	if err != nil {
@@ -577,7 +578,7 @@ func GetUserSessions(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errMsg)
 	}
 
-	payload := controller.GetUserPayload(ctx)
+	payload := SharedController.GetUserPayload(ctx)
 
 	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
@@ -631,7 +632,7 @@ func GetUser(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, errMSg)
 	}
 
-	payload := controller.GetUserPayload(ctx)
+	payload := SharedController.GetUserPayload(ctx)
 
 	act := ActionDTO.NewUserTargeted(uid, payload.ID, payload.Roles)
 
