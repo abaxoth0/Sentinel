@@ -8,8 +8,8 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/abaxoth0/SentinelRBAC v1.2.0 h1:Vh+7j27zaW8M5nwlTMRwQmZ1LB5Ya92+0XLo07DSzMc=
 github.com/abaxoth0/SentinelRBAC v1.2.0/go.mod h1:jKJthxnoNT5NjxMPhIAtTL86UPZlNAmsZXlX9lJX9/M=
-github.com/abaxoth0/go-pwgen v1.0.2 h1:w8jFE+4zWhCMoCfwff7hB1cfJ8MiU9qHR5XuSkA1cY0=
-github.com/abaxoth0/go-pwgen v1.0.2/go.mod h1:4AJPVFHr4QAum+u15aWhi+NnDS5dSjPBQ4vUN/K2mLU=
+github.com/abaxoth0/go-pwgen v1.1.0 h1:9piBiBV7icuFlhoxgimxbrRu/xDLGl2P+ysJFivo4r0=
+github.com/abaxoth0/go-pwgen v1.1.0/go.mod h1:4AJPVFHr4QAum+u15aWhi+NnDS5dSjPBQ4vUN/K2mLU=
 github.com/akamensky/argparse v1.4.0 h1:YGzvsTqCvbEZhL8zZu2AiA5nq805NZh75JNj4ajn1xc=
 github.com/akamensky/argparse v1.4.0/go.mod h1:S5kwC7IuDcEr5VeXtGPRVZ5o/FdhcMlQz4IZQuw64xA=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=

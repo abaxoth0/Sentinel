@@ -23,13 +23,6 @@ import (
 
 var googleOAuthConfig *oauth2.Config
 
-var passwordGenerationOptions = &pwgen.Config{
-	Length: 32,
-	Digits: true,
-	Lower: true,
-	Upper: true,
-}
-
 func initGoogle() {
 	googleOAuthConfig = &oauth2.Config{
 		RedirectURL: api.GetBaseURL() + "/v1/auth/oauth/google/callback",
@@ -175,13 +168,7 @@ func GoogleCallback(ctx echo.Context) error {
 	if e == Error.StatusNotFound {
 		controller.Log.Trace("Generating password for new user...", reqMeta)
 
-		// TODO update version of pwgen lib
-		password, err := pwgen.Generate(&pwgen.Config{
-			Length: 32,
-			Digits: true,
-			Lower: true,
-			Upper: true,
-		})
+		password, err := pwgen.Generate(32, pwgen.LOWER|pwgen.UPPER|pwgen.DIGITS)
 		if err != nil {
 			errMsg := "Failed to generate password"
 			controller.Log.Error("Failed to generate password for new user", errMsg, reqMeta)
