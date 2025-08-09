@@ -61,7 +61,6 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	// TODO Handle error
 	m.session.DeleteUserSessionsCache(user.ID)
 
 	log.DB.Info("Soft deleting user: OK", nil)
@@ -324,7 +323,6 @@ func (m *Manager) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
 
     err = executor.Exec(connection.Primary, deleteQuery)
 
-	// TODO Handle error
     cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
 
 	log.DB.Info("Dropping all soft deleted users: OK", nil)

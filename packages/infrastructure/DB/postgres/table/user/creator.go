@@ -44,8 +44,6 @@ func (m *Manager) Create(login string, password string) (string, *Error.Status) 
         return "", err
 	}
 
-	// TODO Handle error (need to do that for same cases).
-	// 		Create queue (or two) which will try to clear cache for this kinda "dirty" keys?
     cache.Client.Delete(
         cache.KeyBase[cache.UserByLogin] + login,
         cache.KeyBase[cache.AnyUserByLogin] + login,

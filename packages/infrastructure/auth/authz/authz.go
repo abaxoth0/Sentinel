@@ -79,7 +79,6 @@ var DeniedByActionGatePolicy = Error.NewStatusError(
 // Can authorize operations only for the schema of this service.
 // Operations on other services must be authorized by themselves!
 func authorize(ctx *rbac.AuthorizationContext, rolesNames []string) *Error.Status {
-	fmt.Println(ctx)
 	ctxString := stringFromContext(ctx)
 
 	log.Trace("Authorizing "+ctxString+"...", nil)
