@@ -36,12 +36,12 @@ func Drop(ctx echo.Context) error {
 
 	if err := authz.User.DropCache(act.RequesterRoles); err != nil {
 		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
     if err := cache.Client.FlushAll(); err != nil {
 		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
 	controller.Log.Info("Dropping all cache: OK", reqMeta)

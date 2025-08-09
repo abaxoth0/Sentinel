@@ -3,7 +3,6 @@ package docscontroller
 import (
 	"sentinel/packages/common/config"
 	"sentinel/packages/infrastructure/auth/authz"
-	controller "sentinel/packages/presentation/api/http/controllers"
 	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 
 	"github.com/labstack/echo/v4"
@@ -20,7 +19,7 @@ func Swagger(ctx echo.Context) error {
 		payload := SharedController.GetUserPayload(ctx)
 
 		if err := authz.User.AccessAPIDocs(payload.Roles); err != nil {
-			return controller.ConvertErrorStatusToHTTP(err)
+			return err
 		}
 	}
 

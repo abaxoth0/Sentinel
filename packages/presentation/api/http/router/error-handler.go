@@ -25,10 +25,14 @@ func handleHttpError(err error, ctx echo.Context) {
     code := http.StatusInternalServerError
     message := "Internal Server Error"
 
-    if e, is := err.(*echo.HTTPError); is {
+	switch e := any(err).(type) {
+	case *echo.HTTPError:
         code = e.Code
         message = e.Message.(string)
-    } else {
+	case *Error.Status:
+		code = e.Status()
+		message = e.Error()
+	default:
 		log.Warning(
 			"Error is not *echo.HTTPError. It will be turned into the Internal Server Error",
 			request.GetMetadata(ctx),

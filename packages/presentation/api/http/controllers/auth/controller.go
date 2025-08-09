@@ -33,7 +33,7 @@ import (
 func GetCSRFToken(ctx echo.Context) error {
 	tokenStr, err := SharedController.NewCSRFToken(ctx)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
     // Set cookie
@@ -80,14 +80,14 @@ func Login(ctx echo.Context) error {
     user, err := DB.Database.GetUserByLogin(body.Login)
     if err != nil {
         if err.Side() == Error.ClientSide {
-            return controller.ConvertErrorStatusToHTTP(authn.InvalidAuthCreditinals)
+            return authn.InvalidAuthCreditinals
         }
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     if err := authn.CompareHashAndPassword(user.Password, body.Password); err != nil {
 		controller.Log.Error("Failed to authenticate user '"+body.Login+"'", err.Error(), reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
 	return SharedController.Authenticate(ctx, user, body.Audience)
@@ -114,12 +114,12 @@ func Logout(ctx echo.Context) error {
 
     authCookie, e := cookie.GetAuthCookie(ctx)
     if e != nil {
-        return controller.ConvertErrorStatusToHTTP(e)
+        return e
     }
 
 	refreshToken, err := SharedController.GetRefreshToken(ctx)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	claims := refreshToken.Claims.(*token.Claims)
@@ -138,7 +138,7 @@ func Logout(ctx echo.Context) error {
 
 	user, err := DB.Database.GetUserBySessionID(sessionID)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	act := ActionMapper.TargetedActionDTOFromClaims(user.ID, claims)
@@ -146,7 +146,7 @@ func Logout(ctx echo.Context) error {
 	controller.Log.Info("Logoutting user "+user.ID+"...", reqMeta)
 
 	if err := DB.Database.RevokeSession(act, sessionID); err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	if act.TargetUID == act.RequesterUID {
@@ -186,12 +186,12 @@ func Refresh(ctx echo.Context) error {
 
 	user, err := DB.Database.GetUserByID(payload.ID)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	accessToken, refreshToken, err := SharedController.UpdateSession(ctx, nil, user, payload)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     ctx.SetCookie(cookie.NewAuthCookie(refreshToken))
@@ -291,7 +291,7 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 			"User has invalid format (expected UUID)",
 		)
 		controller.Log.Error("Failed to revoke all user session", err.Error(), reqMeta)
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
@@ -310,7 +310,7 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 	act.Reason = body.GetReason()
 
 	if err := DB.Database.RevokeAllUserSessions(act); err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	if act.TargetUID == act.RequesterUID {

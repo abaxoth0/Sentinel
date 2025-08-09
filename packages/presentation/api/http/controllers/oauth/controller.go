@@ -42,7 +42,7 @@ func IntrospectOAuthToken(ctx echo.Context) error {
 	act := SharedController.GetBasicAction(ctx)
 
 	if err := authz.User.OAuthIntrospect(act.RequesterRoles); err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	body := RequestBody.Introspect{}

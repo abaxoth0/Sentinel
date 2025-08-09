@@ -86,7 +86,7 @@ func Authenticate(ctx echo.Context, user *UserDTO.Full, audience []string) error
 		accessToken, refreshToken, err := UpdateSession(ctx, nil, user, payload)
 		if err != nil {
 			if err == authz.InsufficientPermissions || err == authz.DeniedByActionGatePolicy {
-				return controller.ConvertErrorStatusToHTTP(err)
+				return err
 			}
 			controller.Log.Error("Failed to update user session. Switch to regular login process", err.Error(), reqMeta)
 			goto regular_login
@@ -144,7 +144,7 @@ func Authenticate(ctx echo.Context, user *UserDTO.Full, audience []string) error
 			)
 		}
 		if err == authz.InsufficientPermissions || err == authz.DeniedByActionGatePolicy {
-			return controller.ConvertErrorStatusToHTTP(err)
+			return err
 		}
 	}
 

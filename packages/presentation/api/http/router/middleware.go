@@ -10,7 +10,6 @@ import (
 	"sentinel/packages/infrastructure/DB"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
-	controller "sentinel/packages/presentation/api/http/controllers"
 	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	"sentinel/packages/presentation/api/http/request"
 	"slices"
@@ -187,7 +186,7 @@ func secure(next echo.HandlerFunc) echo.HandlerFunc {
 
 		accessToken, err := token.ParseSingedToken(accessTokenStr, config.Secret.AccessTokenPublicKey)
 		if err != nil {
-			return controller.ConvertErrorStatusToHTTP(err)
+			return err
 		}
 
 		payload := UserMapper.PayloadFromClaims(accessToken.Claims.(*token.Claims))
@@ -195,7 +194,7 @@ func secure(next echo.HandlerFunc) echo.HandlerFunc {
 		act := ActionDTO.NewUserTargeted(payload.ID, payload.ID, payload.Roles)
 
 		if _, err := DB.Database.GetRevokedSessionByID(act, payload.SessionID); err == nil {
-			return controller.ConvertErrorStatusToHTTP(Error.StatusSessionRevoked)
+			return Error.StatusSessionRevoked
 		}
 
 		ctx.Set("access_token", accessToken)

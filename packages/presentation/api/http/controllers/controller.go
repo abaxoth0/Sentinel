@@ -15,8 +15,6 @@ import (
 
 var Log = logger.NewSource("CONTROLLER", logger.Default)
 
-var InternalServerError = echo.NewHTTPError(Error.StatusInternalError.Status(), Error.StatusInternalError.Error())
-
 func BindAndValidate[T RequestBody.Validator](ctx echo.Context, dest T) error {
     reqMeta := request.GetMetadata(ctx)
 
@@ -50,7 +48,7 @@ func applyWWWAuthenticate(ctx echo.Context, params *wwwAuthenticateParamas) {
     )
 }
 
-func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
+func HandleTokenError(ctx echo.Context, err *Error.Status) *Error.Status {
 	reqMeta := request.GetMetadata(ctx)
 
 	Log.Trace("Handling token error...", reqMeta)
@@ -66,7 +64,7 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
         authCookie, err := cookie.GetAuthCookie(ctx)
         if err != nil {
 			Log.Trace("Handling token error: OK", reqMeta)
-            return ConvertErrorStatusToHTTP(err)
+            return err
         }
 
         cookie.DeleteCookie(ctx, authCookie)
@@ -81,6 +79,6 @@ func HandleTokenError(ctx echo.Context, err *Error.Status) *echo.HTTPError {
 
 	Log.Trace("Handling token error: OK", reqMeta)
 
-    return ConvertErrorStatusToHTTP(err)
+    return err
 }
 

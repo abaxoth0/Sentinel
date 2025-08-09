@@ -42,12 +42,12 @@ func Create(ctx echo.Context) error {
 
     uid, err := DB.Database.Create(body.Login, body.Password)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     if config.App.IsLoginEmail {
         if err = email.CreateAndEnqueueActivationEmail(uid, body.Login); err != nil {
-            return controller.ConvertErrorStatusToHTTP(err)
+            return err
         }
     }
 
@@ -89,7 +89,7 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 	act.Reason = body.Reason
 
     if err := upd(act); err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
 	controller.Log.Info(logMessageBase + ": OK", reqMeta)
@@ -189,7 +189,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 	act.Reason = body.Reason
 
     if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -224,7 +224,7 @@ func BulkRestore(ctx echo.Context) error {
 	act.Reason = body.Reason
 
     if err := DB.Database.BulkRestore(act, body.IDs); err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -250,27 +250,27 @@ func DropAllDeleted(ctx echo.Context) error {
     act := SharedController.GetBasicAction(ctx)
 
     if err := DB.Database.DropAllSoftDeleted(act); err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     return ctx.NoContent(http.StatusOK)
 }
 
-func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.UpdateUser) *echo.HTTPError {
+func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.UpdateUser) *Error.Status {
     // if user tries to update himself
     if filter.RequesterUID == filter.TargetUID {
         if err := body.Validate(); err != nil {
-            return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+            return Error.NewStatusError(err.Error(), http.StatusBadRequest)
         }
 
         user, err := DB.Database.GetAnyUserByID(filter.TargetUID)
 
         if err != nil {
-            return controller.ConvertErrorStatusToHTTP(err)
+            return err
         }
 
         if err := authn.CompareHashAndPassword(user.Password, body.GetPassword()); err != nil {
-            return echo.NewHTTPError(err.Status(), "Неверный пароль")
+            return Error.NewStatusError("Неверный пароль", err.Status())
         }
 
         return nil
@@ -283,7 +283,7 @@ func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.
                 return nil
             }
         }
-        return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+        return Error.NewStatusError(err.Error(), http.StatusBadRequest)
     }
 
     return nil
@@ -344,7 +344,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 
     if err != nil {
 		controller.Log.Info(logMessageBase + ": FAILED", reqMeta)
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
 	controller.Log.Info(logMessageBase + ": OK", reqMeta)
@@ -443,7 +443,7 @@ func GetRoles(ctx echo.Context) error {
 
     roles, err := DB.Database.GetRoles(filter)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     return ctx.JSON(http.StatusOK, roles)
@@ -543,7 +543,7 @@ func SearchUsers(ctx echo.Context) error {
 
 	dtos, err := DB.Database.SearchUsers(act, rawFilters, page, pageSize)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	return ctx.JSON(http.StatusOK, dtos)
@@ -585,7 +585,7 @@ func GetUserSessions(ctx echo.Context) error {
 	// Get locations for this sessions (in SQL query?)
 	sessions, err := DB.Database.GetUserSessions(act)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	res := make([]ResponseBody.UserSession, 0, len(sessions))

@@ -39,7 +39,7 @@ func Activate(ctx echo.Context) error {
     }
 
     if err := DB.Database.Activate(token); err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     return ctx.NoContent(http.StatusOK)
@@ -68,7 +68,7 @@ func Resend(ctx echo.Context) error {
 
     user, err := DB.Database.GetUserByLogin(body.Login)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
     if user.IsActive() {
@@ -79,14 +79,14 @@ func Resend(ctx echo.Context) error {
 
     tk, err := token.NewActivationToken(user.ID, user.Login, user.Roles)
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
 	controller.Log.Trace("Creating and enqueueing activation email", reqMeta)
 
 	err = email.CreateAndEnqueueActivationEmail(user.Login, tk.String())
     if err != nil {
-        return controller.ConvertErrorStatusToHTTP(err)
+        return err
     }
 
 	controller.Log.Info("Resending activation email: OK", reqMeta)

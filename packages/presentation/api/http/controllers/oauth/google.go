@@ -58,12 +58,12 @@ func GoogleLogin(ctx echo.Context) error {
 
 	if !isInit {
 		controller.Log.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
-		return controller.ConvertErrorStatusToHTTP(Error.StatusInternalError)
+		return Error.StatusInternalError
 	}
 
 	state, err := SharedController.NewCSRFToken(ctx)
 	if err != nil {
-		return controller.ConvertErrorStatusToHTTP(err)
+		return err
 	}
 
 	sessionID := uuid.New().String()
@@ -122,7 +122,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 	if !isInit {
 		controller.Log.Panic("Failed to handle google login", "OAuth controller wasn't initialized", reqMeta)
-		return controller.InternalServerError
+		return Error.StatusInternalError
 	}
 
 	code := ctx.QueryParam("code")
@@ -143,7 +143,7 @@ func GoogleCallback(ctx echo.Context) error {
 	oauthToken, err := googleOAuthConfig.Exchange(c, code)
 	if err != nil {
 		controller.Log.Error("Login failed", err.Error(), reqMeta)
-		return controller.InternalServerError
+		return Error.StatusInternalError
 	}
 
 	client := oauth2.NewClient(c, googleOAuthConfig.TokenSource(c, oauthToken))
@@ -151,13 +151,13 @@ func GoogleCallback(ctx echo.Context) error {
 	userInfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
 		controller.Log.Error("Failed to get user info from google API", err.Error(), reqMeta)
-		return controller.InternalServerError
+		return Error.StatusInternalError
 	}
 	defer userInfo.Body.Close()
 
 	body, err := json.Decode[googleUserInfoPartialResponse](userInfo.Body)
 	if err != nil {
-		return controller.InternalServerError
+		return Error.StatusInternalError
 	}
 
 	if !body.IsEmailVerified {
@@ -168,7 +168,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 	user, e := DB.Database.GetUserByLogin(body.Email)
 	if e != nil && e != Error.StatusNotFound {
-		return controller.ConvertErrorStatusToHTTP(e)
+		return e
 	}
 
 	// User with this email doesn't exists -> create new user
@@ -192,7 +192,7 @@ func GoogleCallback(ctx echo.Context) error {
 
 		uid, e := DB.Database.Create(body.Email, password)
 		if e != nil {
-			return controller.ConvertErrorStatusToHTTP(e)
+			return e
 		}
 
 		// There are may occur a problem since DB.Database.Create() creates user in primary DB,
@@ -207,7 +207,7 @@ func GoogleCallback(ctx echo.Context) error {
 		for retries <= maxRetries {
 			user, e = DB.Database.GetUserByID(uid)
 			if e != nil && e != Error.StatusNotFound {
-				return controller.ConvertErrorStatusToHTTP(e)
+				return e
 			}
 			if e == nil {
 				break
