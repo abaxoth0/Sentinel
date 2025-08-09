@@ -68,6 +68,16 @@ func (dto *Basic) IsActive() bool {
     return !slices.Contains(dto.Roles, "unconfirmed_user")
 }
 
+func (dto *Basic) MakePublic() *Public {
+	return &Public{
+		ID: dto.ID,
+		Login: dto.Login,
+		Roles: dto.Roles,
+		DeletedAt: dto.DeletedAt,
+		Version: dto.Version,
+	}
+}
+
 type Full struct {
     CreatedAt time.Time `json:"createdAt"`
 

@@ -646,6 +646,6 @@ func GetUser(ctx echo.Context) error {
 		return err
 	}
 
-	return ctx.JSON(http.StatusOK, user)
+	return ctx.JSON(http.StatusOK, user.Basic.MakePublic())
 }
 
