@@ -29,7 +29,7 @@ var activationEmailBody string
 
 func initActivationEmailBody() {
     values := activationEmailTemplateValues{
-        ActivationURL: api.GetBaseURL() + "/user/activation/" + activationTokenPlaceholder,
+        ActivationURL: api.GetBaseURL() + "/v1/user/activation/" + activationTokenPlaceholder,
     }
 
     b, err := parseTemplate(activationEmailTemplate, values)

@@ -117,7 +117,7 @@ func Create() *echo.Echo {
     userGroup.PATCH("/:uid/login", User.ChangeLogin, secure, preventUserDesync, doubleSubmitCSRF)
     userGroup.PATCH("/:uid/password", User.ChangePassword, secure, preventUserDesync, doubleSubmitCSRF)
     userGroup.PATCH("/:uid/roles", User.ChangeRoles, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.GET("/activation/:token", Activation.Activate, secure, preventUserDesync)
+    userGroup.GET("/activation/:token", Activation.Activate)
     userGroup.PUT("/activation/resend", Activation.Resend, secure, preventUserDesync)
 	userGroup.GET("/search", User.SearchUsers, secure, preventUserDesync)
 	userGroup.GET("/:uid/sessions", User.GetUserSessions, secure, preventUserDesync)
