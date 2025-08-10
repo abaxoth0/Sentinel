@@ -1431,7 +1431,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/userdto.Full"
+                            "$ref": "#/definitions/userdto.Public"
                         }
                     },
                     "400": {
@@ -2620,35 +2620,6 @@ const docTemplate = `{
                 "user-agent": {
                     "type": "string",
                     "example": "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0"
-                }
-            }
-        },
-        "userdto.Full": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "login": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "version": {
-                    "type": "integer"
                 }
             }
         },

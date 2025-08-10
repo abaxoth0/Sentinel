@@ -266,25 +266,6 @@ definitions:
         example: Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0
         type: string
     type: object
-  userdto.Full:
-    properties:
-      createdAt:
-        type: string
-      deletedAt:
-        type: string
-      id:
-        type: string
-      login:
-        type: string
-      password:
-        type: string
-      roles:
-        items:
-          type: string
-        type: array
-      version:
-        type: integer
-    type: object
   userdto.Payload:
     properties:
       audience:
@@ -1073,7 +1054,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/userdto.Full'
+            $ref: '#/definitions/userdto.Public'
         "400":
           description: Bad Request
           schema:

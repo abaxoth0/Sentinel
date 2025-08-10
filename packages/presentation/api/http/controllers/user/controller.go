@@ -610,7 +610,7 @@ func GetUserSessions(ctx echo.Context) error {
 // @Param 			uid 		path 	string 	true 	"User ID"
 // @Accept			json
 // @Produce			json
-// @Success			200				{object}	userdto.Full
+// @Success			200				{object}	userdto.Public
 // @Failure			400,401,403,500	{object} 	responsebody.Error
 // @Failure			490 			{object} 	responsebody.Error 			"User data desynchronization"
 // @Header 			490 			{string} 	X-Token-Refresh-Required 	"Set to 'true' when token refresh is required"
