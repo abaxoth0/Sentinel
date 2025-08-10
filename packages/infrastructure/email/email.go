@@ -15,7 +15,8 @@ import (
 var log = logger.NewSource("EMAIL", logger.Default)
 
 type Email interface {
-    Send() *Error.Status
+    Send() 	*Error.Status
+	To()	string
 }
 
 var MainMailer *Mailer
@@ -48,9 +49,14 @@ func Run() error {
         config.Secret.MailerEmailPassword,
     )
 
-    MainMailer = NewMailer("main", context.Background())
+	var err error
 
-    go MainMailer.Run()
+	MainMailer, err = NewMailer("main", context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
+    go MainMailer.Run(5)
 
     isRunning = true
 

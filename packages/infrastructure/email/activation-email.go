@@ -41,8 +41,52 @@ func initActivationEmailBody() {
 }
 
 type UserActivationEmail struct {
-    To string
+    to string
     Token string
+}
+
+func NewUserActivationEmail(to string, token string) (*UserActivationEmail, *Error.Status) {
+    if err := validation.Email(to); err != nil {
+        if err == Error.InvalidValue {
+			errMsg := "Invlaid E-Mail format"
+			log.Error("Failed to create user activation email", errMsg, nil)
+            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
+        }
+		if err == Error.NoValue {
+			errMsg := "E-Mail is not specified"
+			log.Error("Failed to create user activation email", errMsg, nil)
+            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
+        }
+    }
+
+    return &UserActivationEmail{ to: to, Token: token }, nil
+}
+
+func (e *UserActivationEmail) To() string {
+	return e.to
+}
+
+func (e *UserActivationEmail) Send() *Error.Status {
+	log.Trace("Sending user activation email...", nil)
+
+    email := gomail.NewMessage()
+
+    email.SetHeader("From", config.Secret.MailerEmail)
+    email.SetHeader("To", e.to)
+    email.SetHeader("Subject", "Account activation")
+
+    body := strings.Replace(activationEmailBody, activationTokenPlaceholder, e.Token, 1)
+
+    email.SetBody("text/html", body)
+
+    if err := dialer.DialAndSend(email); err != nil {
+		log.Error("Failed to send user activation email", err.Error(), nil)
+        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
+    }
+
+	log.Trace("Sending user activation email: OK", nil)
+
+    return nil
 }
 
 // Creates new activation email, on success immediatly pushes it to mailer queue.
@@ -74,46 +118,6 @@ func CreateAndEnqueueActivationEmail(uid, email string) *Error.Status {
     }
 
 	log.Trace("Pushing user activation email in mailer queue: OK", nil)
-
-    return nil
-}
-
-func NewUserActivationEmail(to string, token string) (*UserActivationEmail, *Error.Status) {
-    if err := validation.Email(to); err != nil {
-        if err == Error.InvalidValue {
-			errMsg := "Invlaid E-Mail format"
-			log.Error("Failed to create user activation email", errMsg, nil)
-            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
-        }
-		if err == Error.NoValue {
-			errMsg := "E-Mail is not specified"
-			log.Error("Failed to create user activation email", errMsg, nil)
-            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
-        }
-    }
-
-    return &UserActivationEmail{ To: to, Token: token }, nil
-}
-
-func (e *UserActivationEmail) Send() *Error.Status {
-	log.Trace("Sending user activation email...", nil)
-
-    email := gomail.NewMessage()
-
-    email.SetHeader("From", config.Secret.MailerEmail)
-    email.SetHeader("To", e.To)
-    email.SetHeader("Subject", "Account activation")
-
-    body := strings.Replace(activationEmailBody, activationTokenPlaceholder, e.Token, 1)
-
-    email.SetBody("text/html", body)
-
-    if err := dialer.DialAndSend(email); err != nil {
-		log.Error("Failed to send user activation email", err.Error(), nil)
-        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
-    }
-
-	log.Trace("Sending user activation email: OK", nil)
 
     return nil
 }

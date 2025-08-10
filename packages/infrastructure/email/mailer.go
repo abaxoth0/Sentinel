@@ -2,78 +2,96 @@ package email
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/structs"
-	"sync"
-	"time"
+	"strconv"
+	"sync/atomic"
 )
 
-type Mailer struct {
-    queue *structs.SyncFifoQueue[Email]
-    name string
-    done chan bool
-    isRunning bool
-    ctx context.Context
-    cancel context.CancelFunc
-    mut sync.Mutex
+type MailerOptions struct {
+	// Default: 1
+	BatchSize 	int
+	// Default: 0
+	MaxRetries 	int
 }
 
-// Creates new mailer with specified name and parent context.
-// (Several mailers can have the same names, be careful)
-func NewMailer(name string, ctx context.Context) *Mailer {
+type Mailer struct {
+	name 		string
+	isRunning 	atomic.Bool
+	wp 			*structs.WorkerPool
+    ctx 		context.Context
+    cancel 		context.CancelFunc
+	opt 		*MailerOptions
+}
+
+var mailesNames = map[string]bool{}
+
+// Creates new mailer with specified name, parent context and options.
+// If opt is nil then it will be created using default values of MailerOptions fields.
+// Returns error if mailer with this name already exist.
+func NewMailer(name string, ctx context.Context, opt *MailerOptions) (*Mailer, error) {
+	if mailesNames[name] {
+		return nil, errors.New("Mailer with name \""+name+"\" already exist")
+	}
+
     ctx, cancel := context.WithCancel(ctx)
+
+	if opt == nil {
+		opt = &MailerOptions{
+			MaxRetries: 0,
+			BatchSize: 1,
+		}
+	}
+	if opt.BatchSize <= 0 {
+		opt.BatchSize = 1
+	}
+	if opt.MaxRetries < 0 {
+		opt.MaxRetries = 0
+	}
 
     return &Mailer{
         name: name,
         ctx: ctx,
         cancel: cancel,
-        queue: structs.NewSyncFifoQueue[Email](0),
-        done: make(chan bool),
-    }
+		wp: structs.NewWorkerPool(ctx, opt.BatchSize),
+		opt: opt,
+    }, nil
+}
+
+type emailTask struct {
+	email 	Email
+	mailer	*Mailer
+}
+
+func (t *emailTask) Process() {
+	log.Trace("Mailer '"+t.mailer.name+"': sending email...", nil)
+
+	for i := range t.mailer.opt.MaxRetries + 1 {
+		log.Trace("Attempts to send email: "+strconv.Itoa(i+1), nil)
+		err := t.email.Send()
+		if err == nil {
+			break
+		}
+		log.Error("Mailer '"+t.mailer.name+"': failed to send email", err.Error(), nil)
+	}
+
+	log.Trace("Mailer '"+t.mailer.name+"': sending email: OK", nil)
 }
 
 // Starts mailer loop
-func (m *Mailer) Run() error {
-    m.mut.Lock()
-
-    if m.isRunning {
-        m.mut.Unlock()
+func (m *Mailer) Run(workers int) error {
+    if m.isRunning.Load() {
         return fmt.Errorf("mailer '%s' already running", m.name)
     }
 
-    m.isRunning = true
-    m.mut.Unlock()
+    m.isRunning.Store(true)
 
     log.Info("Mailer '"+m.name+"' started", nil)
 
-    for {
-        select {
-        case <- m.ctx.Done():
-            close(m.done) // notify waiters that mailer loop done it's work
-            return nil
-        default:
-            email, ok := m.queue.PreserveAndPop()
+	m.wp.Start(workers)
 
-            if !ok {
-                // wait 1 second to avoid loading CPU too much
-                // while there are no work.
-                m.queue.WaitTillNotEmpty(time.Second)
-                continue
-            }
-
-			log.Trace("Mailer '"+m.name+"': sending email...", nil)
-
-            if err := email.Send(); err != nil {
-                // Try to send email again if first attempt failed
-                if err := email.Send(); err != nil {
-					log.Error("Mailer '"+m.name+"': failed to send email", err.Error(), nil)
-                }
-            }
-
-			log.Trace("Mailer '"+m.name+"': sending email: OK", nil)
-        }
-    }
+	return nil
 }
 
 // Stops mailer loop.
@@ -81,82 +99,40 @@ func (m *Mailer) Run() error {
 func (m *Mailer) Stop() error {
 	log.Info("Mailer '"+m.name+"': shutting down...", nil)
 
-    m.mut.Lock()
-
-    if !m.isRunning {
-        m.mut.Unlock()
+    if !m.isRunning.Load() {
         return fmt.Errorf("mailer '%s' is not running, hence can't be stopped", m.name)
     }
 
-    m.isRunning = false
+    m.isRunning.Store(false)
 
-    m.mut.Unlock()
+	if err := m.wp.Cancel(); err != nil {
+		log.Error("Mailer '"+m.name+"': failed to shut down", err.Error(), nil)
+		return err
+	}
 
-	log.Info("Mailer '"+m.name+"': waiting till queue is empty...", nil)
+	log.Info("Mailer '"+m.name+"': shutting down: OK", nil)
 
-    if timeout := m.queue.WaitTillEmpty(time.Second * 5); timeout != nil {
-        log.Error(
-			"Mailer '"+m.name+"': failed to wait till queue is empty",
-			"Operation timeout waiting",
-			nil,
-		)
-    } else {
-		log.Info("Mailer '"+m.name+"': waiting till queue is empty: OK", nil)
-    }
-
-	log.Info("Mailer '"+m.name+"': waiting till current work is finished...", nil)
-
-    // at this point mailer loop still can process some email so...
-    m.cancel()
-
-    for {
-        select {
-        // ...wait till mailer loop will finish it's current work...
-        case <-m.done:
-			log.Info("Mailer '"+m.name+"': waiting till current work is finished: OK", nil)
-            log.Info(
-				fmt.Sprintf("Mailer '"+m.name+"': shut down with %d pending emails", m.queue.Size()),
-				nil,
-            )
-
-            return nil
-        // ... or after some long time roll back queue and return timeout error.
-        case <-time.After(time.Second * 5):
-            log.Error(
-				"Mailer '"+m.name+"': failed to wait till all current job is done, queue will be rolled back",
-				"Operation timeout",
-				nil,
-			)
-
-            m.queue.RollBack()
-
-            return Error.StatusTimeout
-        }
-    }
-}
-
-// Returns all pending emails. Can't be called while mailer is running.
-func (m *Mailer) Drain() ([]Email, error) {
-    m.mut.Lock()
-    defer m.mut.Unlock()
-
-    if m.isRunning {
-        return nil, fmt.Errorf("failed to drain emails from mailer '%s': mailer is running", m.name)
-    }
-
-    return m.queue.Unwrap(), nil
+	return nil
 }
 
 // Pushes new email to mailer queue
 func (m *Mailer) Push(email Email) error {
-    m.mut.Lock()
-    defer m.mut.Unlock()
-
-    if !m.isRunning {
+    if !m.isRunning.Load() {
         return fmt.Errorf("can't push to mailer '%s', mailer isn't running", m.name)
     }
 
-    m.queue.Push(email)
+	log.Trace("Pushing new email into the worker pool...", nil)
+
+	err := m.wp.Push(&emailTask{
+		email: email,
+		mailer: m,
+	})
+	if err != nil {
+		log.Error("Failed to push new email into the worker pool", err.Error(), nil)
+		return err
+	}
+
+	log.Trace("Pushing new email into the worker pool: OK", nil)
 
     return nil
 }
