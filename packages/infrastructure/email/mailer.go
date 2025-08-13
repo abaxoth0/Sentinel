@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/structs"
 	"strconv"
 	"sync/atomic"
 )
 
 type MailerOptions struct {
-	// Default: 1
-	BatchSize 	int
 	// Default: 0
 	MaxRetries 	int
+
+	structs.WorkerPoolOptions
 }
 
 type Mailer struct {
@@ -38,13 +39,7 @@ func NewMailer(name string, ctx context.Context, opt *MailerOptions) (*Mailer, e
     ctx, cancel := context.WithCancel(ctx)
 
 	if opt == nil {
-		opt = &MailerOptions{
-			MaxRetries: 0,
-			BatchSize: 1,
-		}
-	}
-	if opt.BatchSize <= 0 {
-		opt.BatchSize = 1
+		opt = new(MailerOptions)
 	}
 	if opt.MaxRetries < 0 {
 		opt.MaxRetries = 0
@@ -54,7 +49,7 @@ func NewMailer(name string, ctx context.Context, opt *MailerOptions) (*Mailer, e
         name: name,
         ctx: ctx,
         cancel: cancel,
-		wp: structs.NewWorkerPool(ctx, opt.BatchSize),
+		wp: structs.NewWorkerPool(ctx, &opt.WorkerPoolOptions),
 		opt: opt,
     }, nil
 }
@@ -65,18 +60,24 @@ type emailTask struct {
 }
 
 func (t *emailTask) Process() {
-	log.Trace("Mailer '"+t.mailer.name+"': sending email...", nil)
+	log.Trace("Mailer '"+t.mailer.name+"': sending email to "+t.email.To()+"...", nil)
+
+	var err *Error.Status
 
 	for i := range t.mailer.opt.MaxRetries + 1 {
-		log.Trace("Attempts to send email: "+strconv.Itoa(i+1), nil)
-		err := t.email.Send()
+		log.Trace("Attempts to send email to "+t.email.To()+": "+strconv.Itoa(i+1), nil)
+		err = t.email.Send()
 		if err == nil {
 			break
 		}
-		log.Error("Mailer '"+t.mailer.name+"': failed to send email", err.Error(), nil)
+		log.Trace("Mailer '"+t.mailer.name+"': failed to send email to "+t.email.To()+", retrying", nil)
 	}
 
-	log.Trace("Mailer '"+t.mailer.name+"': sending email: OK", nil)
+	if err != nil {
+		log.Error("Mailer '"+t.mailer.name+"': failed to send email to "+t.email.To(), err.Error(), nil)
+		return
+	}
+	log.Trace("Mailer '"+t.mailer.name+"': email successfully sent to "+t.email.To(), nil)
 }
 
 // Starts mailer loop
@@ -87,9 +88,9 @@ func (m *Mailer) Run(workers int) error {
 
     m.isRunning.Store(true)
 
-    log.Info("Mailer '"+m.name+"' started", nil)
-
 	m.wp.Start(workers)
+
+	log.Info("Mailer '"+m.name+"' started", nil)
 
 	return nil
 }

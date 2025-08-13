@@ -3,12 +3,21 @@ package structs
 import (
 	"context"
 	"errors"
+	Error "sentinel/packages/common/errors"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Task interface {
     Process()
+}
+
+type WorkerPoolOptions struct {
+	// Default: 1. If <= 0, then will be set to the default
+	BatchSize 	int
+	// Default: 1s. If <= 0, then will be set to the default
+	StopTimeout time.Duration
 }
 
 type WorkerPool struct {
@@ -18,19 +27,38 @@ type WorkerPool struct {
     cancel     	context.CancelFunc
     wg         	*sync.WaitGroup
 	once 		sync.Once
-	batchSize  	int
+	opt			*WorkerPoolOptions
 }
 
-// Creates new worker pool with specified waiter and parent context.
-func NewWorkerPool(ctx context.Context, batchSize int) *WorkerPool {
+const (
+	workerPoolDefaultBatchSize int = 1
+	workerPoolDefaultStopTimeout time.Duration = 1 * time.Second
+)
+
+// Creates new worker pool with parent context and options.
+// If opt is nil then it will be created using default values of WorkerPoolOptions fields.
+func NewWorkerPool(ctx context.Context, opt *WorkerPoolOptions) *WorkerPool {
     ctx, cancel := context.WithCancel(ctx)
+
+	if opt == nil {
+		opt = &WorkerPoolOptions{
+			BatchSize: workerPoolDefaultBatchSize,
+			StopTimeout: workerPoolDefaultStopTimeout,
+		}
+	}
+	if opt.BatchSize <= 0 {
+		opt.BatchSize = workerPoolDefaultBatchSize
+	}
+	if opt.StopTimeout <= 0 {
+		opt.StopTimeout = workerPoolDefaultStopTimeout
+	}
 
     return &WorkerPool{
         queue: NewSyncFifoQueue[Task](0),
         ctx: ctx,
         cancel: cancel,
         wg: new(sync.WaitGroup),
-		batchSize: batchSize,
+		opt: opt,
     }
 }
 
@@ -44,28 +72,37 @@ func (wp *WorkerPool) Start(workerCount int) {
 	})
 }
 
+func (wp *WorkerPool) stop() *Error.Status {
+	timeout := time.After(wp.opt.StopTimeout)
+	for {
+		select {
+		case <-timeout:
+			return Error.StatusTimeout
+		default:
+			tasks, ok := wp.queue.PopN(wp.opt.BatchSize)
+			if !ok {
+				return nil
+			}
+			wp.process(tasks)
+		}
+	}
+}
+
 func (wp *WorkerPool) work() {
 	for {
 		select {
 		case <-wp.ctx.Done():
-			for {
-				tasks, ok := wp.queue.PopN(wp.batchSize)
-				if !ok {
-					return
-				}
-				wp.process(tasks)
-			}
+			wp.stop()
+			return
 		default:
 			if wp.queue.Size() == 0 {
 				wp.queue.WaitTillNotEmpty(0)
 				continue
 			}
-
-			tasks, ok := wp.queue.PopN(wp.batchSize)
+			tasks, ok := wp.queue.PopN(wp.opt.BatchSize)
 			if !ok {
 				continue
 			}
-
 			wp.process(tasks)
 		}
 	}
@@ -94,6 +131,10 @@ func (wp *WorkerPool) Cancel() error {
 
 	wp.canceled.Store(true)
     wp.cancel()
+	// TODO there are bug when WP has less than 3 workers it may panic with message: (this line cause panic)
+	//		panic: sync: WaitGroup is reused before previous Wait has returned
+	// In my case it tried to process several works after being Canceled, but i'm not exactly sure what cause that
+	// if call Cancel while there are no work in queue it won't panic, so most likely problem in stop method
 	wp.wg.Wait()
 
 	return nil

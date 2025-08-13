@@ -19,8 +19,9 @@ import (
 var fileLog = NewSource("FILE LOGGER", Stderr)
 
 const (
-	fallbackBatchSize = 500
-	fallbackWorkers   = 5
+	fallbackBatchSize 	= 500
+	fallbackWorkers   	= 5
+	fallbackStopTimeout = time.Second * 10
 )
 
 // Satisfies Logger and LoggerBinder interfaces
@@ -48,7 +49,10 @@ func NewFileLogger(name string) *FileLogger {
 		name: name,
         done: make(chan struct{}),
         disruptor: structs.NewDisruptor[*LogEntry](),
-        fallback: structs.NewWorkerPool(context.Background(), fallbackBatchSize),
+        fallback: structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
+			BatchSize: fallbackBatchSize,
+			StopTimeout: fallbackStopTimeout,
+		}),
         transmissions: []Logger{},
 		streamPool: sync.Pool{
 			New: func() any {
@@ -98,7 +102,10 @@ func (l *FileLogger) Start(debug bool) error {
 
     // canceled WorkerPool can't be started
     if l.fallback.IsCanceled() {
-        l.fallback = structs.NewWorkerPool(context.Background(), fallbackBatchSize)
+        l.fallback = structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
+			BatchSize: fallbackBatchSize,
+			StopTimeout: fallbackStopTimeout,
+		})
     }
 
     l.isRunning.Store(true)
