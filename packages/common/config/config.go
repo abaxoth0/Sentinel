@@ -88,7 +88,6 @@ type appConfig struct {
     ShowLogs              		bool   `yaml:"show-logs" validate:"exists"`
     TraceLogsEnabled      		bool   `yaml:"trace-logs" validate:"exists"`
     ServiceID             		string `yaml:"service-id" validate:"required"`
-    IsLoginEmail          		bool   `yaml:"is-login-email" validate:"exists"`
     RawActivationTokenTTL 		string `yaml:"user-activation-token-ttl" validate:"required"`
 	RawPasswordResetTokenTTL 	string `yaml:"password-reset-token-ttl" validate:"required"`
 }

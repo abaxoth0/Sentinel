@@ -48,8 +48,6 @@ debug-location-ip: 8.8.8.8
 ### APP ###
 service-id: cb663674-803e-4b06-bfeb-87c5cc86383e
 
-is-login-email: true
-
 user-activation-token-ttl: 24h
 
 password-reset-token-ttl: 1h

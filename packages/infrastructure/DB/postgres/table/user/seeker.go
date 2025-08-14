@@ -145,7 +145,7 @@ func (m *Manager) getUserBy(
             return nil, e
         }
     }
-    if conditionProperty == user.LoginProperty && config.App.IsLoginEmail {
+    if conditionProperty == user.LoginProperty {
         if err := validation.Email(conditionValue); err != nil {
 			e := err.ToStatus(
 				"User login isn't specified",

@@ -3,7 +3,6 @@ package usercontroller
 import (
 	"fmt"
 	"net/http"
-	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
@@ -45,11 +44,9 @@ func Create(ctx echo.Context) error {
         return err
     }
 
-    if config.App.IsLoginEmail {
-        if err = email.EnqueueTokenEmail(email.ActivationTokenType, uid, body.Login); err != nil {
-            return err
-        }
-    }
+	if err = email.EnqueueTokenEmail(email.ActivationTokenType, uid, body.Login); err != nil {
+		return err
+	}
 
     controller.Log.Info("Creating new user: OK", reqMeta)
 

@@ -23,11 +23,9 @@ func Start(Router *echo.Echo) {
 
     signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-    if config.App.IsLoginEmail {
-		if err := email.Run(); err != nil {
-			log.Fatal("Failed to start mailer", err.Error(), nil)
-		}
-    }
+	if err := email.Run(); err != nil {
+		log.Fatal("Failed to start mailer", err.Error(), nil)
+	}
 
     go func(){
 		var err error
@@ -71,11 +69,9 @@ func Shutdown() {
         log.Error("Failed to disconnect from DB", err.Error(), nil)
     }
 
-    if config.App.IsLoginEmail {
-        if err := email.Stop(); err != nil {
-            log.Error("Failed to stop mailer", err.Error(), nil)
-        }
-    }
+	if err := email.Stop(); err != nil {
+		log.Error("Failed to stop mailer", err.Error(), nil)
+	}
 
     log.Info("Shutted down", nil)
 }

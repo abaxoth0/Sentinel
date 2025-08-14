@@ -3,7 +3,6 @@ package user
 import (
 	"net/http"
 	"regexp"
-	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
 	"sentinel/packages/core"
@@ -59,10 +58,6 @@ var ErrInvalidEmailFormat = Error.NewStatusError(
     "Неверный логин: недопустимый формат E-Mail'а",
     http.StatusBadRequest,
 )
-var ErrLoginContainsUnacceptableSymbols = Error.NewStatusError(
-    "Логин содержит недопустимые символы. " + allowedSymbolsMsg,
-    http.StatusBadRequest,
-)
 
 var allowedSymbolsRegexp = regexp.MustCompile(`^[a-zA-Z0-9_\-\.@$!#]+$`)
 
@@ -88,17 +83,11 @@ func ValidateLogin(login string) *Error.Status {
         return ErrInvalidLoginLength
     }
 
-    if config.App.IsLoginEmail {
-        if err := validation.Email(login); err != nil {
-            // If err is not nil then it maybe only Error.InvalidValie,
-            // cuz login was already checked for zero or whitespaces value
-            return ErrInvalidEmailFormat
-        }
-    } else {
-        if !allowedSymbolsRegexp.MatchString(login) {
-            return ErrLoginContainsUnacceptableSymbols
-        }
-    }
+	if err := validation.Email(login); err != nil {
+		// If err is not nil then it maybe only Error.InvalidValie,
+		// cuz login was already checked for zero or whitespaces value
+		return ErrInvalidEmailFormat
+	}
 
     return nil
 }
