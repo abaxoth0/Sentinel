@@ -15,8 +15,9 @@ import (
 var log = logger.NewSource("EMAIL", logger.Default)
 
 type Email interface {
-    Send() 	*Error.Status
-	To()	string
+    Send() 		*Error.Status
+	To()		string
+	Subject() 	string
 }
 
 var MainMailer *Mailer
@@ -32,7 +33,7 @@ func Run() error {
 		return errors.New(errMsg)
     }
 
-    initActivationEmailBody()
+    initTokenEmailsBodies()
 
     validSMTPPorts := []int{587, 25, 465, 2525}
 

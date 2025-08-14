@@ -96,6 +96,8 @@ func Create() *echo.Echo {
     authGroup.DELETE(rootPath, Auth.Logout, doubleSubmitCSRF)
 	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync, doubleSubmitCSRF)
 	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync, doubleSubmitCSRF)
+	authGroup.POST("/forgot-password", Auth.ForgotPassword)
+	authGroup.POST("/reset-password", Auth.ResetPassword, doubleSubmitCSRF)
 
 	oauthSubGroup := authGroup.Group("/oauth", noCache)
 

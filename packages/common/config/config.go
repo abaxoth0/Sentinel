@@ -85,11 +85,12 @@ type debugConfig struct {
 }
 
 type appConfig struct {
-    ShowLogs              bool   `yaml:"show-logs" validate:"exists"`
-    TraceLogsEnabled      bool   `yaml:"trace-logs" validate:"exists"`
-    ServiceID             string `yaml:"service-id" validate:"required"`
-    IsLoginEmail          bool   `yaml:"is-login-email" validate:"exists"`
-    RawActivationTokenTTL string `yaml:"user-activation-token-ttl" validate:"required"`
+    ShowLogs              		bool   `yaml:"show-logs" validate:"exists"`
+    TraceLogsEnabled      		bool   `yaml:"trace-logs" validate:"exists"`
+    ServiceID             		string `yaml:"service-id" validate:"required"`
+    IsLoginEmail          		bool   `yaml:"is-login-email" validate:"exists"`
+    RawActivationTokenTTL 		string `yaml:"user-activation-token-ttl" validate:"required"`
+	RawPasswordResetTokenTTL 	string `yaml:"password-reset-token-ttl" validate:"required"`
 }
 
 type emailConfig struct {
@@ -99,6 +100,10 @@ type emailConfig struct {
 
 func (c *appConfig) ActivationTokenTTL() time.Duration {
     return parseDuration(c.RawActivationTokenTTL)
+}
+
+func (c *appConfig) PasswordResetTokenTTL() time.Duration {
+    return parseDuration(c.RawPasswordResetTokenTTL)
 }
 
 type sentry struct {

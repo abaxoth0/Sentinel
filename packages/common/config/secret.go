@@ -22,12 +22,14 @@ type secrets struct {
     ReplicaDatabaseUser     string `validate:"required"`
     ReplicaDatabasePassword string `validate:"required"`
 
-    AccessTokenPrivateKey     ed25519.PrivateKey `validate:"required"`
-    AccessTokenPublicKey      ed25519.PublicKey  `validate:"required"`
-    RefreshTokenPrivateKey    ed25519.PrivateKey `validate:"required"`
-    RefreshTokenPublicKey     ed25519.PublicKey  `validate:"required"`
-    ActivationTokenPrivateKey ed25519.PrivateKey `validate:"required"`
-    ActivationTokenPublicKey  ed25519.PublicKey  `validate:"required"`
+    AccessTokenPrivateKey     		ed25519.PrivateKey `validate:"required"`
+    AccessTokenPublicKey      		ed25519.PublicKey  `validate:"required"`
+    RefreshTokenPrivateKey    		ed25519.PrivateKey `validate:"required"`
+    RefreshTokenPublicKey     		ed25519.PublicKey  `validate:"required"`
+    ActivationTokenPrivateKey 		ed25519.PrivateKey `validate:"required"`
+    ActivationTokenPublicKey  		ed25519.PublicKey  `validate:"required"`
+    PasswordResetTokenPrivateKey 	ed25519.PrivateKey `validate:"required"`
+    PasswordResetTokenPublicKey  	ed25519.PublicKey  `validate:"required"`
 
     CacheURI            string `validate:"required"`
     CachePassword       string `validate:"required"`
@@ -75,6 +77,7 @@ func loadSecrets() {
         "ACCESS_TOKEN_SECRET",
         "REFRESH_TOKEN_SECRET",
         "ACTIVATION_TOKEN_SECRET",
+        "PASSWORD_RESET_TOKEN_SECRET",
 
         "CACHE_URI",
         "CACHE_PASSWORD",
@@ -134,20 +137,22 @@ func loadSecrets() {
     AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
     RefreshTokenSecret := []byte(getEnv("REFRESH_TOKEN_SECRET"))
     ActivationTokenSecret := []byte(getEnv("ACTIVATION_TOKEN_SECRET"))
+    PasswordResetTokenSecret := []byte(getEnv("PASSWORD_RESET_TOKEN_SECRET"))
 
 	verifyTokenLength("access token", AccessTokenSecret)
 	verifyTokenLength("refresh token", RefreshTokenSecret)
 	verifyTokenLength("activation token", ActivationTokenSecret)
+	verifyTokenLength("password reset token", PasswordResetTokenSecret)
 
-    Secret.AccessTokenPrivateKey = ed25519.NewKeyFromSeed(AccessTokenSecret)
-    Secret.RefreshTokenPrivateKey = ed25519.NewKeyFromSeed(RefreshTokenSecret)
-    Secret.ActivationTokenPrivateKey = ed25519.NewKeyFromSeed(ActivationTokenSecret)
+    Secret.AccessTokenPrivateKey 		= ed25519.NewKeyFromSeed(AccessTokenSecret)
+    Secret.RefreshTokenPrivateKey 		= ed25519.NewKeyFromSeed(RefreshTokenSecret)
+    Secret.ActivationTokenPrivateKey 	= ed25519.NewKeyFromSeed(ActivationTokenSecret)
+    Secret.PasswordResetTokenPrivateKey = ed25519.NewKeyFromSeed(RefreshTokenSecret)
 
-    // `priv.Public()` actually returns `ed25519.PublicKey` type, not `crypto.PublicKey`.
-    // Tested via `reflect.TypeOf()`
-    Secret.AccessTokenPublicKey = Secret.AccessTokenPrivateKey.Public().(ed25519.PublicKey)
-    Secret.RefreshTokenPublicKey = Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
-    Secret.ActivationTokenPublicKey = Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
+    Secret.AccessTokenPublicKey 		= Secret.AccessTokenPrivateKey.Public().(ed25519.PublicKey)
+    Secret.RefreshTokenPublicKey 		= Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
+    Secret.ActivationTokenPublicKey 	= Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
+    Secret.PasswordResetTokenPublicKey 	= Secret.PasswordResetTokenPrivateKey.Public().(ed25519.PublicKey)
 
     log.Info("Loading environment vairables: OK", nil)
 

@@ -46,7 +46,7 @@ func Create(ctx echo.Context) error {
     }
 
     if config.App.IsLoginEmail {
-        if err = email.CreateAndEnqueueActivationEmail(uid, body.Login); err != nil {
+        if err = email.EnqueueTokenEmail(email.ActivationTokenType, uid, body.Login); err != nil {
             return err
         }
     }

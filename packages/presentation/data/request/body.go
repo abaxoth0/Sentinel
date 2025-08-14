@@ -267,3 +267,19 @@ func (b *Introspect) Validate() *Error.Status {
 	return nil
 }
 
+type PasswordReset struct {
+	Token 		string 	`json:"token" example:"eyJhbGciOiJFZER..."`
+
+	UserPassword		`json:",inline"`
+}
+
+func (b *PasswordReset) Validate() *Error.Status {
+	if err := b.UserPassword.Validate(); err != nil {
+		return err
+	}
+	if b.Token == "" {
+		return missingFieldValue("token")
+	}
+	return nil
+}
+

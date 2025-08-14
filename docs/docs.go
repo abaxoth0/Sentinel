@@ -365,6 +365,62 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/auth/forgot-password": {
+            "post": {
+                "description": "Sends email to user with password reset (In URL)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Send password reset token",
+                "operationId": "forgot-password",
+                "parameters": [
+                    {
+                        "description": "User login",
+                        "name": "login",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.UserLogin"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/auth/oauth/google/callback": {
             "get": {
                 "security": [
@@ -508,6 +564,70 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/auth/reset-password": {
+            "post": {
+                "security": [
+                    {
+                        "CSRF_Header": []
+                    },
+                    {
+                        "CSRF_Cookie": []
+                    }
+                ],
+                "description": "Resets user password if password reset token is valid",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Resets user password",
+                "operationId": "reset-password",
+                "parameters": [
+                    {
+                        "description": "Password reset token and new user password",
+                        "name": "token-and-password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requestbody.PasswordReset"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responsebody.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/responsebody.Error"
                         }
@@ -2328,6 +2448,19 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "your-password"
+                }
+            }
+        },
+        "requestbody.PasswordReset": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "your-password"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJFZER..."
                 }
             }
         },

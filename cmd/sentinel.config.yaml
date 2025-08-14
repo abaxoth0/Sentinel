@@ -52,6 +52,8 @@ is-login-email: true
 
 user-activation-token-ttl: 24h
 
+password-reset-token-ttl: 1h
+
 show-logs: true
 
 trace-logs: true

@@ -181,24 +181,50 @@ func NewAuthTokens(payload *UserDTO.Payload) (accessToken *SignedToken, refreshT
     return accessToken, refreshToken, nil
 }
 
-func NewActivationToken(uid string, login string, roles []string) (*SignedToken, *Error.Status) {
+func NewActivationToken(uid string, login string) (*SignedToken, *Error.Status) {
 	log.Trace("Creating new activation token...", nil)
 
 	token, err := newSignedToken(
         &UserDTO.Payload{
             ID: uid,
-            Roles: roles,
+			Login: login,
         },
         config.App.ActivationTokenTTL(),
         config.Secret.ActivationTokenPrivateKey,
 		[]string{config.Auth.SelfAudience},
-		nil,
+		tokenHeaders{
+			"typ": "activation",
+		},
     )
 	if err != nil {
 		return nil, err
 	}
 
 	log.Trace("Creating new activation token: OK", nil)
+
+	return token, nil
+}
+
+func NewPasswordResetToken(uid string, login string) (*SignedToken, *Error.Status) {
+	log.Trace("Creating new password reset token...", nil)
+
+	token, err := newSignedToken(
+		&UserDTO.Payload{
+			ID: uid,
+			Login: login,
+		},
+        config.App.PasswordResetTokenTTL(),
+        config.Secret.PasswordResetTokenPrivateKey,
+		[]string{config.Auth.SelfAudience},
+		tokenHeaders{
+			"typ": "password-reset",
+		},
+    )
+	if err != nil {
+		return nil, err
+	}
+
+	log.Trace("Creating new password reset token: OK", nil)
 
 	return token, nil
 }
@@ -245,6 +271,11 @@ func ParseSingedToken(tokenStr string, key ed25519.PublicKey) (*jwt.Token, *Erro
 
 		return nil, e
     }
+
+	if token.Header["typ"] == "activation" || token.Header["typ"] == "password-reset" {
+		log.Trace("Parsing signed token: OK", nil)
+		return token, nil
+	}
 
 	// RFC 9068 p2.2
 	if claims.Issuer == "" ||

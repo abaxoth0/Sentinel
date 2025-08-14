@@ -6,8 +6,10 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
+	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
+	"sentinel/packages/infrastructure/email"
 	ActionMapper "sentinel/packages/infrastructure/mappers/action"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
@@ -318,6 +320,74 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 		if err == nil {
 			cookie.DeleteCookie(ctx, authCookie)
 		}
+	}
+
+	return ctx.NoContent(http.StatusOK)
+}
+
+// @Summary 		Send password reset token
+// @Description 	Sends email to user with password reset (In URL)
+// @ID 				forgot-password
+// @Tags			auth
+// @Param 			login body requestbody.UserLogin true "User login"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Router			/v1/auth/forgot-password [post]
+func ForgotPassword(ctx echo.Context) error {
+    var body RequestBody.UserLogin
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
+        return err
+    }
+
+	user, err := DB.Database.GetUserByLogin(body.Login)
+	if err != nil {
+		return err
+	}
+
+	err = email.EnqueueTokenEmail(email.PasswordResetTokenType, user.ID, user.Login)
+	if err != nil {
+		return err
+	}
+
+	return ctx.NoContent(http.StatusOK)
+}
+
+// @Summary 		Resets user password
+// @Description 	Resets user password if password reset token is valid
+// @ID 				reset-password
+// @Tags			auth
+// @Param 			token-and-password body requestbody.PasswordReset true "Password reset token and new user password"
+// @Accept			json
+// @Produce			json
+// @Success			200
+// @Failure			400,401,403,500	{object} 	responsebody.Error
+// @Router			/v1/auth/reset-password [post]
+// @Security		CSRF_Header
+// @Security		CSRF_Cookie
+func ResetPassword(ctx echo.Context) error {
+    var body RequestBody.PasswordReset
+    if err := controller.BindAndValidate(ctx, &body); err != nil {
+        return err
+    }
+
+	tk, err := token.ParseSingedToken(body.Token, config.Secret.PasswordResetTokenPublicKey)
+	if err != nil {
+		return err
+	}
+
+	claims := tk.Claims.(*token.Claims)
+
+	user, err := DB.Database.GetUserByID(claims.Subject)
+	if err != nil {
+		return err
+	}
+
+	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
+
+	if err := DB.Database.ChangePassword(act, body.Password); err != nil {
+		return err
 	}
 
 	return ctx.NoContent(http.StatusOK)
