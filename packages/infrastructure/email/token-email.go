@@ -3,6 +3,7 @@ package email
 import (
 	_ "embed"
 	"net/http"
+	"net/url"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
@@ -16,6 +17,8 @@ import (
 const tokenPlaceholder string = "{{token}}"
 
 var (
+	escapedTokenPlaceholder string = url.QueryEscape(tokenPlaceholder)
+
 	//go:embed templates/password-reset-email.template.html
 	passwordResetEmailTemplate string
 	//go:embed templates/activation-email.template.html
@@ -47,8 +50,17 @@ func initTokenEmailsBodies() {
 		ResetPasswordURL string
 	}
 
+	redirectURL, err := url.Parse(config.App.PasswordResetRedirectURL)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	query := redirectURL.Query()
+	query.Add("passwordResetToken", tokenPlaceholder)
+	redirectURL.RawQuery = query.Encode()
+
     passwordResetEmailValues := passwordResetEmailTemplateValues{
-        ResetPasswordURL: api.GetBaseURL() + "/v1/auth/reset-password/" + tokenPlaceholder,
+        ResetPasswordURL: redirectURL.String(),
     }
 
     b, err = parseEmailTemplate(passwordResetEmailTemplate, passwordResetEmailValues)
@@ -155,7 +167,7 @@ func (e *TokenEmail) Send() *Error.Status {
     email.SetHeader("To", e.to)
     email.SetHeader("Subject", e.subject)
 
-    body := strings.Replace(rawBody, tokenPlaceholder, e.Token, 1)
+    body := strings.Replace(rawBody, escapedTokenPlaceholder, e.Token, 1)
 
     email.SetBody("text/html", body)
 

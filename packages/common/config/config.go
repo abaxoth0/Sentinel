@@ -90,6 +90,7 @@ type appConfig struct {
     ServiceID             		string `yaml:"service-id" validate:"required"`
     RawActivationTokenTTL 		string `yaml:"user-activation-token-ttl" validate:"required"`
 	RawPasswordResetTokenTTL 	string `yaml:"password-reset-token-ttl" validate:"required"`
+	PasswordResetRedirectURL	string `yaml:"password-reset-redirect-url" validate:"required"`
 }
 
 type emailConfig struct {
