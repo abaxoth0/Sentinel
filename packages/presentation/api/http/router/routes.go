@@ -42,98 +42,99 @@ func Create() *echo.Echo {
 
 	router := echo.New()
 
-    router.HideBanner = true
-    router.HidePort = true
+	router.HideBanner = true
+	router.HidePort = true
 
-    router.HTTPErrorHandler = handleHttpError
-    router.JSONSerializer = serializer{}
-    router.Binder = &binder{}
+	router.HTTPErrorHandler = handleHttpError
+	router.JSONSerializer = serializer{}
+	router.Binder = &binder{}
 
-    cors := middleware.CORSConfig{
-        Skipper:      middleware.DefaultSkipper,
-        AllowOrigins: config.HTTP.AllowedOrigins,
-        AllowCredentials: true,
-        AllowMethods: []string{
-            http.MethodGet,
-            http.MethodHead,
-            http.MethodPut,
-            http.MethodPatch,
-            http.MethodPost,
-            http.MethodDelete,
-        },
+	cors := middleware.CORSConfig{
+		Skipper:      middleware.DefaultSkipper,
+		AllowOrigins: config.HTTP.AllowedOrigins,
+		AllowCredentials: true,
+		AllowMethods: []string{
+			http.MethodGet,
+			http.MethodHead,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodPost,
+			http.MethodDelete,
+		},
 		AllowHeaders: []string{
 			"X-CSRF-Token",
 		},
-    }
+	}
 
 	router.Use(securityHeaders)
 	router.Use(middleware.BodyLimit("1M"))
 	router.Use(middleware.HTTPSRedirect())
-    router.Use(middleware.CORSWithConfig(cors))
+	router.Use(middleware.CORSWithConfig(cors))
 	router.Use(middleware.RequestID())
 	router.Use(request.Middleware)
 	router.Use(checkOrigin)
 	router.Use(sentryecho.New(sentryecho.Options{
 		Repanic: true,
 	}))
-    // router.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10_000)))
 
-    if config.Debug.Enabled {
-        router.Use(middleware.Logger())
-    }
+	if config.Debug.Enabled {
+		router.Use(middleware.Logger())
+	}
+
+	limit := newRateLimiter()
 
 	apiV1 := router.Group("/v1")
 
 	// Path is strange, but it's convention from OpenID Connect Discovery (OIDC)
-	apiV1.GET("/.well-known/jwks.json", Auth.GetJWKs)
+	apiV1.GET("/.well-known/jwks.json", Auth.GetJWKs, limit.Max10reqPerSecond(Insignificant))
 
-    authGroup := apiV1.Group("/auth", noCache)
+	authGroup := apiV1.Group("/auth", noCache)
 
 	authGroup.GET("/csrf-token", Auth.GetCSRFToken)
-    authGroup.GET(rootPath, Auth.Verify, secure, preventUserDesync)
-    authGroup.POST(rootPath, Auth.Login, doubleSubmitCSRF)
-    authGroup.PUT(rootPath, Auth.Refresh, doubleSubmitCSRF)
-    authGroup.DELETE(rootPath, Auth.Logout, doubleSubmitCSRF)
-	authGroup.DELETE("/:sessionID", Auth.Logout, secure, preventUserDesync, doubleSubmitCSRF)
-	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, secure, preventUserDesync, doubleSubmitCSRF)
-	authGroup.POST("/forgot-password", Auth.ForgotPassword)
-	authGroup.POST("/reset-password", Auth.ResetPassword, doubleSubmitCSRF)
+	authGroup.GET(rootPath, Auth.Verify, limit.Max1reqPerSecond(Default), secure, preventUserDesync)
+	authGroup.POST(rootPath, Auth.Login, limit.Max5reqPerMinute(Sensitive), doubleSubmitCSRF)
+	authGroup.PUT(rootPath, Auth.Refresh, limit.Max1reqPerSecond(Sensitive), doubleSubmitCSRF)
+	authGroup.DELETE(rootPath, Auth.Logout, limit.Max1reqPerSecond(Default), doubleSubmitCSRF)
+	authGroup.DELETE("/:sessionID", Auth.Logout, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	authGroup.DELETE("/sessions/:uid", Auth.RevokeAllUserSessions, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	authGroup.POST("/forgot-password", Auth.ForgotPassword, limit.Max5reqPerHour(Sensitive))
+	authGroup.POST("/reset-password", Auth.ResetPassword, limit.Max3reqPerMinute(Sensitive), doubleSubmitCSRF)
 
 	oauthSubGroup := authGroup.Group("/oauth", noCache)
 
-	oauthSubGroup.POST("/introspect", OAuth.IntrospectOAuthToken, secure, preventUserDesync)
-	oauthSubGroup.GET("/google/login", OAuth.GoogleLogin)
-	oauthSubGroup.GET("/google/callback", OAuth.GoogleCallback)
+	oauthSubGroup.POST("/introspect", OAuth.IntrospectOAuthToken, limit.Max1reqPerSecond(Default), secure, preventUserDesync)
+	oauthSubGroup.GET("/google/login", OAuth.GoogleLogin, limit.Max5reqPerMinute(Sensitive))
+	oauthSubGroup.GET("/google/callback", OAuth.GoogleCallback, limit.Max5reqPerMinute(Sensitive))
 
-    userGroup := apiV1.Group("/user", noCache)
+	userGroup := apiV1.Group("/user", noCache)
 
-    userGroup.POST(rootPath, User.Create)
-    userGroup.DELETE("/:uid", User.SoftDelete, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.PUT("/:uid/restore", User.Restore, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.DELETE(rootPath, User.BulkSoftDelete, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.PUT(rootPath, User.BulkRestore, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.DELETE("/:uid/drop", User.Drop, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.DELETE("/all/drop", User.DropAllDeleted, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.POST("/login/available", User.IsLoginAvailable)
-    userGroup.GET("/:uid/roles", User.GetRoles, secure, preventUserDesync)
-    userGroup.PATCH("/:uid/login", User.ChangeLogin, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.PATCH("/:uid/password", User.ChangePassword, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.PATCH("/:uid/roles", User.ChangeRoles, secure, preventUserDesync, doubleSubmitCSRF)
-    userGroup.GET("/activation/:token", Activation.Activate)
-    userGroup.PUT("/activation/resend", Activation.Resend)
-	userGroup.GET("/search", User.SearchUsers, secure, preventUserDesync)
-	userGroup.GET("/:uid/sessions", User.GetUserSessions, secure, preventUserDesync)
-	userGroup.GET("/:uid", User.GetUser, secure, preventUserDesync)
+	userGroup.POST(rootPath, User.Create, limit.Max3reqPerMinute(Default))
+	userGroup.DELETE("/:uid", User.SoftDelete, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.PUT("/:uid/restore", User.Restore, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.DELETE(rootPath, User.BulkSoftDelete, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.PUT(rootPath, User.BulkRestore, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.DELETE("/:uid/drop", User.Drop, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.DELETE("/all/drop", User.DropAllDeleted, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.POST("/login/available", User.IsLoginAvailable, limit.Max1reqPerSecond(Insignificant))
+	userGroup.GET("/:uid/roles", User.GetRoles, limit.Max1reqPerSecond(Default), secure, preventUserDesync)
+	userGroup.PATCH("/:uid/login", User.ChangeLogin, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.PATCH("/:uid/password", User.ChangePassword, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.PATCH("/:uid/roles", User.ChangeRoles, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync, doubleSubmitCSRF)
+	userGroup.GET("/activation/:token", Activation.Activate, limit.Max5reqPerMinute(Default))
+	userGroup.PUT("/activation/resend", Activation.Resend, limit.Max1reqPer5Minutes(Default))
+	userGroup.GET("/search", User.SearchUsers, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync)
+	userGroup.GET("/:uid/sessions", User.GetUserSessions, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync)
+	userGroup.GET("/:uid", User.GetUser, limit.Max1reqPerSecond(Sensitive), secure, preventUserDesync)
 
-    rolesGroup := apiV1.Group("/roles", secure, preventUserDesync)
+	rolesGroup := apiV1.Group("/roles", secure, preventUserDesync)
 
-    rolesGroup.GET("/:serviceID", Roles.GetAll)
+	rolesGroup.GET("/:serviceID", Roles.GetAll, limit.Max1reqPerSecond(Insignificant))
 
-    cacheGroup := apiV1.Group("/cache", secure, preventUserDesync, noCache)
+	cacheGroup := apiV1.Group("/cache", secure, preventUserDesync, noCache)
 
-    cacheGroup.DELETE(rootPath, Cache.Drop, doubleSubmitCSRF)
+	cacheGroup.DELETE(rootPath, Cache.Drop, limit.Max1reqPerSecond(Sensitive), doubleSubmitCSRF)
 
-	docsGroupMiddlewares := []echo.MiddlewareFunc{doubleSubmitCSRF}
+	docsGroupMiddlewares := []echo.MiddlewareFunc{limit.Max1reqPerSecond(Sensitive), doubleSubmitCSRF}
 	if !config.Debug.Enabled {
 		docsGroupMiddlewares = append(docsGroupMiddlewares, secure, preventUserDesync)
 	}
@@ -142,6 +143,6 @@ func Create() *echo.Echo {
 
 	docsGroup.GET("/*", Docs.Swagger)
 
-    return router
+	return router
 }
 
