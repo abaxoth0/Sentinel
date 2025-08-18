@@ -88,170 +88,170 @@ func Create() *echo.Echo {
 
 	// Path is strange, but it's convention from OpenID Connect Discovery (OIDC)
 	apiV1.GET(
-		"/.well-known/jwks.json", Auth.GetJWKs,
-		limit.Max10reqPerSecond(middleware.InsignificantEndpoint),
+		"/.well-known/jwks.json", Auth.GetJWKs, middleware.Sensivity(middleware.InsignificantEndpoint),
+		limit.Max10reqPerSecond(),
 	)
 
 	authGroup := apiV1.Group("/auth", middleware.NoCache)
 
 	authGroup.GET("/csrf-token", Auth.GetCSRFToken)
 	authGroup.GET(
-		rootPath, Auth.Verify,
-		limit.Max1reqPerSecond(middleware.DefaultEndpoint),
+		rootPath, Auth.Verify, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync,
 	)
 	authGroup.POST(
-		rootPath, Auth.Login,
-		limit.Max5reqPerMinute(middleware.SensitiveEndpoint),
+		rootPath, Auth.Login, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max5reqPerMinute(),
 		middleware.DoubleSubmitCSRF,
 	)
 	authGroup.PUT(
-		rootPath, Auth.Refresh,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		rootPath, Auth.Refresh, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.DoubleSubmitCSRF,
 	)
 	authGroup.DELETE(
-		rootPath, Auth.Logout,
-		limit.Max1reqPerSecond(middleware.DefaultEndpoint),
+		rootPath, Auth.Logout, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.DoubleSubmitCSRF,
 	)
 	authGroup.DELETE(
-		"/:sessionID", Auth.Logout,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:sessionID", Auth.Logout, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	authGroup.DELETE(
-		"/sessions/:uid", Auth.RevokeAllUserSessions,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/sessions/:uid", Auth.RevokeAllUserSessions, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	authGroup.POST(
-		"/forgot-password", Auth.ForgotPassword,
-		limit.Max5reqPerHour(middleware.SensitiveEndpoint),
+		"/forgot-password", Auth.ForgotPassword, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max5reqPerHour(),
 	)
 	authGroup.POST(
-		"/reset-password", Auth.ResetPassword,
-		limit.Max3reqPerMinute(middleware.SensitiveEndpoint),
+		"/reset-password", Auth.ResetPassword, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max3reqPerMinute(),
 		middleware.DoubleSubmitCSRF,
 	)
 
 	oauthSubGroup := authGroup.Group("/oauth", middleware.NoCache)
 
 	oauthSubGroup.POST(
-		"/introspect", OAuth.IntrospectOAuthToken,
-		limit.Max1reqPerSecond(middleware.DefaultEndpoint),
+		"/introspect", OAuth.IntrospectOAuthToken, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync,
 	)
 	oauthSubGroup.GET(
-		"/google/login", OAuth.GoogleLogin,
-		limit.Max5reqPerMinute(middleware.SensitiveEndpoint),
+		"/google/login", OAuth.GoogleLogin, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max5reqPerMinute(),
 	)
 	oauthSubGroup.GET(
-		"/google/callback", OAuth.GoogleCallback,
-		limit.Max5reqPerMinute(middleware.SensitiveEndpoint),
+		"/google/callback", OAuth.GoogleCallback, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max5reqPerMinute(),
 	)
 
 	userGroup := apiV1.Group("/user", middleware.NoCache)
 
 	userGroup.POST(
-		rootPath, User.Create,
-		limit.Max3reqPerMinute(middleware.DefaultEndpoint),
+		rootPath, User.Create, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max3reqPerMinute(),
 	)
 	userGroup.DELETE(
-		"/:uid", User.SoftDelete,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid", User.SoftDelete, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.PUT(
-		"/:uid/restore", User.Restore,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid/restore", User.Restore, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.DELETE(
-		rootPath, User.BulkSoftDelete,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		rootPath, User.BulkSoftDelete, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.PUT(
-		rootPath, User.BulkRestore,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		rootPath, User.BulkRestore, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.DELETE(
-		"/:uid/drop", User.Drop,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid/drop", User.Drop, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.DELETE(
-		"/all/drop", User.DropAllDeleted,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/all/drop", User.DropAllDeleted, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.POST(
-		"/login/available", User.IsLoginAvailable,
-		limit.Max1reqPerSecond(middleware.InsignificantEndpoint),
+		"/login/available", User.IsLoginAvailable, middleware.Sensivity(middleware.InsignificantEndpoint),
+		limit.Max1reqPerSecond(),
 	)
 	userGroup.GET(
-		"/:uid/roles", User.GetRoles,
-		limit.Max1reqPerSecond(middleware.DefaultEndpoint),
+		"/:uid/roles", User.GetRoles, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync,
 	)
 	userGroup.PATCH(
-		"/:uid/login", User.ChangeLogin,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid/login", User.ChangeLogin, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.PATCH(
-		"/:uid/password", User.ChangePassword,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid/password", User.ChangePassword, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.PATCH(
-		"/:uid/roles", User.ChangeRoles,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid/roles", User.ChangeRoles, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync, middleware.DoubleSubmitCSRF,
 	)
 	userGroup.GET(
-		"/activation/:token", Activation.Activate,
-		limit.Max5reqPerMinute(middleware.DefaultEndpoint),
+		"/activation/:token", Activation.Activate, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max5reqPerMinute(),
 	)
 	userGroup.PUT(
-		"/activation/resend", Activation.Resend,
-		limit.Max1reqPer5Minutes(middleware.DefaultEndpoint),
+		"/activation/resend", Activation.Resend, middleware.Sensivity(middleware.DefaultEndpoint),
+		limit.Max1reqPer5Minutes(),
 	)
 	userGroup.GET(
-		"/search", User.SearchUsers,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/search", User.SearchUsers, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync,
 	)
 	userGroup.GET(
-		"/:uid/sessions", User.GetUserSessions,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid/sessions", User.GetUserSessions, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync,
 	)
 	userGroup.GET(
-		"/:uid", User.GetUser,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		"/:uid", User.GetUser, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.Secure, middleware.CheckUserSync,
 	)
 
 	rolesGroup := apiV1.Group("/roles", middleware.Secure, middleware.CheckUserSync)
 
 	rolesGroup.GET(
-		"/:serviceID", Roles.GetAll,
-		limit.Max1reqPerSecond(middleware.InsignificantEndpoint),
+		"/:serviceID", Roles.GetAll, middleware.Sensivity(middleware.InsignificantEndpoint),
+		limit.Max1reqPerSecond(),
 	)
 
 	cacheGroup := apiV1.Group("/cache", middleware.Secure, middleware.CheckUserSync, middleware.NoCache)
 
 	cacheGroup.DELETE(
-		rootPath, Cache.Drop,
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+		rootPath, Cache.Drop, middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.DoubleSubmitCSRF,
 	)
 
-	docsGroupMiddlewares := []echo.MiddlewareFunc{
-		limit.Max1reqPerSecond(middleware.SensitiveEndpoint),
+	docsGroupMiddlewares := []echo.MiddlewareFunc{ middleware.Sensivity(middleware.SensitiveEndpoint),
+		limit.Max1reqPerSecond(),
 		middleware.DoubleSubmitCSRF,
 	}
 	if !config.Debug.Enabled {
