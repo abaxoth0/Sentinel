@@ -102,10 +102,9 @@ func (t TokenEmailType) Subject() (string, bool) {
 
 type TokenEmail struct {
 	tokenType 	TokenEmailType
-	name 		string
-    to 			string
-	subject 	string
     Token 		string
+
+	plainEmail
 }
 
 func NewTokenEmail(tokenType TokenEmailType, to string, token string) (*TokenEmail, *Error.Status) {
@@ -129,21 +128,15 @@ func NewTokenEmail(tokenType TokenEmailType, to string, token string) (*TokenEma
         }
     }
 
-    return &TokenEmail{
-		to: to,
+	return &TokenEmail{
 		Token: token,
 		tokenType: tokenType,
-		name: name,
-		subject: subject,
+		plainEmail: plainEmail{
+			to: to,
+			name: name,
+			subject: subject,
+		},
 	}, nil
-}
-
-func (e *TokenEmail) To() string {
-	return e.to
-}
-
-func (e *TokenEmail) Subject() string {
-	return e.subject
 }
 
 func (e *TokenEmail) Send() *Error.Status {

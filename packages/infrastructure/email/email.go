@@ -20,6 +20,22 @@ type Email interface {
 	Subject() 	string
 }
 
+// Contains common fields for all emails: name, to and subject.
+// Also implemets To() and Subject() methods of Email interface.
+type plainEmail struct {
+	name 		string
+	to 			string
+	subject 	string
+}
+
+func (e *plainEmail) To() string {
+	return e.to
+}
+
+func (e *plainEmail) Subject() string {
+	return e.subject
+}
+
 var MainMailer *Mailer
 var dialer *gomail.Dialer
 var isRunning = false
