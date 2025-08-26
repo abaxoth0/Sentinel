@@ -346,7 +346,14 @@ func ForgotPassword(ctx echo.Context) error {
 		return err
 	}
 
-	err = email.EnqueueTokenEmail(email.PasswordResetTokenType, user.ID, user.Login)
+	tk, err := token.NewPasswordResetToken(user.ID, user.Login)
+	if err != nil {
+		return err
+	}
+
+	err = email.EnqueueEmail(email.PasswordResetEmail, user.Login, email.Substitutions{
+		email.TokenPlaceholder: tk.String(),
+	})
 	if err != nil {
 		return err
 	}

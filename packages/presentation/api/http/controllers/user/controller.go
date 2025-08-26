@@ -10,6 +10,7 @@ import (
 	"sentinel/packages/infrastructure/auth/authn"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/email"
+	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	SharedController "sentinel/packages/presentation/api/http/controllers/shared"
 	"sentinel/packages/presentation/api/http/request"
@@ -44,7 +45,15 @@ func Create(ctx echo.Context) error {
         return err
     }
 
-	if err = email.EnqueueTokenEmail(email.ActivationTokenType, uid, body.Login); err != nil {
+	tk, err := token.NewActivationToken(uid, body.Login)
+    if err != nil {
+        return err
+    }
+
+	err = email.EnqueueEmail(email.ActivationEmail, body.Login, email.Substitutions{
+		email.TokenPlaceholder: tk.String(),
+	})
+	if err != nil {
 		return err
 	}
 

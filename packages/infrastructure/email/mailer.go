@@ -55,7 +55,7 @@ func NewMailer(name string, ctx context.Context, opt *MailerOptions) (*Mailer, e
 }
 
 type emailTask struct {
-	email 	Email
+	email 	AnyEmail
 	mailer	*Mailer
 }
 
@@ -117,7 +117,7 @@ func (m *Mailer) Stop() error {
 }
 
 // Pushes new email to mailer queue
-func (m *Mailer) Push(email Email) error {
+func (m *Mailer) Push(email AnyEmail) error {
     if !m.isRunning.Load() {
         return fmt.Errorf("can't push to mailer '%s', mailer isn't running", m.name)
     }

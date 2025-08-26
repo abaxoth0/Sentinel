@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/email"
+	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
 	"sentinel/packages/presentation/api/http/request"
 	RequestBody "sentinel/packages/presentation/data/request"
@@ -76,7 +77,14 @@ func Resend(ctx echo.Context) error {
         return echo.NewHTTPError(http.StatusConflict, errMsg)
     }
 
-	err = email.EnqueueTokenEmail(email.ActivationTokenType, user.ID, user.Login)
+	tk, err := token.NewActivationToken(user.ID, user.Login)
+	if err != nil {
+		return err
+	}
+
+	err = email.EnqueueEmail(email.ActivationEmail, user.Login, email.Substitutions{
+		email.TokenPlaceholder: tk.String(),
+	})
     if err != nil {
         return err
     }

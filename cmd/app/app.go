@@ -23,7 +23,7 @@ func Start(Router *echo.Echo) {
 
     signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	if err := email.Run(); err != nil {
+	if err := email.Init(); err != nil {
 		log.Fatal("Failed to start mailer", err.Error(), nil)
 	}
 

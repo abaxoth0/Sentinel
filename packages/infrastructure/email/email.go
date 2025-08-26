@@ -3,10 +3,13 @@ package email
 import (
 	"context"
 	"errors"
+	"net/http"
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/logger"
+	"sentinel/packages/common/validation"
 	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/gomail.v2"
@@ -14,42 +17,212 @@ import (
 
 var log = logger.NewSource("EMAIL", logger.Default)
 
-type Email interface {
+type EmailType int8
+
+type PlainEmail    = EmailType
+type TemplateEmail = EmailType
+
+const (
+	PasswordResetEmail TemplateEmail = 1
+	ActivationEmail    TemplateEmail = 2
+)
+const (
+	PasswordChangeAlertEmail PlainEmail = -1
+	LoginChangeAlertEmail 	 PlainEmail = -2
+)
+
+var plainEmails = map[PlainEmail]bool{
+	PasswordChangeAlertEmail: true,
+	LoginChangeAlertEmail: true,
+}
+
+func (t EmailType) IsPlain() bool {
+	return plainEmails[t]
+}
+
+var emailsNames = map[EmailType]string{
+	PasswordResetEmail: "forgot pasword",
+	ActivationEmail: "activation",
+	PasswordChangeAlertEmail: "password change alert",
+	LoginChangeAlertEmail: "login change alert",
+}
+
+func (t EmailType) Name() (string, bool) {
+	if name, ok := emailsNames[t]; ok {
+		return name, true
+	}
+	return "", false
+}
+
+var emailsSubjects = map[EmailType]string{
+	PasswordResetEmail: "Password reset",
+	ActivationEmail: "Account activation",
+	PasswordChangeAlertEmail: "Security Alert: password changed",
+	LoginChangeAlertEmail: "Security Aler: login changed",
+}
+
+func (t EmailType) Subject() (string, bool) {
+	if sub, ok := emailsSubjects[t]; ok {
+		return sub, true
+	}
+	return "", false
+}
+
+type AnyEmail interface {
+	Type()		EmailType
     Send() 		*Error.Status
 	To()		string
 	Subject() 	string
 }
 
-// Contains common fields for all emails: name, to and subject.
-// Also implemets To() and Subject() methods of Email interface.
-type plainEmail struct {
-	name 		string
-	to 			string
-	subject 	string
+func send(email AnyEmail, body string) *Error.Status {
+    letter := gomail.NewMessage()
+
+    letter.SetHeader("From", config.Secret.MailerEmail)
+    letter.SetHeader("To", email.To())
+    letter.SetHeader("Subject", email.Subject())
+    letter.SetBody("text/html", body)
+
+    if err := dialer.DialAndSend(letter); err != nil {
+        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
+    }
+
+	return nil
 }
 
-func (e *plainEmail) To() string {
+// Used for substituting placeholders with actual values in email body
+type SubstitutionPlaceholder string
+
+const TokenPlaceholder SubstitutionPlaceholder = "{{token}}"
+
+type Substitutions = map[SubstitutionPlaceholder]string
+
+// Contains common fields for all emails: type, name, to and subject.
+// Also implemets Type(), To() and Subject() methods of Email interface.
+type Email struct {
+	_type			EmailType
+	name 			string
+	to 				string
+	subject 		string
+	substitutions	Substitutions
+}
+
+func NewEmail(emailType EmailType, to string, substitutions Substitutions) (*Email, *Error.Status) {
+	name, nameOk := emailType.Name()
+	subject, subjectOk := emailType.Subject()
+	if !nameOk || !subjectOk {
+		log.Panic("Failed to create token email", "Invalid email name or subject", nil)
+		return nil, Error.StatusInternalError
+	}
+
+    if err := validation.Email(to); err != nil {
+        if err == Error.InvalidValue {
+			errMsg := "Invlaid E-Mail format"
+			log.Error("Failed to create "+name+" email", errMsg, nil)
+            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
+        }
+		if err == Error.NoValue {
+			errMsg := "E-Mail is not specified"
+			log.Error("Failed to create "+name+" email", errMsg, nil)
+            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
+        }
+    }
+
+	return &Email{
+		_type: emailType,
+		to: to,
+		name: name,
+		subject: subject,
+		substitutions: substitutions,
+	}, nil
+}
+
+// Applies substitutions from subs to specified body.
+// Returns empty string if fails.
+func substituteToken(body string, subs Substitutions) string {
+	tk, ok := subs[TokenPlaceholder]
+	if !ok {
+		log.Panic("Failed to send email", "Missing substitution for "+string(TokenPlaceholder)+" placeholder", nil)
+		return ""
+	}
+	return strings.Replace(body, escapedTokenPlaceholder, tk, 1)
+}
+
+func (e *Email) Send() *Error.Status {
+	var body string
+
+	// Check if email type is valid and apply substitutions if needed
+	switch e._type {
+	case PasswordResetEmail:
+		body = substituteToken(forgotPasswordEmailBody, e.substitutions)
+	case ActivationEmail:
+		body = substituteToken(activationEmailBody, e.substitutions)
+	case PasswordChangeAlertEmail:
+		body = passwordChangeAlertEmailBody
+	case LoginChangeAlertEmail:
+		body = loginChangeAlertEmailBody
+	default:
+		log.Panic("Failed to send email", "Invalid email type", nil)
+		return Error.StatusInternalError
+	}
+	// If body is empty that means substituteToken() failed
+	if body == "" {
+		return Error.StatusInternalError
+	}
+
+	log.Trace("Sending "+e.name+" email...", nil)
+
+    if err := send(e, body); err != nil {
+		log.Error("Failed to send "+e.name+" email", err.Error(), nil)
+        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
+    }
+
+	log.Trace("Sending "+e.name+" email: OK", nil)
+
+    return nil
+}
+
+func (e *Email) Type() EmailType {
+	return e._type
+}
+
+func (e *Email) To() string {
 	return e.to
 }
 
-func (e *plainEmail) Subject() string {
+func (e *Email) Subject() string {
 	return e.subject
 }
 
+// Creates new template email, on success immediatly pushes it into the main mailer.
+func EnqueueEmail(emailType EmailType, to string, subs Substitutions) *Error.Status {
+	email, err := NewEmail(emailType, to, subs)
+	if err != nil {
+		return err
+	}
+
+	if err := MainMailer.Push(email); err != nil {
+		return Error.StatusInternalError
+	}
+
+	return nil
+}
+
+
 var MainMailer *Mailer
 var dialer *gomail.Dialer
-var isRunning = false
+var isInit = false
 
-func Run() error {
+func Init() error {
 	log.Info("Initializing email module...", nil)
 
-    if isRunning {
-		errMsg := "Mailer already running"
-        log.Error("Failed to start mailer", errMsg, nil)
+    if isInit {
+		errMsg := "Email module already initialized"
+        log.Error("Failed to init email module", errMsg, nil)
 		return errors.New(errMsg)
     }
 
-    initTokenEmailsBodies()
+    initTemplateEmailsBodies()
 
     validSMTPPorts := []int{587, 25, 465, 2525}
 
@@ -75,7 +248,7 @@ func Run() error {
 
     go MainMailer.Run(5)
 
-    isRunning = true
+    isInit = true
 
     // give some time for MainMailer to start
     time.Sleep(time.Millisecond * 10)
@@ -88,11 +261,11 @@ func Run() error {
 func Stop() error {
 	log.Info("Stopping email module...", nil)
 
-    if !isRunning {
-        return errors.New("email module isn't started, hence can't be stopped")
+    if !isInit {
+		errMsg := "email module isn't initialized, hence can't be stopped"
+        log.Error("Failed to stop email module", errMsg, nil)
+        return errors.New(errMsg)
     }
-
-    defer func(){ isRunning = false }()
 
     if err := MainMailer.Stop(); err != nil {
         return err
