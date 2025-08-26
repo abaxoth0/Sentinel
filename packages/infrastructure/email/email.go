@@ -19,26 +19,12 @@ var log = logger.NewSource("EMAIL", logger.Default)
 
 type EmailType int8
 
-type PlainEmail    = EmailType
-type TemplateEmail = EmailType
-
 const (
-	PasswordResetEmail TemplateEmail = 1
-	ActivationEmail    TemplateEmail = 2
+	PasswordResetEmail EmailType = iota
+	ActivationEmail
+	PasswordChangeAlertEmail
+	LoginChangeAlertEmail
 )
-const (
-	PasswordChangeAlertEmail PlainEmail = -1
-	LoginChangeAlertEmail 	 PlainEmail = -2
-)
-
-var plainEmails = map[PlainEmail]bool{
-	PasswordChangeAlertEmail: true,
-	LoginChangeAlertEmail: true,
-}
-
-func (t EmailType) IsPlain() bool {
-	return plainEmails[t]
-}
 
 var emailsNames = map[EmailType]string{
 	PasswordResetEmail: "forgot pasword",
@@ -207,7 +193,6 @@ func EnqueueEmail(emailType EmailType, to string, subs Substitutions) *Error.Sta
 
 	return nil
 }
-
 
 var MainMailer *Mailer
 var dialer *gomail.Dialer
