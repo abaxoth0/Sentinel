@@ -6,6 +6,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/common/validation"
 	ActionDTO "sentinel/packages/core/action/DTO"
+	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authn"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -299,10 +300,8 @@ func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.
 
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
-func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string) error {
+func update(ctx echo.Context, body RequestBody.UpdateUser) error {
     reqMeta := request.GetMetadata(ctx)
-
-    controller.Log.Info(logMessageBase + "...", reqMeta)
 
     controller.Log.Trace("Binding request...", reqMeta)
 
@@ -330,12 +329,21 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 		act.Reason = body.GetReason()
 	}
 
+	var oldUser *UserDTO.Full
     var err *Error.Status
 
     switch b := body.(type) {
     case *RequestBody.ChangeLogin:
+		oldUser, err = DB.Database.GetUserByID(act.TargetUID)
+		if err != nil {
+			return err
+		}
         err = DB.Database.ChangeLogin(act, b.Login)
     case *RequestBody.ChangePassword:
+		oldUser, err = DB.Database.GetUserByID(act.TargetUID)
+		if err != nil {
+			return err
+		}
         err = DB.Database.ChangePassword(act, b.NewPassword)
     case *RequestBody.ChangeRoles:
         err = DB.Database.ChangeRoles(act, b.Roles)
@@ -347,15 +355,38 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 		)
         return nil
     }
-
     if err != nil {
-		controller.Log.Info(logMessageBase + ": FAILED", reqMeta)
         return err
     }
 
-	controller.Log.Info(logMessageBase + ": OK", reqMeta)
+	// Even if this function fails - that means it fails to push alert email in mailer queue.
+	// So even if it will be successfully pushed, there are no guarantee that it will be delivered,
+	// since that error handling is ommited
+	//
+	// TODO implement feature that allows to track email sending status?
+	// (but remember - this is a pet-project, it mustn't be fully production ready)
+	sendSecurityAlert(oldUser.Login, body)
 
     return ctx.NoContent(http.StatusOK)
+}
+
+func sendSecurityAlert(login string, body RequestBody.UpdateUser) *Error.Status {
+	var emailType email.EmailType
+
+	switch body.(type){
+    case *RequestBody.ChangeLogin:
+		emailType = email.LoginChangeAlertEmail
+    case *RequestBody.ChangePassword:
+		emailType = email.PasswordChangeAlertEmail
+	default:
+		return nil
+	}
+
+	if err := email.EnqueueEmail(emailType, login, nil); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // @Summary 		Change user login
@@ -378,7 +409,7 @@ func update(ctx echo.Context, body RequestBody.UpdateUser, logMessageBase string
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ChangeLogin(ctx echo.Context) error {
-    return update(ctx, new(RequestBody.ChangeLogin), "Changing user login")
+    return update(ctx, new(RequestBody.ChangeLogin))
 }
 
 // @Summary 		Change user password
@@ -401,7 +432,7 @@ func ChangeLogin(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ChangePassword(ctx echo.Context) error {
-    return update(ctx, new(RequestBody.ChangePassword), "Changing user password")
+    return update(ctx, new(RequestBody.ChangePassword))
 }
 
 // @Summary 		Change user roles
@@ -424,7 +455,7 @@ func ChangePassword(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ChangeRoles(ctx echo.Context) error {
-    return update(ctx, new(RequestBody.ChangeRoles), "Changing user roles")
+    return update(ctx, new(RequestBody.ChangeRoles))
 }
 
 // @Summary 		Get user roles

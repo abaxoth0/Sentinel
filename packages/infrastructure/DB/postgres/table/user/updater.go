@@ -27,6 +27,8 @@ func invalidateBasicUserDtoCache(old, current *UserDTO.Full) {
 	}
 }
 
+// TODO make this change methods also return old user?
+
 func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
 	log.DB.Info("Changing login of user "+act.TargetUID+"...", nil)
 
