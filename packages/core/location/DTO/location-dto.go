@@ -1,6 +1,7 @@
 package locationdto
 
 import (
+	"fmt"
 	"net"
 	"sentinel/packages/common/util"
 	"time"
@@ -39,6 +40,13 @@ func (dto *Full) MakePublic() *Public {
 		DeletedAt: deletedAt,
 		CreatedAt: createdAt,
 	}
+}
+
+func (dto *Full) String() string {
+	return fmt.Sprintf(
+		"%s: %s %s %s (Latitude: %f, Longitude: %f)",
+		dto.IP.To4().String(), dto.Country, dto.Region, dto.City, dto.Latitude, dto.Longitude,
+	)
 }
 
 type Public struct {

@@ -24,6 +24,7 @@ const (
 	ActivationEmail
 	PasswordChangeAlertEmail
 	LoginChangeAlertEmail
+	NewSessionAlertEmail
 )
 
 var emailsNames = map[EmailType]string{
@@ -31,6 +32,7 @@ var emailsNames = map[EmailType]string{
 	ActivationEmail: "activation",
 	PasswordChangeAlertEmail: "password change alert",
 	LoginChangeAlertEmail: "login change alert",
+	NewSessionAlertEmail: "new session alert",
 }
 
 func (t EmailType) Name() (string, bool) {
@@ -44,7 +46,8 @@ var emailsSubjects = map[EmailType]string{
 	PasswordResetEmail: "Password reset",
 	ActivationEmail: "Account activation",
 	PasswordChangeAlertEmail: "Security Alert: password changed",
-	LoginChangeAlertEmail: "Security Aler: login changed",
+	LoginChangeAlertEmail: "Security Alert: login changed",
+	NewSessionAlertEmail: "Security Alert: new sign-in",
 }
 
 func (t EmailType) Subject() (string, bool) {
@@ -79,7 +82,10 @@ func send(email AnyEmail, body string) *Error.Status {
 // Used for substituting placeholders with actual values in email body
 type SubstitutionPlaceholder string
 
-const TokenPlaceholder SubstitutionPlaceholder = "{{token}}"
+const (
+	TokenPlaceholder SubstitutionPlaceholder = "{{token}}"
+	LocationPlaceholder SubstitutionPlaceholder = "{{location}}"
+)
 
 type Substitutions = map[SubstitutionPlaceholder]string
 
@@ -125,13 +131,23 @@ func NewEmail(emailType EmailType, to string, substitutions Substitutions) (*Ema
 
 // Applies substitutions from subs to specified body.
 // Returns empty string if fails.
-func substituteToken(body string, subs Substitutions) string {
-	tk, ok := subs[TokenPlaceholder]
+func substitute(body string, placeholder SubstitutionPlaceholder, subs Substitutions) string {
+	tk, ok := subs[placeholder]
 	if !ok {
-		log.Panic("Failed to send email", "Missing substitution for "+string(TokenPlaceholder)+" placeholder", nil)
+		log.Panic(
+			"Failed to apply substitutions for email body",
+			"Missing substitution for "+string(TokenPlaceholder)+" placeholder",
+			nil,
+		)
 		return ""
 	}
-	return strings.Replace(body, escapedTokenPlaceholder, tk, 1)
+	var rawPlaceholder string
+	if placeholder == TokenPlaceholder {
+		rawPlaceholder = escapedTokenPlaceholder
+	} else {
+		rawPlaceholder = string(placeholder)
+	}
+	return strings.Replace(body, rawPlaceholder, tk, 1)
 }
 
 func (e *Email) Send() *Error.Status {
@@ -140,18 +156,20 @@ func (e *Email) Send() *Error.Status {
 	// Check if email type is valid and apply substitutions if needed
 	switch e._type {
 	case PasswordResetEmail:
-		body = substituteToken(forgotPasswordEmailBody, e.substitutions)
+		body = substitute(forgotPasswordEmailBody, TokenPlaceholder, e.substitutions)
 	case ActivationEmail:
-		body = substituteToken(activationEmailBody, e.substitutions)
+		body = substitute(activationEmailBody, TokenPlaceholder, e.substitutions)
 	case PasswordChangeAlertEmail:
 		body = passwordChangeAlertEmailBody
 	case LoginChangeAlertEmail:
 		body = loginChangeAlertEmailBody
+	case NewSessionAlertEmail:
+		body = substitute(newSessionAlertEmailBody, LocationPlaceholder, e.substitutions)
 	default:
 		log.Panic("Failed to send email", "Invalid email type", nil)
 		return Error.StatusInternalError
 	}
-	// If body is empty that means substituteToken() failed
+	// If body is empty that means substitute() failed
 	if body == "" {
 		return Error.StatusInternalError
 	}

@@ -19,11 +19,15 @@ var (
 	passwordResetEmailTemplate string
 	//go:embed templates/activation-email.template.html
 	activationEmailTemplate string
+	//go:embed templates/new-session-alert-email.template.html
+	newSessionAlertEmailTemplate string
 
 	// Must be initialized via email.Run()
 	forgotPasswordEmailBody string
 	// Must be initialized via email.Run()
 	activationEmailBody string
+	// Must be initialized via email.Run()
+	newSessionAlertEmailBody string
 )
 
 func initTemplateEmailsBodies() {
@@ -65,5 +69,20 @@ func initTemplateEmailsBodies() {
     }
 
     forgotPasswordEmailBody = b
+
+	type newSessionAlertEmailTemplateValues struct {
+		Location string
+	}
+
+	newSessionAlertEmailValues := newSessionAlertEmailTemplateValues{
+		Location: string(LocationPlaceholder),
+	}
+
+	b, err = parseEmailTemplate(newSessionAlertEmailTemplate, newSessionAlertEmailValues)
+    if err != nil {
+        panic(err.Error())
+    }
+
+	newSessionAlertEmailBody = b
 }
 

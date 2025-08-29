@@ -8,6 +8,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB"
 	"sentinel/packages/infrastructure/auth/authz"
+	"sentinel/packages/infrastructure/email"
 	UserMapper "sentinel/packages/infrastructure/mappers/user"
 	"sentinel/packages/infrastructure/token"
 	controller "sentinel/packages/presentation/api/http/controllers"
@@ -45,12 +46,17 @@ func AuthenticateWithNewSession(ctx echo.Context, user *UserDTO.Full, audience [
 
 	act := ActionDTO.NewUserTargeted(user.ID, user.ID, user.Roles)
 
-	if err := updateOrCreateLocation(act, session.ID, session.IpAddress); err != nil {
+	newLocation, err := updateOrCreateLocation(act, session.ID, session.IpAddress)
+	if err != nil {
 		if e := DB.Database.RevokeSession(act, session.ID); e != nil {
 			return e
 		}
 		return err
 	}
+
+	email.EnqueueEmail(email.NewSessionAlertEmail, user.Login, email.Substitutions{
+		email.LocationPlaceholder: newLocation.String(),
+	})
 
 	ctx.SetCookie(cookie.NewAuthCookie(refreshToken))
 
