@@ -98,8 +98,6 @@ type googleUserInfoPartialResponse struct {
 	IsEmailVerified bool 	`json:"email_verified"`
 }
 
-// TODO Send user password on creating account using this endpoint (cuz they won't be able to get it somehow else, and won't be able to change password, cuz on changing password of their own account current password also must be included in the request)
-
 // @Summary 		Actual handler for auth via google account
 // @Description 	Do not access this endpoint manually, google API will automatically redirect to it. E-Mail of google account MUST be verified.
 // @ID 				google-login-handler
