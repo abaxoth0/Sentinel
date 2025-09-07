@@ -1,10 +1,10 @@
 networks:
   default:
     driver: bridge
-    enable_ipv6: false
 
 volumes:
-  postgres_data:
+  primary_postgres_data:
+  replica_postgres_data:
   redis_data:
   loki-data: {}
   grafana-data: {}
@@ -19,39 +19,70 @@ services:
     ports:
       - "0.0.0.0:8080:8080" # make sure that container port is the same in config
     depends_on:
-      postgres:
+      postgres-primary:
+        condition: service_healthy
+      postgres-replica:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
-    environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     volumes:
       - ./cmd/.env:/sentinel/.env
       - ./cmd/sentinel.config.yaml:/sentinel/sentinel.config.yaml
-      - ./cmd/RBAC.json:/sentinel/RBAC.json
+      - ./cmd/RBAC.config.json:/sentinel/RBAC.config.json
+      - ./cmd/cert.pem:/sentinel/cert.pem
+      - ./cmd/key.pem:/sentinel/key.pem
       - sentinel-logs:/var/log/sentinel
+    networks:
+      - default
 
-  postgres:
+  postgres-primary:
     image: postgres:17.2
     env_file:
       - ./cmd/.env
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${PRIMARY_DB_USER}
+      - POSTGRES_PASSWORD=${PRIMARY_DB_PASSWORD}
+      - POSTGRES_DB=${PRIMARY_DB_NAME}
     ports:
-      - "5432"
+      - "${PRIMARY_DB_PORT}:${PRIMARY_DB_PORT}"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - primary_postgres_data:/var/lib/postgresql/primary_data
+      - ./cmd/postgresql.primary.conf:/etc/postgresql/primary.conf
+      - ./docker-db-init:/docker-entrypoint-initdb.d
+    command: postgres -c config_file=/etc/postgresql/primary.conf -c port=5433
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $${PRIMARY_DB_USER} -d sentinel -p 5433"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    networks:
+      - default
+
+  postgres-replica:
+    image: postgres:17.2
+    env_file:
+      - ./cmd/.env
+    environment:
+      - POSTGRES_USER=${REPLICA_DB_USER}
+      - POSTGRES_PASSWORD=${REPLICA_DB_PASSWORD}
+      - POSTGRES_DB=${REPLICA_DB_NAME}
+    ports:
+      - "${REPLICA_DB_PORT}:${REPLICA_DB_PORT}"
+    volumes:
+      - replica_postgres_data:/var/lib/postgresql/replica_data
+      - ./cmd/postgresql.replica.conf:/etc/postgresql/replica.conf
+      - ./docker-db-init:/docker-entrypoint-initdb.d
+    command: postgres -c config_file=/etc/postgresql/replica.conf -c port=5434
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${REPLICA_DB_USER} -d sentinel -p 5434"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - default
 
   redis:
     image: redis:7.2.5-alpine
