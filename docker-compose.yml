@@ -44,13 +44,15 @@ services:
       - POSTGRES_USER=${PRIMARY_DB_USER}
       - POSTGRES_PASSWORD=${PRIMARY_DB_PASSWORD}
       - POSTGRES_DB=${PRIMARY_DB_NAME}
+      - PGDATA=/var/lib/postgresql/primary_data
     ports:
       - "${PRIMARY_DB_PORT}:${PRIMARY_DB_PORT}"
     volumes:
       - primary_postgres_data:/var/lib/postgresql/primary_data
       - ./cmd/postgresql.primary.conf:/etc/postgresql/primary.conf
+      - ./cmd/pg_hba.primary.conf:/etc/postgresql/pg_hba.primary.conf
       - ./docker-db-init:/docker-entrypoint-initdb.d
-    command: postgres -c config_file=/etc/postgresql/primary.conf -c port=5433
+    command: postgres -c config_file=/etc/postgresql/primary.conf -c port=5433 -c hba_file=/etc/postgresql/pg_hba.primary.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${PRIMARY_DB_USER} -d sentinel -p 5433"]
       interval: 5s
@@ -64,23 +66,32 @@ services:
     image: postgres:17.2
     env_file:
       - ./cmd/.env
+    depends_on:
+      - postgres-primary
     environment:
       - POSTGRES_USER=${REPLICA_DB_USER}
       - POSTGRES_PASSWORD=${REPLICA_DB_PASSWORD}
       - POSTGRES_DB=${REPLICA_DB_NAME}
+      - PGDATA=/var/lib/postgresql/replica_data
     ports:
       - "${REPLICA_DB_PORT}:${REPLICA_DB_PORT}"
     volumes:
       - replica_postgres_data:/var/lib/postgresql/replica_data
       - ./cmd/postgresql.replica.conf:/etc/postgresql/replica.conf
+      - ./cmd/pg_hba.replica.conf:/etc/postgresql/pg_hba.replica.conf
       - ./docker-db-init:/docker-entrypoint-initdb.d
-    command: postgres -c config_file=/etc/postgresql/replica.conf -c port=5434
+      - ./scripts/docker-init-replica.sh:/docker-entrypoint-initdb.d/init-replica.sh
+    command: >
+      sh -c "
+      chmod +x /docker-entrypoint-initdb.d/init-replica.sh &&
+      /docker-entrypoint-initdb.d/init-replica.sh
+      "
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${REPLICA_DB_USER} -d sentinel -p 5434"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 30s
     networks:
       - default
 
