@@ -1,6 +1,6 @@
 # TECH STACK
 
--   Programming language: Go (1.22.3)
+-   Programming language: Go (1.23.0)
 
 -   Database: PostgreSQL
 
@@ -16,7 +16,7 @@
 
 -   Password hashing method: bcrypt (ed25519)
 
--   Authentication: toke-based (JWT)
+-   Authentication: toke-based (JWT) & OAuth 2.0
 
 -   Supported OS: Linux
 
