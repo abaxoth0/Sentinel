@@ -10,3 +10,7 @@ cmd/main
 # place for testing some random stuff
 playground/*
 
+# empty file that generates by docker compose or some init script
+# (idk why and i don't want to deal with it, just ignore this)
+docker-db-init/init-replica.sh
+
