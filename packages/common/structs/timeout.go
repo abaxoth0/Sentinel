@@ -15,6 +15,7 @@ func SetTimeout(ctx context.Context, timeout time.Duration, req func(ctx context
 
 	go func() {
 		req(ctx)
+		close(done)
 	}()
 
 	select {
