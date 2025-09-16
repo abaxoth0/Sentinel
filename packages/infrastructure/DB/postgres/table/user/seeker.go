@@ -17,7 +17,6 @@ import (
 	UserFilterParser "sentinel/packages/infrastructure/parsers/user-filter"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -228,11 +227,6 @@ func (m *Manager) GetUserBySessionID(sessionID string) (*UserDTO.Full, *Error.St
 	}
 
 	return dto, nil
-}
-
-type userIdAndDeletedAt struct {
-	id string
-	deletedAt *time.Time
 }
 
 // Return loginAlreadyInUse error if login already in use by some user, otherwise returns nil
