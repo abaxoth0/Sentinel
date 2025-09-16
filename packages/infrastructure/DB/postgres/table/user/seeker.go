@@ -132,10 +132,6 @@ func (m *Manager) getUserBy(
 ) (*UserDTO.Full, *Error.Status) {
 	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+"...", nil)
 
-	if state == user.AnyState {
-		log.DB.Panic("Failed to get user", "Can't get user with any state using getUserBy()", nil)
-	}
-
     if conditionProperty == user.IdProperty {
         if err := validation.UUID(conditionValue); err != nil {
 			e := err.ToStatus(

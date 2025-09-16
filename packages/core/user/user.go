@@ -27,13 +27,11 @@ type State byte
 const (
     NotDeletedState State = iota
     DeletedState
-    AnyState
 )
 
 var stateMap = map[State]string{
 	NotDeletedState: "not deleted",
 	DeletedState:	 "deleted",
-	AnyState:		 "any",
 }
 
 func (s State) String() string {
