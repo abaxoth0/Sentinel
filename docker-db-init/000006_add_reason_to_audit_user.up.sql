@@ -1,3 +1,0 @@
-BEGIN;
-    ALTER TABLE IF EXISTS "audit_user" ADD COLUMN reason TEXT;
-COMMIT;
