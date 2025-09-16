@@ -63,24 +63,9 @@ func Create(ctx echo.Context) error {
     return ctx.NoContent(http.StatusOK)
 }
 
-type updater = func (*ActionDTO.UserTargeted) *Error.Status
-
-// Updates user's state (deletion status).
-// if omitUid is true, then uid will be set to empty string,
-// otherwise uid will be taken from path params (in this case uid must be a valid UUID).
-// If you want to change other user properties then use 'update' isntead.
-func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessageBase string) error {
+// Creates basic action DTO with reason and binds specified request body
+func getReasonedAction(ctx echo.Context, body RequestBody.ReasonGetter) (*ActionDTO.Basic, error) {
     reqMeta := request.GetMetadata(ctx)
-
-    controller.Log.Info(logMessageBase + "...", reqMeta)
-
-    var uid string
-
-    if !omitUid {
-        uid = ctx.Param("uid")
-    }
-
-	var body RequestBody.ActionReason
 
 	controller.Log.Info("Binding request...", reqMeta)
 
@@ -91,17 +76,11 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 		controller.Log.Info("Binding request: OK", reqMeta)
 	}
 
-    act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
+    act := SharedController.GetBasicAction(ctx)
 
-	act.Reason = body.Reason
+	act.Reason = body.GetReason()
 
-    if err := upd(act); err != nil {
-        return err
-    }
-
-	controller.Log.Info(logMessageBase + ": OK", reqMeta)
-
-    return ctx.NoContent(http.StatusOK)
+	return act, nil
 }
 
 // @Summary 		Soft delete user
@@ -122,7 +101,24 @@ func handleUserStateUpdate(ctx echo.Context, upd updater, omitUid bool, logMessa
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func SoftDelete(ctx echo.Context) error {
-	return handleUserStateUpdate(ctx, DB.Database.SoftDelete, false, "Soft deleting user")
+	reqMeta := request.GetMetadata(ctx)
+
+	controller.Log.Info("Soft deleting user...", reqMeta)
+
+	act, err := getReasonedAction(ctx, new(RequestBody.ActionReason))
+	if err != nil {
+		controller.Log.Error("Failed to soft delete user", err.Error(), reqMeta)
+		return err
+	}
+
+	if err := DB.Database.SoftDelete(act.ToUserTargeted(ctx.Param("uid"))); err != nil {
+		controller.Log.Error("Failed to soft delete user", err.Error(), reqMeta)
+		return err
+	}
+
+	controller.Log.Info("Soft deleting user: OK", reqMeta)
+
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Restore soft delete user
@@ -143,7 +139,27 @@ func SoftDelete(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func Restore(ctx echo.Context) error {
-    return handleUserStateUpdate(ctx, DB.Database.Restore, false, "Restoring user")
+	reqMeta := request.GetMetadata(ctx)
+
+	controller.Log.Info("Restoring user...", reqMeta)
+
+	body := new(RequestBody.RestoreUser)
+
+	act, err := getReasonedAction(ctx, body)
+	if err != nil {
+		controller.Log.Error("Failed to restore user", err.Error(), reqMeta)
+		return err
+	}
+
+	e := DB.Database.Restore(act.ToUserTargeted(ctx.Param("uid")), body.Login)
+	if e != nil {
+		controller.Log.Error("Failed to restore user", e.Error(), reqMeta)
+		return e
+	}
+
+	controller.Log.Info("Restoring user: OK", reqMeta)
+
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Hard delete user
@@ -164,7 +180,24 @@ func Restore(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func Drop(ctx echo.Context) error {
-    return handleUserStateUpdate(ctx, DB.Database.Drop, false, "Dropping user")
+	reqMeta := request.GetMetadata(ctx)
+
+	controller.Log.Info("Dropping user...", reqMeta)
+
+	act, err := getReasonedAction(ctx, new(RequestBody.ActionReason))
+	if err != nil {
+		controller.Log.Error("Failed to drop user", err.Error(), reqMeta)
+		return err
+	}
+
+	if err := DB.Database.Drop(act.ToUserTargeted(ctx.Param("uid"))); err != nil {
+		controller.Log.Error("Failed to drop user", err.Error(), reqMeta)
+		return err
+	}
+
+	controller.Log.Info("Dropping user: OK", reqMeta)
+
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Soft delete several users
@@ -270,8 +303,7 @@ func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.
             return Error.NewStatusError(err.Error(), http.StatusBadRequest)
         }
 
-        user, err := DB.Database.GetAnyUserByID(filter.TargetUID)
-
+        user, err := DB.Database.GetUserByID(filter.TargetUID)
         if err != nil {
             return err
         }

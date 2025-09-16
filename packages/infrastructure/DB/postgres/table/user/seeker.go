@@ -17,6 +17,7 @@ import (
 	UserFilterParser "sentinel/packages/infrastructure/parsers/user-filter"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -131,6 +132,10 @@ func (m *Manager) getUserBy(
 ) (*UserDTO.Full, *Error.Status) {
 	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+"...", nil)
 
+	if state == user.AnyState {
+		log.DB.Panic("Failed to get user", "Can't get user with any state using getUserBy()", nil)
+	}
+
     if conditionProperty == user.IdProperty {
         if err := validation.UUID(conditionValue); err != nil {
 			e := err.ToStatus(
@@ -169,8 +174,6 @@ func (m *Manager) getUserBy(
 		selectQuery = query.New(sql + " AND deleted_at IS NULL;", conditionValue)
 	case user.DeletedState:
 		selectQuery = query.New(sql + " AND deleted_at IS NOT NULL;", conditionValue)
-	case user.AnyState:
-		selectQuery = query.New(sql + ";", conditionValue)
 	default:
 		log.DB.Panic("Invalid getUserBy() call", "Unknown user state: " + string(state), nil)
 		return nil, Error.StatusInternalError
@@ -184,15 +187,6 @@ func (m *Manager) getUserBy(
 	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+":OK", nil)
 
     return dto, nil
-}
-
-func (m *Manager) GetAnyUserByID(id string) (*UserDTO.Full, *Error.Status) {
-    return m.getUserBy(
-        user.IdProperty,
-        id,
-        user.AnyState,
-        cache.KeyBase[cache.AnyUserById] + id,
-    )
 }
 
 func (m *Manager) GetUserByID(id string) (*UserDTO.Full, *Error.Status) {
@@ -210,15 +204,6 @@ func (m *Manager) GetSoftDeletedUserByID(id string) (*UserDTO.Full, *Error.Statu
         id,
         user.DeletedState,
         cache.KeyBase[cache.DeletedUserById] + id,
-    )
-}
-
-func (m *Manager) GetAnyUserByLogin(login string) (*UserDTO.Full, *Error.Status) {
-    return m.getUserBy(
-        user.LoginProperty,
-        login,
-        user.AnyState,
-        cache.KeyBase[cache.AnyUserByLogin] + login,
     )
 }
 
@@ -249,38 +234,41 @@ func (m *Manager) GetUserBySessionID(sessionID string) (*UserDTO.Full, *Error.St
 	return dto, nil
 }
 
-// Return loginAlreadyInUse error if login already used by another user, otherwise returns nil
-func (m *Manager) checkIfLoginInUse(login string) *Error.Status {
-	log.DB.Info("Checking if login "+login+" available...", nil)
+type userIdAndDeletedAt struct {
+	id string
+	deletedAt *time.Time
+}
+
+// Return loginAlreadyInUse error if login already in use by some user, otherwise returns nil
+func (m *Manager) checkLoginAvailability(login string) *Error.Status {
+	log.DB.Info("Checking availability of login \""+login+"\"...", nil)
 
     if err := user.ValidateLogin(login); err != nil {
-		log.DB.Error("Failed to check if login "+login+" available", err.Error(), nil)
+		log.DB.Error("Failed to check availability of login \""+login+"\"", err.Error(), nil)
         return err
     }
 
-    _, err := m.GetAnyUserByLogin(login)
-    if err != nil {
-        // user wasn't found, hence login is free to use
-        if err.Status() == http.StatusNotFound {
-			log.DB.Info("Checking if login "+login+" available: OK", nil)
-            return nil
-        }
+	_, err := m.GetUserByLogin(login)
+	if err != nil {
+		if err == Error.StatusNotFound {
+			log.DB.Info("Checking availability of login \""+login+"\": OK", nil)
+			return nil
+		}
+		log.DB.Info("Checking availability of login \""+login+"\": Reserved by soft deleted user", nil)
+		return err
+	}
 
-		log.DB.Error("Failed to check if login "+login+" available", err.Error(), nil)
-        return err
-    }
-
-	log.DB.Info("Checking if login "+login+" available: OK", nil)
+	log.DB.Info("Checking availability of login \""+login+"\": Already in use", nil)
 
     // if there are no any error (which means that user with this login exists)
     return loginAlreadyInUse
 }
 
 func (m *Manager) IsLoginInUse(login string) bool  {
-	if err := m.checkIfLoginInUse(login); err != nil {
-		return false
+	if err := m.checkLoginAvailability(login); err != nil {
+		return true
 	}
-	return true
+	return false
 }
 
 func (_ *Manager) GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status) {

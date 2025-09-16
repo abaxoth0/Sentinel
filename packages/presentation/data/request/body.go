@@ -283,3 +283,8 @@ func (b *PasswordReset) Validate() *Error.Status {
 	return nil
 }
 
+type RestoreUser struct {
+	UserLogin 		`json:",inline"`
+	ActionReason 	`json:",inline"`
+}
+

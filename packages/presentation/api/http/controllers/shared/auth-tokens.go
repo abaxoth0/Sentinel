@@ -18,8 +18,8 @@ import (
 )
 
 // IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
-// Otherwise, using this function will cause panic.
-func getNonNilValueFromSecuredRequestContext[T any](ctx echo.Context, key string) T {
+// Otherwise this function will cause panic.
+func getNonNilValueFromSecuredContext[T any](ctx echo.Context, key string) T {
 	value := ctx.Get(key)
 	if value == nil {
 		secured := ctx.Get("Secured")
@@ -62,7 +62,7 @@ func getNonNilValueFromSecuredRequestContext[T any](ctx echo.Context, key string
 //
 // Returned value guaranteed to be non-nil.
 func GetAccessToken(ctx echo.Context) *jwt.Token {
-	return getNonNilValueFromSecuredRequestContext[*jwt.Token](ctx, "access_token")
+	return getNonNilValueFromSecuredContext[*jwt.Token](ctx, "access_token")
 }
 
 // IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
@@ -70,7 +70,7 @@ func GetAccessToken(ctx echo.Context) *jwt.Token {
 //
 // Returned value guaranteed to be non-nil.
 func GetUserPayload(ctx echo.Context) *UserDTO.Payload {
-	return getNonNilValueFromSecuredRequestContext[*UserDTO.Payload](ctx, "user_payload")
+	return getNonNilValueFromSecuredContext[*UserDTO.Payload](ctx, "user_payload")
 }
 
 // IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
@@ -78,7 +78,7 @@ func GetUserPayload(ctx echo.Context) *UserDTO.Payload {
 //
 // Returned value guaranteed to be non-nil.
 func GetBasicAction(ctx echo.Context) *ActionDTO.Basic {
-	return getNonNilValueFromSecuredRequestContext[*ActionDTO.Basic](ctx, "basic_action")
+	return getNonNilValueFromSecuredContext[*ActionDTO.Basic](ctx, "basic_action")
 }
 
 // Retrieves and validates refresh token.

@@ -17,9 +17,9 @@ import (
 func (m *Manager) Create(login string, password string) (string, *Error.Status) {
 	log.DB.Info("Creating new user...", nil)
 
-    if err := m.checkIfLoginInUse(login); err != nil {
-        return "", err
-    }
+	if err := m.checkLoginAvailability(login); err != nil {
+		return "", err
+	}
 
     if err := user.ValidatePassword(password); err != nil {
 		log.DB.Error("Failed to create new user", err.Error(), nil)

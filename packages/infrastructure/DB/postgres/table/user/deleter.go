@@ -68,7 +68,7 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 	return nil
 }
 
-func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
+func (m *Manager) Restore(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
 	log.DB.Info("Restoring soft deleted user...", nil)
 
     if err := act.ValidateUIDs(); err != nil {
@@ -87,12 +87,36 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted) *Error.Status {
 
     auditUserDTO := newAuditDTO(audit.RestoreOperation, act, user)
 
-    query := query.New(
-        `UPDATE "user" SET deleted_at = NULL, version = version + 1
-        WHERE id = $1 AND deleted_at IS NOT NULL;`,
-        act.TargetUID,
-    )
-    if err := execTxWithAudit(&auditUserDTO, query); err != nil {
+	queries := []*query.Query{}
+
+	err = m.checkLoginAvailability(user.Login)
+	if err != nil {
+		if err != loginAlreadyInUse {
+			return err
+		}
+
+		if newLogin == "" {
+			return Error.NewStatusError(
+				"Login of this account has been taken by other user. To restore this account you need to specify a new login for it",
+				http.StatusConflict,
+			)
+		}
+
+		queries = append(queries, query.New(
+			`UPDATE "user" SET login = $1 WHERE id = $2;`,
+			newLogin, act.TargetUID,
+		))
+	}
+
+	queries = append(queries,
+		query.New(
+			`UPDATE "user" SET deleted_at = NULL, version = version + 1
+			WHERE id = $1 AND deleted_at IS NOT NULL;`,
+			act.TargetUID,
+		),
+	)
+
+    if err := execTxWithAudit(&auditUserDTO, queries...); err != nil {
 		return err
 	}
 
@@ -259,12 +283,17 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 		return err
 	}
 
-    user, err := m.GetAnyUserByID(act.TargetUID)
+    user, err := m.GetSoftDeletedUserByID(act.TargetUID)
     if err != nil {
-        return err
-    }
+		if err != Error.StatusNotFound {
+			return err
+		}
 
-    if user.DeletedAt.IsZero() {
+		user, err = m.GetUserByID(act.TargetUID)
+		if err != nil {
+			return err
+		}
+
 		errMsg := "Only soft deleted users can be dropped"
 		log.DB.Error("Failed to drop soft deleted user", errMsg, nil)
         return Error.NewStatusError(errMsg, http.StatusBadRequest)

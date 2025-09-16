@@ -21,15 +21,11 @@ type creator interface {
 type seeker interface {
 	SearchUsers(act *ActionDTO.Basic, rawFilters []string, page int, pageSize int) ([]*UserDTO.Public, *Error.Status)
 
-	GetAnyUserByID(string) (*UserDTO.Full, *Error.Status)
-
 	GetUserByID(string) (*UserDTO.Full, *Error.Status)
 
 	GetSoftDeletedUserByID(string) (*UserDTO.Full, *Error.Status)
 
 	GetUserByLogin(string) (*UserDTO.Full, *Error.Status)
-
-	GetAnyUserByLogin(string) (*UserDTO.Full, *Error.Status)
 
 	GetUserBySessionID(string) (*UserDTO.Full, *Error.Status)
 
@@ -53,7 +49,7 @@ type updater interface {
 type deleter interface {
 	SoftDelete(act *ActionDTO.UserTargeted) *Error.Status
 
-	Restore(act *ActionDTO.UserTargeted) *Error.Status
+	Restore(act *ActionDTO.UserTargeted, newLogin string) *Error.Status
 
 	Drop(act *ActionDTO.UserTargeted) *Error.Status
 

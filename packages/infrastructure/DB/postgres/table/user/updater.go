@@ -60,9 +60,9 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
         return Error.NewStatusError(errMsg, http.StatusConflict)
     }
 
-    if err := m.checkIfLoginInUse(newLogin); err != nil {
-        return err
-    }
+	if err := m.checkLoginAvailability(newLogin); err != nil {
+		return err
+	}
 
     audit := newAuditDTO(audit.UpdatedOperation, act, user)
 
