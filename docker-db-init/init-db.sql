@@ -14,8 +14,8 @@ BEGIN;
 
     CREATE TABLE IF NOT EXISTS "audit_user" (
         id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        changed_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
-        changed_by_user_id uuid REFERENCES "user"(id) ON DELETE CASCADE,
+        changed_user_id uuid,
+        changed_by_user_id uuid,
         operation CHAR(1) NOT NULL,
         login VARCHAR(72) NOT NULL,
         password CHAR(60) NOT NULL,
@@ -28,7 +28,7 @@ BEGIN;
 
     CREATE TABLE IF NOT EXISTS user_session (
         id                  UUID PRIMARY KEY,
-        user_id             UUID REFERENCES "user"(id) ON DELETE CASCADE,
+        user_id             UUID,
         user_agent          TEXT NOT NULL,
         ip_address          INET,
         device_id           TEXT,
@@ -78,7 +78,7 @@ BEGIN;
 
     CREATE TABLE IF NOT EXISTS "audit_location" (
         id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        changed_location_id uuid REFERENCES "location"(id) ON DELETE CASCADE,
+        changed_location_id uuid,
         operation           CHAR(1) NOT NULL,
         ip                  INET NOT NULL,
         session_id          UUID REFERENCES "user_session"(id) ON DELETE SET NULL,
@@ -95,10 +95,10 @@ BEGIN;
 
     CREATE TABLE IF NOT EXISTS "audit_user_session" (
         id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-        changed_session_id  UUID REFERENCES "user_session"(id) ON DELETE CASCADE,
-        changed_by_user_id  UUID REFERENCES "user"(id) ON DELETE SET NULL,
+        changed_session_id  UUID,
+        changed_by_user_id  UUID,
         operation           CHAR(1) NOT NULL,
-        user_id             UUID REFERENCES "user"(id) ON DELETE SET NULL,
+        user_id             UUID,
         user_agent          TEXT NOT NULL,
         ip_address          INET,
         device_id           TEXT,
