@@ -14,13 +14,6 @@ func setTokenRefreshRequiredHeader(ctx echo.Context) {
 	ctx.Response().Header().Set("X-Token-Refresh-Required", "true")
 }
 
-// Without this user won't be able to refresh auth tokens, login or logout on desync
-var skipSyncCheckEndpoints map[string]bool = map[string]bool{
-	http.MethodPut + "/auth": true, // Refresh auth tokens endpoint
-	http.MethodPost + "/auth": true, // Login endpoint
-	http.MethodDelete + "/auth": true, // Logout endpoint
-}
-
 // IMPORTANT: Works only if route\group was secured via 'secure' middleware.
 func CheckUserSync(next echo.HandlerFunc) echo.HandlerFunc {
 	return func (ctx echo.Context) error {
