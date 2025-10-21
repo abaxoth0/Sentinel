@@ -21,7 +21,7 @@ var fileLog = NewSource("FILE LOGGER", Stderr)
 const (
 	fallbackBatchSize 	= 500
 	fallbackWorkers   	= 5
-	fallbackStopTimeout = time.Second * 10
+	stopTimeout  		= time.Second * 10
 )
 
 // Satisfies Logger and LoggerBinder interfaces
@@ -51,7 +51,7 @@ func NewFileLogger(name string) *FileLogger {
         disruptor: structs.NewDisruptor[*LogEntry](),
         fallback: structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
 			BatchSize: fallbackBatchSize,
-			StopTimeout: fallbackStopTimeout,
+			StopTimeout: stopTimeout,
 		}),
         transmissions: []Logger{},
 		streamPool: sync.Pool{
@@ -104,7 +104,7 @@ func (l *FileLogger) Start(debug bool) error {
     if l.fallback.IsCanceled() {
         l.fallback = structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
 			BatchSize: fallbackBatchSize,
-			StopTimeout: fallbackStopTimeout,
+			StopTimeout: stopTimeout,
 		})
     }
 
@@ -131,9 +131,33 @@ func (l *FileLogger) Stop() error {
     l.isRunning.Store(false)
 
     l.disruptor.Close()
+
+    disruptorDone := false
+    timeout := time.After(stopTimeout)
+
+    for !disruptorDone {
+        select {
+        case <-timeout:
+            fileLog.Error("disruptor processing timeout during shutdown", "", nil)
+            disruptorDone = true
+        default:
+            if l.disruptor.IsEmpty() {
+                disruptorDone = true
+            } else {
+                time.Sleep(time.Millisecond * 10)
+            }
+        }
+    }
+
     if err := l.fallback.Cancel(); err != nil {
         return err
     }
+
+    // Flush any remaining data in the file buffer
+    if err := l.logger.Writer().(*os.File).Sync(); err != nil {
+        fileLog.Error("failed to sync log file during shutdown", err.Error(), nil)
+    }
+
     if err := l.logFile.Close(); err != nil {
         return err
     }
@@ -221,4 +245,3 @@ func (l *FileLogger) RemoveTransmission(logger Logger) error {
 
     return errors.New("transmission now found")
 }
-

@@ -69,6 +69,11 @@ func (d *Disruptor[T]) Close() {
 	d.closed.Store(true)
 }
 
+// IsEmpty returns true if all entries have been processed
+func (d *Disruptor[T]) IsEmpty() bool {
+	return d.writer.Value.Load() == d.reader.Value.Load()
+}
+
 // Adds specified entry into a Disruptor buffer.
 // Returns false if buffer is overflowed or if Disruptor is closed
 func (d *Disruptor[T]) Publish(entry T) bool {
