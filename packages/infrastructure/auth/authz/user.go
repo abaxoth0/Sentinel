@@ -86,13 +86,6 @@ func (u user) DeleteLocation(roles []string) *Error.Status {
 	return authorize(&userGetSessionLocationContext, roles)
 }
 
-func (u user) GetUser(self bool, roles []string) *Error.Status {
-	if self {
-		return authorize(&userGetSelfContext, roles)
-	}
-	return authorize(&userGetUserContext, roles)
-}
-
 func (u user) OAuthIntrospect(roles []string) *Error.Status {
 	return authorize(&userIntrospectOAuthTokenContext, roles)
 }

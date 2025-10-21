@@ -37,7 +37,6 @@ func createSuffixFromReqeustMeta(m Meta) string {
 		s += "id:" + v
 	}
 
-
 	s += ")"
 
 	return s
@@ -74,8 +73,6 @@ type TransmittingLogger interface {
     // Will return error if transmission to specified logger isn't exist.
     RemoveTransmission(logger Logger) error
 }
-
-type logHandler = func (*LogEntry)
 
 // Returns false if log must not be processed
 func preprocess(entry *LogEntry, transmissions []Logger) bool {

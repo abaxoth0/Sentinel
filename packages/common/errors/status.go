@@ -74,12 +74,6 @@ func NewStatusError(message string, status int) *Status {
     return &Status{status, message}
 }
 
-func IsStatusError(err error) (bool, *Status) {
-	e, is := err.(*Status)
-
-	return is, e
-}
-
 var StatusInternalError = NewStatusError(
     "Internal Server Error",
     http.StatusInternalServerError,

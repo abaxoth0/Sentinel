@@ -15,13 +15,6 @@ type Basic struct {
 	Reason 			string
 }
 
-func NewBasic(requesterUID string, requestedRoles []string) *Basic {
-    return &Basic{
-        RequesterUID: requesterUID,
-        RequesterRoles: requestedRoles,
-    }
-}
-
 func (dto *Basic) ValidateRequesterUID() *Error.Status {
     if err := validation.UUID(dto.RequesterUID); err != nil {
         return err.ToStatus(

@@ -61,14 +61,6 @@ func getNonNilValueFromSecuredContext[T any](ctx echo.Context, key string) T {
 // Otherwise, using this function will cause panic.
 //
 // Returned value guaranteed to be non-nil.
-func GetAccessToken(ctx echo.Context) *jwt.Token {
-	return getNonNilValueFromSecuredContext[*jwt.Token](ctx, "access_token")
-}
-
-// IMPORTANT: This function can only be used if the route has been secured (via the 'secured' middleware).
-// Otherwise, using this function will cause panic.
-//
-// Returned value guaranteed to be non-nil.
 func GetUserPayload(ctx echo.Context) *UserDTO.Payload {
 	return getNonNilValueFromSecuredContext[*UserDTO.Payload](ctx, "user_payload")
 }

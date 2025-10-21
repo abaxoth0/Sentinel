@@ -83,18 +83,6 @@ var stringToCondMap = map[string]filter.Condition {
 	condContainedStr: 	   filter.Containd,
 }
 
-func ParseCond(rawCond string) (filter.Condition, error) {
-	mapper.Log.Trace("Parsing filter condition: "+rawCond+"...", nil)
-	r := stringToCondMap[rawCond]
-	if r == 0 {
-		errMsg := "No such condition"
-		mapper.Log.Error("Parsing filter condition: "+rawCond, errMsg, nil)
-		return 0, errors.New(errMsg)
-	}
-	mapper.Log.Trace("Parsing filter condition: "+rawCond+": OK", nil)
-	return r, nil
-}
-
 func FormatCond(cond filter.Condition) (string, error) {
 	mapper.Log.Trace("Formatting filter condition into the string...", nil)
 	r := condToStringMap[cond]

@@ -9,7 +9,3 @@ func TargetedActionDTOFromClaims(targetUID string, claims *token.Claims) (*Actio
 	return ActionDTO.NewUserTargeted(targetUID, claims.Subject, claims.Roles)
 }
 
-func BasicActionDTOFromClaims(claims *token.Claims) (*ActionDTO.Basic) {
-	return ActionDTO.NewBasic(claims.Subject, claims.Roles)
-}
-
