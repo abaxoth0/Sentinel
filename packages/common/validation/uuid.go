@@ -8,7 +8,7 @@ import (
 )
 
 // Returns nil if 'v' is valid uuid,
-// otherwise returns either Error.NoValue, either Error.InvalidValue.
+// otherwise returns either Error.NoValue or Error.InvalidValue.
 func UUID(v string) *Error.Validation {
     if strings.ReplaceAll(v, " ", "") == "" {
         return Error.NoValue
@@ -20,4 +20,3 @@ func UUID(v string) *Error.Validation {
 
     return nil
 }
-

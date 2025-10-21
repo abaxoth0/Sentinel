@@ -15,10 +15,10 @@ func (m Meta) stringSuffix() string {
 		return ""
 	}
 
-	return createSuffixFromReqeustMeta(m)
+	return createSuffixFromRequestMeta(m)
 }
 
-func createSuffixFromReqeustMeta(m Meta) string {
+func createSuffixFromRequestMeta(m Meta) string {
 	s := " ("
 
 	if v, ok := m["addr"].(string); ok {
@@ -115,4 +115,3 @@ var Undefined = NewSource("UNDEFINED", Default)
 var Stdout = newStdoutLogger()
 
 var Stderr = newStderrLogger()
-

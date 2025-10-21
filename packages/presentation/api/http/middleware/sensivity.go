@@ -42,7 +42,7 @@ func Sensivity(s EndpointSensivity) echo.MiddlewareFunc {
 	}
 }
 
-// Can be used only after Sensivity middleware beign applied, otherwise will cause panic.
+// Can be used only after Sensitivity middleware being applied, otherwise will cause panic.
 func GetSensivity(ctx echo.Context) EndpointSensivity {
 	s, ok := ctx.Get(sensivityKey).(EndpointSensivity)
 	if !ok {
@@ -55,4 +55,3 @@ func GetSensivity(ctx echo.Context) EndpointSensivity {
 	}
 	return s
 }
-

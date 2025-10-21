@@ -112,7 +112,7 @@ func authorize(ctx *rbac.AuthorizationContext, rolesNames []string) *Error.Statu
             return DeniedByActionGatePolicy
 		default:
 			msg := fmt.Sprintf(
-				"Unexpected error occured during authorization of %s with %s",
+				"Unexpected error occurred during authorization of %s with %s",
 				ctxString, strings.Join(rolesNames, ","),
 				)
 			log.Panic(msg, err.Error(), nil)
@@ -125,4 +125,3 @@ func authorize(ctx *rbac.AuthorizationContext, rolesNames []string) *Error.Statu
 
     return nil
 }
-

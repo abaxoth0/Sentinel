@@ -82,11 +82,10 @@ func ValidateLogin(login string) *Error.Status {
     }
 
 	if err := validation.Email(login); err != nil {
-		// If err is not nil then it maybe only Error.InvalidValie,
+		// If err is not nil then it may be only Error.InvalidValue,
 		// cuz login was already checked for zero or whitespaces value
 		return ErrInvalidEmailFormat
 	}
 
     return nil
 }
-

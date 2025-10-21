@@ -12,7 +12,7 @@ type stderrLogger struct {
 
 func newStderrLogger() *stderrLogger {
     return &stderrLogger{
-        // btw log package sends logs into stderr by default (blew my mind)
+        // BTW: log package sends logs into stderr by default
         // but i want to add prefix to logs and possibility to adjust flags
         logger: log.New(os.Stderr, "ERROR: ", log.Ldate | log.Ltime),
     }
@@ -37,4 +37,3 @@ func (l *stderrLogger) Log(entry *LogEntry) {
 		handleCritical(entry)
 	}
 }
-

@@ -182,7 +182,7 @@ func GoogleCallback(ctx echo.Context) error {
 			return e
 		}
 
-		// There are may occur a problem since DB.Database.Create() creates user in primary DB,
+		// There may occur a problem since DB.Database.Create() creates user in primary DB,
 		// but DB.Database.FindUserByID() tries to find user in replica DB.
 		// This is fine, but there are very small time gap between this two actions,
 		// so this loop is needed to give replica DB enough time to synchronize with primary DB
@@ -223,4 +223,3 @@ func GoogleCallback(ctx echo.Context) error {
 
 	return SharedController.Authenticate(ctx, user, []string{config.Auth.SelfAudience})
 }
-

@@ -108,7 +108,7 @@ func FullUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Use
             return r, nil
         }
 
-        // If decoding failed thats mean more likely cached data was invalid,
+        // If decoding failed that means more likely cached data was invalid,
         // so need to delete it from cache to prevent errors in future.
         if e := cache.Client.Delete(cacheKey); e != nil {
             return nil, e
@@ -157,7 +157,7 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 			return r, nil
 		}
 
-        // If decoding failed thats mean more likely cached data was invalid,
+        // If decoding failed that means more likely cached data was invalid,
         // so need to delete it from cache to prevent same errors in future.
         if e := cache.Client.Delete(cacheKey); e != nil {
             return nil, e
@@ -271,7 +271,7 @@ func FullLocationDTO(conType connection.Type, q *query.Query, cacheKey string) (
 			return r, nil
 		}
 
-        // If decoding failed thats mean more likely cached data was invalid,
+        // If decoding failed that means more likely cached data was invalid,
         // so need to delete it from cache to prevent same errors in future.
         if e := cache.Client.Delete(cacheKey); e != nil {
             return nil, e
@@ -320,4 +320,3 @@ func FullLocationDTO(conType connection.Type, q *query.Query, cacheKey string) (
 
 	return dto, nil
 }
-

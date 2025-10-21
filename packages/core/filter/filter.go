@@ -1,7 +1,7 @@
 // Entity filter
 package filter
 
-// For Pasrsing/Formatting use filtermapper module
+// For Parsing/Formatting use filtermapper module
 type Condition byte
 
 const (
@@ -22,4 +22,3 @@ type Entity[P any] struct {
 	Cond     Condition
 	Value    any
 }
-
