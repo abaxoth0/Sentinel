@@ -8,6 +8,17 @@ import (
 
 // Returns Error.StatusTimeout on timeout.
 func SetTimeout(ctx context.Context, timeout time.Duration, req func(ctx context.Context)) error {
+	// If timeout is zero or negative, don't set a timeout
+	if timeout <= 0 {
+		done := make(chan struct{})
+		go func() {
+			req(ctx)
+			close(done)
+		}()
+		<-done
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -29,4 +40,3 @@ func SetTimeout(ctx context.Context, timeout time.Duration, req func(ctx context
 		return err
 	}
 }
-

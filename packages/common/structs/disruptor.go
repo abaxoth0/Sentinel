@@ -14,13 +14,13 @@ const (
 var yieldWaiter = yieldSeqWait{}
 
 type sequence struct {
-    Value atomic.Int64
-    // Padding to prevent false sharing
-    _padding [56]byte
+	Value atomic.Int64
+	// Padding to prevent false sharing
+	_padding [56]byte
 }
 
 type seqWaiter interface {
-    WaitFor(seq int64, cursor *sequence, done <-chan struct{})
+	WaitFor(seq int64, cursor *sequence, done <-chan struct{})
 }
 
 type yieldSeqWait struct{}
@@ -39,17 +39,17 @@ func (w yieldSeqWait) WaitFor(seq int64, cursor *sequence, done <-chan struct{})
 
 // Implements LMAX Disruptor pattern
 type Disruptor[T any] struct {
-	buffer  [BufferSize]T
-	writer  sequence // write position (starts at -1)
-	reader  sequence // read position (starts at -1)
-	waiter  seqWaiter
-	closed  atomic.Bool
-	done    chan struct{}
+	buffer [BufferSize]T
+	writer sequence // write position (starts at -1)
+	reader sequence // read position (starts at -1)
+	waiter seqWaiter
+	closed atomic.Bool
+	done   chan struct{}
 }
 
 func NewDisruptor[T any]() *Disruptor[T] {
 	// If is not power of two
-	if BufferSize&(BufferSize - 1) != 0 {
+	if BufferSize&(BufferSize-1) != 0 {
 		panic(fmt.Sprintf("invalid disruptor buffer size - %d: it must be a power of two", BufferSize))
 	}
 
@@ -65,9 +65,8 @@ func NewDisruptor[T any]() *Disruptor[T] {
 // Closes Disruptor, after that it can't be started again.
 func (d *Disruptor[T]) Close() {
 	close(d.done)
-	for !d.closed.Load() {
-		time.Sleep(time.Microsecond * 10)
-	}
+	// Set closed flag immediately if no consumer is running
+	d.closed.Store(true)
 }
 
 // Adds specified entry into a Disruptor buffer.
@@ -86,7 +85,7 @@ func (d *Disruptor[T]) Publish(entry T) bool {
 		// NOTE: For buffer sizes ≤ 8, use (nextWriter - reader) > (BufferSize - 1)
 		// to avoid off-by-one overwrites. For larger buffers (≥1024), the current check
 		// is sufficient and more performant.
-		if nextWriter - reader >= BufferSize {
+		if nextWriter-reader >= BufferSize {
 			return false
 		}
 
@@ -111,7 +110,7 @@ func (d *Disruptor[T]) Consume(handler func(T)) error {
 
 		select {
 		case <-d.done:
-			closed = true;
+			closed = true
 		default:
 			if claimed > writer {
 				d.waiter.WaitFor(claimed, &d.writer, d.done)
@@ -133,4 +132,3 @@ func (d *Disruptor[T]) Consume(handler func(T)) error {
 		}
 	}
 }
-
