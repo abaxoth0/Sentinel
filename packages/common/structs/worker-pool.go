@@ -27,6 +27,7 @@ type WorkerPool struct {
     cancel     	context.CancelFunc
     wg         	*sync.WaitGroup
 	once 		sync.Once
+	stopOnce	sync.Once
 	opt			*WorkerPoolOptions
 }
 
@@ -92,7 +93,9 @@ func (wp *WorkerPool) work() {
 	for {
 		select {
 		case <-wp.ctx.Done():
-			wp.stop()
+			wp.stopOnce.Do(func() {
+				wp.stop()
+			})
 			return
 		default:
 			if wp.queue.Size() == 0 {
@@ -131,10 +134,8 @@ func (wp *WorkerPool) Cancel() error {
 
 	wp.canceled.Store(true)
     wp.cancel()
-	// TODO there are bug when WP has less than 3 workers it may panic with message: (this line cause panic)
-	//		panic: sync: WaitGroup is reused before previous Wait has returned
-	// In my case it tried to process several works after being Canceled, but i'm not exactly sure what cause that
-	// if call Cancel while there are no work in queue it won't panic, so most likely problem in stop method
+	// Fixed: WaitGroup reuse issue by using stopOnce.Do() in work() method
+	// to ensure stop() is only called once from a single worker goroutine
 	wp.wg.Wait()
 
 	return nil
@@ -151,4 +152,3 @@ func (wp *WorkerPool) Push(t Task) error {
 
 	return nil
 }
-
