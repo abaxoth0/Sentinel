@@ -42,7 +42,7 @@ func InitDefault() {
 func InitModules() {
 	log.Info("Initializng modules...", nil)
 
-    authz.Init()
+    authz.Init("RBAC.config.json")
 
 	token.Init()
 

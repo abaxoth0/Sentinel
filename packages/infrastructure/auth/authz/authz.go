@@ -27,10 +27,10 @@ var userEntity = rbac.NewEntity("user")
 var Schema *rbac.Schema
 var Host *rbac.Host
 
-func Init() {
+func Init(configPath string) {
 	log.Info("Loading configuration file...", nil)
 
-	host, e := rbac.LoadHost("RBAC.config.json")
+	host, e := rbac.LoadHost(configPath)
 	if e != nil {
         log.Fatal("Failed to load configuration file", e.Error(), nil)
 	}
