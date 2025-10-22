@@ -17,8 +17,8 @@ const (
 
 var sensivityMap = map[EndpointSensivity]bool{
 	InsignificantEndpoint: true,
-	DefaultEndpoint: true,
-	SensitiveEndpoint: true,
+	DefaultEndpoint:       true,
+	SensitiveEndpoint:     true,
 }
 
 func (s EndpointSensivity) Validate() error {

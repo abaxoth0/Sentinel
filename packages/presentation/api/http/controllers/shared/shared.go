@@ -20,14 +20,13 @@ func NewCSRFToken(ctx echo.Context) (string, *Error.Status) {
 	controller.Log.Trace("Generating CSRF token...", reqMeta)
 
 	token := make([]byte, 32)
-    if _, err := rand.Read(token); err != nil {
+	if _, err := rand.Read(token); err != nil {
 		controller.Log.Error("Failed to generate CSRF token", err.Error(), reqMeta)
-        return "", Error.StatusInternalError
-    }
-    tokenStr := base64.RawURLEncoding.EncodeToString(token)
+		return "", Error.StatusInternalError
+	}
+	tokenStr := base64.RawURLEncoding.EncodeToString(token)
 
 	controller.Log.Trace("Generating CSRF token: OK", reqMeta)
 
 	return tokenStr, nil
 }
-

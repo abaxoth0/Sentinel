@@ -21,36 +21,35 @@ func (m *Manager) Create(login string, password string) (string, *Error.Status) 
 		return "", err
 	}
 
-    if err := user.ValidatePassword(password); err != nil {
+	if err := user.ValidatePassword(password); err != nil {
 		log.DB.Error("Failed to create new user", err.Error(), nil)
-        return "", err
-    }
-
-	hashedPassword, err := hashPassword(password)
-    if err != nil {
-		log.DB.Error("Failed to create new user", err.Error(), nil)
-        return "", nil
-    }
-
-    uid := uuid.New()
-
-    insertQuery := query.New(
-        `INSERT INTO "user" (id, login, password, roles) VALUES
-        ($1, $2, $3, $4);`,
-        uid, login, hashedPassword, rbac.GetRolesNames(authz.Host.DefaultRoles),
-    )
-
-    if err := executor.Exec(connection.Primary, insertQuery); err != nil {
-        return "", err
+		return "", err
 	}
 
-    cache.Client.Delete(
-        cache.KeyBase[cache.UserByLogin] + login,
-        cache.KeyBase[cache.AnyUserByLogin] + login,
-    )
+	hashedPassword, err := hashPassword(password)
+	if err != nil {
+		log.DB.Error("Failed to create new user", err.Error(), nil)
+		return "", nil
+	}
+
+	uid := uuid.New()
+
+	insertQuery := query.New(
+		`INSERT INTO "user" (id, login, password, roles) VALUES
+        ($1, $2, $3, $4);`,
+		uid, login, hashedPassword, rbac.GetRolesNames(authz.Host.DefaultRoles),
+	)
+
+	if err := executor.Exec(connection.Primary, insertQuery); err != nil {
+		return "", err
+	}
+
+	cache.Client.Delete(
+		cache.KeyBase[cache.UserByLogin]+login,
+		cache.KeyBase[cache.AnyUserByLogin]+login,
+	)
 
 	log.DB.Info("Creating new user: OK", nil)
 
-    return uid.String(), nil
+	return uid.String(), nil
 }
-

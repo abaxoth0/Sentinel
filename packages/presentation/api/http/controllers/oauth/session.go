@@ -13,16 +13,16 @@ import (
 // Used for security.
 // Allows to ensure that IP, User Agent and State (CSRF token) match during redirects.
 type oauthSession struct {
-	IP 			string
+	IP string
 	// CSRF token (Name comes from OAuth convention. See RFC 6749 p4.1.1)
-	State 		string
-	UserAgent	string
+	State     string
+	UserAgent string
 }
 
 func newOAuthSession(ip, state, userAgent string) oauthSession {
 	return oauthSession{
-		IP: ip,
-		State: state,
+		IP:        ip,
+		State:     state,
 		UserAgent: userAgent,
 	}
 }
@@ -57,8 +57,8 @@ type oauthSessionStore struct {
 var oauthSessionTTL = time.Minute * 5
 
 func (s *oauthSessionStore) Save(provider authProvider, id string, session *oauthSession) error {
-	id = provider.String()+"_"+id
-	value := session.IP+"\n"+session.State+"\n"+session.UserAgent
+	id = provider.String() + "_" + id
+	value := session.IP + "\n" + session.State + "\n" + session.UserAgent
 
 	if err := cache.Client.SetWithTTL(id, value, oauthSessionTTL); err != nil {
 		errMsg := "Failed to store oauth session"
@@ -71,7 +71,7 @@ func (s *oauthSessionStore) Save(provider authProvider, id string, session *oaut
 
 // IMPORTANT: This method will delete session from store if specified id was found
 func (s *oauthSessionStore) Extract(provider authProvider, id string) (oauthSession, bool) {
-	key := provider.String()+"_"+id
+	key := provider.String() + "_" + id
 
 	sessionStr, hit := cache.Client.Get(key)
 	if !hit {
@@ -89,11 +89,10 @@ func (s *oauthSessionStore) Extract(provider authProvider, id string) (oauthSess
 	}
 
 	return oauthSession{
-		IP: sessionData[0],
-		State: sessionData[1],
+		IP:        sessionData[0],
+		State:     sessionData[1],
 		UserAgent: sessionData[2],
 	}, true
 }
 
 var sessionStore = new(oauthSessionStore)
-

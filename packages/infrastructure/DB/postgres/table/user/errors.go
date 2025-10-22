@@ -6,7 +6,6 @@ import (
 )
 
 var loginAlreadyInUse = Error.NewStatusError(
-    "This login is already in use by another user",
-    http.StatusConflict,
+	"This login is already in use by another user",
+	http.StatusConflict,
 )
-

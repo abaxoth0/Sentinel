@@ -42,7 +42,7 @@ func InitDefault() {
 func InitModules() {
 	log.Info("Initializng modules...", nil)
 
-    authz.Init("RBAC.config.json")
+	authz.Init("RBAC.config.json")
 
 	token.Init()
 
@@ -52,7 +52,7 @@ func InitModules() {
 func InitConnections() {
 	log.Info("Initializng connections...", nil)
 
-    cache.Client.Connect()
+	cache.Client.Connect()
 	DB.Database.Connect()
 
 	log.Info("Initializng connections: OK", nil)
@@ -65,6 +65,5 @@ func InitRouter() *echo.Echo {
 
 	log.Info("Initializng router: OK", nil)
 
-    return Router
+	return Router
 }
-

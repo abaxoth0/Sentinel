@@ -66,24 +66,23 @@ func main() {
 	app.InitModules()
 	app.InitConnections()
 
-    go func () {
-        if err := logger.Default.Start(config.Debug.Enabled); err != nil {
-            panic(err.Error())
-        }
-    }()
-    defer func() {
-        if err := logger.Default.Stop(); err != nil {
+	go func() {
+		if err := logger.Default.Start(config.Debug.Enabled); err != nil {
+			panic(err.Error())
+		}
+	}()
+	defer func() {
+		if err := logger.Default.Stop(); err != nil {
 			log.Error("Failed to stop logger", err.Error(), nil)
-        }
-    }()
+		}
+	}()
 
-    // Reserve some time for logger to start up
-    time.Sleep(time.Millisecond * 50)
+	// Reserve some time for logger to start up
+	time.Sleep(time.Millisecond * 50)
 
 	r := app.InitRouter()
 
 	app.EndInit()
 
-    app.Start(r)
+	app.Start(r)
 }
-

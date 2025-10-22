@@ -25,8 +25,8 @@ var googleOAuthConfig *oauth2.Config
 
 func initGoogle() {
 	googleOAuthConfig = &oauth2.Config{
-		RedirectURL: api.GetBaseURL() + "/v1/auth/oauth/google/callback",
-		ClientID: config.Secret.OAuthGoogleClientID,
+		RedirectURL:  api.GetBaseURL() + "/v1/auth/oauth/google/callback",
+		ClientID:     config.Secret.OAuthGoogleClientID,
 		ClientSecret: config.Secret.OAuthGoogleClientSecret,
 		Scopes: []string{
 			"openid",
@@ -66,10 +66,10 @@ func GoogleLogin(ctx echo.Context) error {
 	}
 
 	ctx.SetCookie(&http.Cookie{
-		Name: "oauth_session",
-		Value: sessionID,
+		Name:     "oauth_session",
+		Value:    sessionID,
 		HttpOnly: true,
-		Secure: true,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -77,11 +77,13 @@ func GoogleLogin(ctx echo.Context) error {
 
 	return ctx.Redirect(http.StatusTemporaryRedirect, url)
 }
-/*
-	Response from https://www.googleapis.com/oauth2/v3/userinfo
 
-	Contains not all fields from response, only those which are needed.
-	Response example:
+/*
+Response from https://www.googleapis.com/oauth2/v3/userinfo
+
+Contains not all fields from response, only those which are needed.
+Response example:
+
 	{
 		"sub": "google_account_id",
 		"name": "fullname",
@@ -93,9 +95,9 @@ func GoogleLogin(ctx echo.Context) error {
 	}
 */
 type googleUserInfoPartialResponse struct {
-	GoogleID 		string 	`json:"sub"`
-	Email 	 		string	`json:"email"`
-	IsEmailVerified bool 	`json:"email_verified"`
+	GoogleID        string `json:"sub"`
+	Email           string `json:"email"`
+	IsEmailVerified bool   `json:"email_verified"`
 }
 
 // @Summary 		Actual handler for auth via google account
@@ -130,7 +132,7 @@ func GoogleCallback(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "Security vioalation detected")
 	}
 
-	c, cancel := context.WithTimeout(context.Background(), time.Second * 10)
+	c, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	oauthToken, err := googleOAuthConfig.Exchange(c, code)
@@ -204,7 +206,7 @@ func GoogleCallback(ctx echo.Context) error {
 			retries++
 		}
 
-		controller.Log.Trace("Retries of searching for a created user: " + strconv.Itoa(retries), reqMeta)
+		controller.Log.Trace("Retries of searching for a created user: "+strconv.Itoa(retries), reqMeta)
 
 		if retries == maxRetries {
 			controller.Log.Error(

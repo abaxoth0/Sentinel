@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func marshall(pb any) ([]byte, error){
+func marshall(pb any) ([]byte, error) {
 	encoding.Log.Trace("Marshalling data into a protobuf...", nil)
 
 	var message proto.Message
@@ -54,4 +54,3 @@ func unmarshall[T proto.Message](message T, rawDTO []byte) (T, error) {
 
 	return message, nil
 }
-

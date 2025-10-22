@@ -13,18 +13,18 @@ import (
 )
 
 func newAuditDTO(op audit.Operation, act *ActionDTO.UserTargeted, user *UserDTO.Full) UserDTO.Audit {
-    return UserDTO.Audit{
-        ChangedUserID: act.TargetUID,
-        ChangedByUserID: act.RequesterUID,
-        Operation: string(op),
-        ChangedAt: time.Now(),
-		Reason: act.Reason,
-		Basic: &user.Basic,
-    }
+	return UserDTO.Audit{
+		ChangedUserID:   act.TargetUID,
+		ChangedByUserID: act.RequesterUID,
+		Operation:       string(op),
+		ChangedAt:       time.Now(),
+		Reason:          act.Reason,
+		Basic:           &user.Basic,
+	}
 }
 
 func newAuditQuery(dto *UserDTO.Audit) *query.Query {
-    var deletedAt = util.Ternary(dto.IsDeleted(), dto.DeletedAt, nil)
+	var deletedAt = util.Ternary(dto.IsDeleted(), dto.DeletedAt, nil)
 
 	var reason any = dto.Reason
 
@@ -32,27 +32,26 @@ func newAuditQuery(dto *UserDTO.Audit) *query.Query {
 		reason = nil
 	}
 
-    return query.New(
-        `INSERT INTO "audit_user"
+	return query.New(
+		`INSERT INTO "audit_user"
         (changed_user_id, changed_by_user_id, operation, login, password, roles, deleted_at, changed_at, version, reason)
         VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        dto.ChangedUserID,
-        dto.ChangedByUserID,
-        dto.Operation,
-        dto.Login,
-        dto.Password,
-        dto.Roles,
-        deletedAt,
-        dto.ChangedAt,
+		dto.ChangedUserID,
+		dto.ChangedByUserID,
+		dto.Operation,
+		dto.Login,
+		dto.Password,
+		dto.Roles,
+		deletedAt,
+		dto.ChangedAt,
 		dto.Version,
 		reason,
-    )
+	)
 }
 
 func execTxWithAudit(dto *UserDTO.Audit, queries ...*query.Query) *Error.Status {
-    queries = append(queries, newAuditQuery(dto))
+	queries = append(queries, newAuditQuery(dto))
 
-    return transaction.New(queries...).Exec(connection.Primary)
+	return transaction.New(queries...).Exec(connection.Primary)
 }
-

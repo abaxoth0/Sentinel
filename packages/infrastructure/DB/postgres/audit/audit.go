@@ -7,4 +7,3 @@ const (
 	UpdatedOperation Operation = "U"
 	RestoreOperation Operation = "R"
 )
-

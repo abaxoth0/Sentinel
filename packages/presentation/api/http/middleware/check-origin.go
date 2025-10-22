@@ -31,4 +31,3 @@ func CheckOrigin(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(ctx)
 	}
 }
-

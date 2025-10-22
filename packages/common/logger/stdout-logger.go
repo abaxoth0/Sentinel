@@ -7,32 +7,31 @@ import (
 
 // Satisfies Logger interface
 type stdoutLogger struct {
-    logger *log.Logger
+	logger *log.Logger
 }
 
 func newStdoutLogger() stdoutLogger {
-    return stdoutLogger{
-        logger: log.New(os.Stdout, "", log.Ldate | log.Ltime),
-    }
+	return stdoutLogger{
+		logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
+	}
 }
 
 func (l stdoutLogger) log(entry *LogEntry) {
-	msg := "["+entry.Source+": "+entry.Level+"] " + entry.Message
+	msg := "[" + entry.Source + ": " + entry.Level + "] " + entry.Message
 	if entry.rawLevel >= ErrorLogLevel {
 		msg += ": " + entry.Error
 	}
-    l.logger.Println(msg + entry.Meta.stringSuffix())
+	l.logger.Println(msg + entry.Meta.stringSuffix())
 }
 
 func (l stdoutLogger) Log(entry *LogEntry) {
-    if ok := preprocess(entry, nil); !ok {
-        return
-    }
+	if ok := preprocess(entry, nil); !ok {
+		return
+	}
 
-    l.log(entry)
+	l.log(entry)
 
 	if entry.rawLevel >= FatalLogLevel {
 		handleCritical(entry)
 	}
 }
-

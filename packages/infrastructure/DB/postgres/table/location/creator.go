@@ -37,4 +37,3 @@ func (_ *Manager) SaveLocation(dto *LocationDTO.Full) *Error.Status {
 
 	return nil
 }
-

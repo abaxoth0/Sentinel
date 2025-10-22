@@ -13,7 +13,7 @@ var validPropertyCondMap = map[user.Property]map[filter.Condition]bool{
 	},
 	user.LoginProperty: {
 		filter.Equal: true,
-		filter.Like: true,
+		filter.Like:  true,
 	},
 	user.PasswordProperty: {
 		filter.Equal: true,
@@ -23,12 +23,12 @@ var validPropertyCondMap = map[user.Property]map[filter.Condition]bool{
 		filter.Containd: true,
 	},
 	user.DeletedAtProperty: {
-		filter.IsNull: true,
-		filter.IsNotNull: true,
-		filter.Equal: true,
-		filter.Less: true,
-		filter.LessOrEqual: true,
-		filter.Greater: true,
+		filter.IsNull:         true,
+		filter.IsNotNull:      true,
+		filter.Equal:          true,
+		filter.Less:           true,
+		filter.LessOrEqual:    true,
+		filter.Greater:        true,
 		filter.GreaterOrEqual: true,
 	},
 }
@@ -41,8 +41,7 @@ func validatePropertyCond(property user.Property, cond filter.Condition) error {
 		// cond is valid, so there are no cases when error will be not nil
 		condStr, _ := FilterMapper.FormatCond(cond)
 
-		return errors.New("Invalid condition '"+condStr+"' for user property '"+string(property)+"'")
+		return errors.New("Invalid condition '" + condStr + "' for user property '" + string(property) + "'")
 	}
 	return nil
 }
-

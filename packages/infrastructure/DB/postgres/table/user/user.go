@@ -21,7 +21,6 @@ func hashPassword(password string) ([]byte, *Error.Status) {
 	hashedPassword, e := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if e != nil {
 		return nil, Error.StatusInternalError
-    }
-    return hashedPassword, nil
+	}
+	return hashedPassword, nil
 }
-

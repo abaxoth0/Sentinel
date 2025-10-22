@@ -30,11 +30,11 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 	parser.Log.Trace("Parsing user filter "+rawFilter+"...", nil)
 
 	if cached, hit := cache[rawFilter]; hit {
-		parser.Log.Trace("Cache hit: " + rawFilter, nil)
+		parser.Log.Trace("Cache hit: "+rawFilter, nil)
 		return cached, nil
 	}
 
-	parser.Log.Trace("Cache miss: " + rawFilter, nil)
+	parser.Log.Trace("Cache miss: "+rawFilter, nil)
 
 	var zero filter.Entity[user.Property]
 	var property user.Property
@@ -102,7 +102,7 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 		// (especially when this function will need to be refactored/fixed/reworked)
 		parser.Log.Panic(
 			"Faield to parse user filter",
-			"Unknown user property received: " + string(property),
+			"Unknown user property received: "+string(property),
 			nil,
 		)
 		return zero, Error.StatusInternalError
@@ -110,13 +110,13 @@ func Parse(rawFilter string) (filter.Entity[user.Property], *Error.Status) {
 
 	f := filter.Entity[user.Property]{
 		Property: property,
-		Cond: cond,
-		Value: value,
+		Cond:     cond,
+		Value:    value,
 	}
 
 	cache[rawFilter] = f
 
-	parser.Log.Trace("Cache set: " + rawFilter, nil)
+	parser.Log.Trace("Cache set: "+rawFilter, nil)
 
 	parser.Log.Trace("Parsing user filter "+rawFilter+": OK", nil)
 
@@ -129,7 +129,7 @@ var errorNoFilters = Error.NewStatusError(
 )
 
 // Calls Parse() function from this module for each element in rawFilter slice
-func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Status){
+func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Status) {
 	filtersStr := strings.Join(rawFilters, ", ")
 	parser.Log.Info("Parsing user filters: "+filtersStr+"...", nil)
 
@@ -151,4 +151,3 @@ func ParseAll(rawFilters []string) ([]filter.Entity[user.Property], *Error.Statu
 
 	return filters, nil
 }
-

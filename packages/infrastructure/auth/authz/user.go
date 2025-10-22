@@ -89,4 +89,3 @@ func (u user) DeleteLocation(roles []string) *Error.Status {
 func (u user) OAuthIntrospect(roles []string) *Error.Status {
 	return authorize(&userIntrospectOAuthTokenContext, roles)
 }
-

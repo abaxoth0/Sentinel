@@ -9,7 +9,7 @@ import (
 
 // Constant-time comparison to prevent timing attacks
 func secureCompare(a, b string) bool {
-    return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
 // Requires two same CSRF tokens, one must be set in HTTP-Only cookie and
@@ -54,4 +54,3 @@ func DoubleSubmitCSRF(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(ctx)
 	}
 }
-

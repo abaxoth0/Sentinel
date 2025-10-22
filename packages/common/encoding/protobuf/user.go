@@ -10,13 +10,13 @@ import (
 
 func MarshallFullUserDTO(dto *UserDTO.Full) ([]byte, error) {
 	return marshall(&pbgen.FullUserDTO{
-		Id: dto.ID,
-		Login: dto.Login,
-		Password: dto.Password,
-		Roles: dto.Roles,
+		Id:        dto.ID,
+		Login:     dto.Login,
+		Password:  dto.Password,
+		Roles:     dto.Roles,
 		DeletedAt: timestamppb.New(util.SafeDereference(dto.DeletedAt)),
 		CreatedAt: timestamppb.New(dto.CreatedAt),
-		Version: dto.Version,
+		Version:   dto.Version,
 	})
 }
 
@@ -30,14 +30,13 @@ func UnmarshallFullUserDTO(rawDTO []byte) (*UserDTO.Full, error) {
 
 	return &UserDTO.Full{
 		Basic: UserDTO.Basic{
-			ID: dto.Id,
-			Login: dto.Login,
-			Password: dto.Password,
-			Roles: dto.Roles,
+			ID:        dto.Id,
+			Login:     dto.Login,
+			Password:  dto.Password,
+			Roles:     dto.Roles,
 			DeletedAt: util.Ternary(deletedAt.IsZero(), nil, &deletedAt),
-			Version: dto.Version,
+			Version:   dto.Version,
 		},
 		CreatedAt: dto.CreatedAt.AsTime(),
 	}, nil
 }
-

@@ -26,28 +26,28 @@ func collect[T any](
 ) ([]T, *Error.Status) {
 	log.DB.Trace("Collecting rows...", nil)
 
-    rows, err := Rows(conType, q)
-    if err != nil {
-        return nil, err
-    }
+	rows, err := Rows(conType, q)
+	if err != nil {
+		return nil, err
+	}
 
 	dtos, e := pgx.CollectRows(rows, collectFunc)
-    if e != nil {
+	if e != nil {
 		log.DB.Error("Failed to collect rows", e.Error(), nil)
-        return nil, q.ConvertAndLogError(e)
-    }
+		return nil, q.ConvertAndLogError(e)
+	}
 	if len(dtos) == 0 {
 		return nil, q.ConvertAndLogError(Error.StatusNotFound)
 	}
 
 	log.DB.Trace("Collecting rows: OK", nil)
 
-    return dtos, nil
+	return dtos, nil
 }
 
 // TODO add cache
 func CollectFullUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.Full, *Error.Status) {
-	return collect(conType, q, func (row pgx.CollectableRow) (*UserDTO.Full, error) {
+	return collect(conType, q, func(row pgx.CollectableRow) (*UserDTO.Full, error) {
 		dto := new(UserDTO.Full)
 
 		var deletedAt sql.NullTime
@@ -77,7 +77,7 @@ func CollectFullUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.Ful
 
 // TODO add cache
 func CollectPublicUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.Public, *Error.Status) {
-	return collect(conType, q, func (row pgx.CollectableRow) (*UserDTO.Public, error) {
+	return collect(conType, q, func(row pgx.CollectableRow) (*UserDTO.Public, error) {
 		dto := new(UserDTO.Public)
 
 		var deletedAt sql.NullTime
@@ -102,23 +102,23 @@ func CollectPublicUserDTO(conType connection.Type, q *query.Query) ([]*UserDTO.P
 // Works same as queryRow, but also creates and returns
 // *UserDTO.Full after scanning resulting row into it.
 func FullUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*UserDTO.Full, *Error.Status) {
-    if cached, hit := cache.Client.Get(cacheKey); hit {
+	if cached, hit := cache.Client.Get(cacheKey); hit {
 		r, err := pbencoding.UnmarshallFullUserDTO([]byte(cached))
-        if err == nil {
-            return r, nil
-        }
+		if err == nil {
+			return r, nil
+		}
 
-        // If decoding failed that means more likely cached data was invalid,
-        // so need to delete it from cache to prevent errors in future.
-        if e := cache.Client.Delete(cacheKey); e != nil {
-            return nil, e
-        }
-    }
+		// If decoding failed that means more likely cached data was invalid,
+		// so need to delete it from cache to prevent errors in future.
+		if e := cache.Client.Delete(cacheKey); e != nil {
+			return nil, e
+		}
+	}
 
-    scan, err := Row(conType, q)
-    if err != nil {
-        return nil, err
-    }
+	scan, err := Row(conType, q)
+	if err != nil {
+		return nil, err
+	}
 
 	dto := new(UserDTO.Full)
 
@@ -147,7 +147,7 @@ func FullUserDTO(conType connection.Type, q *query.Query, cacheKey string) (*Use
 		cache.Client.Set(cacheKey, cached)
 	}
 
-    return dto, nil
+	return dto, nil
 }
 
 func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*SessionDTO.Full, *Error.Status) {
@@ -157,11 +157,11 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 			return r, nil
 		}
 
-        // If decoding failed that means more likely cached data was invalid,
-        // so need to delete it from cache to prevent same errors in future.
-        if e := cache.Client.Delete(cacheKey); e != nil {
-            return nil, e
-        }
+		// If decoding failed that means more likely cached data was invalid,
+		// so need to delete it from cache to prevent same errors in future.
+		if e := cache.Client.Delete(cacheKey); e != nil {
+			return nil, e
+		}
 	}
 
 	scan, err := Row(conType, q)
@@ -212,14 +212,14 @@ func FullSessionDTO(conType connection.Type, q *query.Query, cacheKey string) (*
 	dto.IpAddress = addr
 
 	if cached, e := pbencoding.MarshallFullSessionDTO(dto); e == nil {
-    	cache.Client.Set(cacheKey, cached)
+		cache.Client.Set(cacheKey, cached)
 	}
 
 	return dto, nil
 }
 
 func CollectFullSessionDTO(conType connection.Type, query *query.Query) ([]*SessionDTO.Full, *Error.Status) {
-	return collect(conType, query, func (row pgx.CollectableRow) (*SessionDTO.Full, error) {
+	return collect(conType, query, func(row pgx.CollectableRow) (*SessionDTO.Full, error) {
 		dto := new(SessionDTO.Full)
 
 		var createdAt sql.NullTime
@@ -271,11 +271,11 @@ func FullLocationDTO(conType connection.Type, q *query.Query, cacheKey string) (
 			return r, nil
 		}
 
-        // If decoding failed that means more likely cached data was invalid,
-        // so need to delete it from cache to prevent same errors in future.
-        if e := cache.Client.Delete(cacheKey); e != nil {
-            return nil, e
-        }
+		// If decoding failed that means more likely cached data was invalid,
+		// so need to delete it from cache to prevent same errors in future.
+		if e := cache.Client.Delete(cacheKey); e != nil {
+			return nil, e
+		}
 	}
 
 	scan, err := Row(conType, q)
@@ -315,7 +315,7 @@ func FullLocationDTO(conType connection.Type, q *query.Query, cacheKey string) (
 	dto.IP = addr
 
 	if cached, e := pbencoding.MarshallFullLocationDTO(dto); e == nil {
-    	cache.Client.Set(cacheKey, cached)
+		cache.Client.Set(cacheKey, cached)
 	}
 
 	return dto, nil

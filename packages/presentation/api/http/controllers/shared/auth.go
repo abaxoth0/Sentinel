@@ -22,12 +22,12 @@ import (
 
 func AuthenticateWithNewSession(ctx echo.Context, user *UserDTO.Full, audience []string) error {
 	payload := &UserDTO.Payload{
-		ID: user.ID,
-		Login: user.Login,
-		Roles: user.Roles,
+		ID:        user.ID,
+		Login:     user.Login,
+		Roles:     user.Roles,
 		SessionID: uuid.NewString(),
-		Version: user.Version,
-		Audience: audience,
+		Version:   user.Version,
+		Audience:  audience,
 	}
 
 	accessToken, refreshToken, err := token.NewAuthTokens(payload)
@@ -65,9 +65,9 @@ func AuthenticateWithNewSession(ctx echo.Context, user *UserDTO.Full, audience [
 	return ctx.JSON(
 		http.StatusOK,
 		ResponseBody.Token{
-			Message: "Пользователь успешно авторизован",
+			Message:     "Пользователь успешно авторизован",
 			AccessToken: accessToken.String(),
-			ExpiresIn: int(accessToken.TTL()) / 1000,
+			ExpiresIn:   int(accessToken.TTL()) / 1000,
 		},
 	)
 }
@@ -103,13 +103,13 @@ func Authenticate(ctx echo.Context, user *UserDTO.Full, audience []string) error
 		return ctx.JSON(
 			http.StatusOK,
 			ResponseBody.Token{
-				Message: "Пользователь успешно авторизован",
+				Message:     "Пользователь успешно авторизован",
 				AccessToken: accessToken.String(),
-				ExpiresIn: int(accessToken.TTL()) / 1000,
+				ExpiresIn:   int(accessToken.TTL()) / 1000,
 			},
 		)
 	}
-	regular_login:
+regular_login:
 
 	deviceID, browser, err := getDeviceIDAndBrowser(ctx)
 	if err != nil {
@@ -125,11 +125,11 @@ func Authenticate(ctx echo.Context, user *UserDTO.Full, audience []string) error
 		controller.Log.Info("Already existing user session was found for the specified device. Proceeding with it", reqMeta)
 
 		accessToken, refreshToken, err := UpdateSession(ctx, session, user, &UserDTO.Payload{
-			ID: user.ID,
-			Login: user.Login,
-			Roles: user.Roles,
+			ID:        user.ID,
+			Login:     user.Login,
+			Roles:     user.Roles,
 			SessionID: session.ID,
-			Version: user.Version,
+			Version:   user.Version,
 		})
 		if err == nil {
 			ctx.SetCookie(cookie.NewAuthCookie(refreshToken))
@@ -141,9 +141,9 @@ func Authenticate(ctx echo.Context, user *UserDTO.Full, audience []string) error
 			return ctx.JSON(
 				http.StatusOK,
 				ResponseBody.Token{
-					Message: "Пользователь успешно авторизован",
+					Message:     "Пользователь успешно авторизован",
 					AccessToken: accessToken.String(),
-					ExpiresIn: int(accessToken.TTL()) / 1000,
+					ExpiresIn:   int(accessToken.TTL()) / 1000,
 				},
 			)
 		}
@@ -154,4 +154,3 @@ func Authenticate(ctx echo.Context, user *UserDTO.Full, audience []string) error
 
 	return AuthenticateWithNewSession(ctx, user, audience)
 }
-

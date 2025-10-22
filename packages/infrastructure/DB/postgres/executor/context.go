@@ -8,7 +8,7 @@ import (
 )
 
 type executionContext struct {
-	Connection	*pgxpool.Conn
+	Connection *pgxpool.Conn
 
 	context.Context
 }
@@ -22,7 +22,7 @@ func newExecutionContext(
 
 	execCtx := &executionContext{
 		Connection: con,
-		Context: ctx,
+		Context:    ctx,
 	}
 
 	return execCtx, func() {
@@ -30,5 +30,3 @@ func newExecutionContext(
 		con.Release()
 	}
 }
-
-

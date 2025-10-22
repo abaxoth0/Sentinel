@@ -13,7 +13,7 @@ import (
 	"sentinel/packages/infrastructure/cache"
 )
 
-func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full ,*Error.Status) {
+func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Full, *Error.Status) {
 	log.DB.Info("Getting session "+sessionID+"...", nil)
 
 	cond := util.Ternary(revoked, "IS NOT", "IS")
@@ -40,7 +40,7 @@ func (m *Manager) getSessionByID(sessionID string, revoked bool) (*SessionDTO.Fu
 	return dto, nil
 }
 
-func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
+func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string) (*SessionDTO.Full, *Error.Status) {
 	if err := authz.User.GetUserSession(
 		act.TargetUID == act.RequesterUID,
 		act.RequesterRoles,
@@ -51,7 +51,7 @@ func (m *Manager) GetSessionByID(act *ActionDTO.UserTargeted, sessionID string) 
 	return m.getSessionByID(sessionID, false)
 }
 
-func (m *Manager) GetRevokedSessionByID(act *ActionDTO.UserTargeted, sessionID string) (*SessionDTO.Full ,*Error.Status) {
+func (m *Manager) GetRevokedSessionByID(act *ActionDTO.UserTargeted, sessionID string) (*SessionDTO.Full, *Error.Status) {
 	if err := authz.User.GetUserSession(
 		act.TargetUID == act.RequesterUID,
 		act.RequesterRoles,
@@ -103,7 +103,7 @@ func (m *Manager) GetUserSessions(act *ActionDTO.UserTargeted) ([]*SessionDTO.Pu
 	return sessions, nil
 }
 
-func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full ,*Error.Status) {
+func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*SessionDTO.Full, *Error.Status) {
 	log.DB.Trace("Getting session with "+deviceID+" device and "+UID+" user...", nil)
 
 	selectQuery := query.New(
@@ -115,7 +115,7 @@ func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*Ses
 	dto, err := executor.FullSessionDTO(
 		connection.Replica,
 		selectQuery,
-		cache.KeyBase[cache.SessionByDeviceAndUserID] + deviceID + "|" + UID,
+		cache.KeyBase[cache.SessionByDeviceAndUserID]+deviceID+"|"+UID,
 	)
 	if err != nil {
 		return nil, err
@@ -125,4 +125,3 @@ func (m *Manager) GetSessionByDeviceAndUserID(deviceID string, UID string) (*Ses
 
 	return dto, nil
 }
-

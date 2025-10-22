@@ -33,10 +33,10 @@ func Init(manager *connection.Manager) {
 // Creates new execution context.
 // Instead of newExecutionContext() which just creates it, this function make it ready-to-use.
 func initExecutionContext(conType connection.Type, q *query.Query) (*executionContext, context.CancelFunc, *Error.Status) {
-    con, err := conManager.AcquireConnection(conType)
-    if err != nil {
-        return nil, nil, err
-    }
+	con, err := conManager.AcquireConnection(conType)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	if config.Debug.Enabled && config.Debug.LogDbQueries {
 		args := make([]string, len(q.Args))
@@ -68,10 +68,10 @@ func initExecutionContext(conType connection.Type, q *query.Query) (*executionCo
 			}
 		}
 
-		log.DB.Debug("Running query:\n" + q.SQL + "\n * Query args: " + strings.Join(args, "; "), nil)
+		log.DB.Debug("Running query:\n"+q.SQL+"\n * Query args: "+strings.Join(args, "; "), nil)
 	}
 
-	ctx, cancel := newExecutionContext(context.Background(), time.Second * 5, con)
+	ctx, cancel := newExecutionContext(context.Background(), time.Second*5, con)
 
 	return ctx, cancel, nil
 }
@@ -108,7 +108,7 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 
 	row := ctx.Connection.QueryRow(ctx, query.SQL, query.Args...)
 
-    return func (dests ...any) *Error.Status {
+	return func(dests ...any) *Error.Status {
 		log.DB.Trace("Scanning row...", nil)
 
 		if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
@@ -139,7 +139,7 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 }
 
 // Wrapper for '*pgxpool.Con.Exec'
-func Exec(conType connection.Type, query *query.Query) (*Error.Status) {
+func Exec(conType connection.Type, query *query.Query) *Error.Status {
 	ctx, cancel, err := initExecutionContext(conType, query)
 	if err != nil {
 		return err
@@ -150,6 +150,5 @@ func Exec(conType connection.Type, query *query.Query) (*Error.Status) {
 		return query.ConvertAndLogError(err)
 	}
 
-    return nil
+	return nil
 }
-

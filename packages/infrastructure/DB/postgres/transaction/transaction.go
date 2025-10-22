@@ -26,11 +26,11 @@ func Init(manager *connection.Manager) {
 }
 
 type Transaction struct {
-    queries []*query.Query
+	queries []*query.Query
 }
 
 func New(queries ...*query.Query) *Transaction {
-    return &Transaction{queries}
+	return &Transaction{queries}
 }
 
 func (t *Transaction) Exec(conType connection.Type) *Error.Status {
@@ -48,7 +48,7 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 		}
 	}
 
-    ctx, cancel := context.WithTimeout(context.Background(), time.Second * 5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	var tx pgx.Tx
@@ -66,10 +66,10 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 		)
 	}
 
-    if err != nil {
-        log.DB.Error("Failed to begin transaction", err.Error(), nil)
-        return Error.StatusInternalError
-    }
+	if err != nil {
+		log.DB.Error("Failed to begin transaction", err.Error(), nil)
+		return Error.StatusInternalError
+	}
 
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
@@ -77,20 +77,19 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 		}
 	}()
 
-    for _, query := range t.queries {
-        if _, err := tx.Exec(ctx, query.SQL, query.Args...); err != nil {
+	for _, query := range t.queries {
+		if _, err := tx.Exec(ctx, query.SQL, query.Args...); err != nil {
 			log.DB.Error("Transaction failed", err.Error(), nil)
-            return query.ConvertAndLogError(err)
+			return query.ConvertAndLogError(err)
 		}
-    }
+	}
 
-    if err := tx.Commit(ctx); err != nil {
-        log.DB.Error("Failed to commit transaction", err.Error(), nil)
-        return Error.StatusInternalError
-    }
+	if err := tx.Commit(ctx); err != nil {
+		log.DB.Error("Failed to commit transaction", err.Error(), nil)
+		return Error.StatusInternalError
+	}
 
 	log.DB.Trace("Executing transaction: OK", nil)
 
-    return nil
+	return nil
 }
-

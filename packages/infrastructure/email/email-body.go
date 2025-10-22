@@ -35,16 +35,16 @@ func initTemplateEmailsBodies() {
 		ActivationURL string
 	}
 
-    activationEmailValues := activationEmailTemplateValues{
-        ActivationURL: api.GetBaseURL() + "/v1/user/activation/" + string(TokenPlaceholder),
-    }
+	activationEmailValues := activationEmailTemplateValues{
+		ActivationURL: api.GetBaseURL() + "/v1/user/activation/" + string(TokenPlaceholder),
+	}
 
-    b, err := parseEmailTemplate(activationEmailTemplate, activationEmailValues)
-    if err != nil {
-        panic(err.Error())
-    }
+	b, err := parseEmailTemplate(activationEmailTemplate, activationEmailValues)
+	if err != nil {
+		panic(err.Error())
+	}
 
-    activationEmailBody = b
+	activationEmailBody = b
 
 	type passwordResetEmailTemplateValues struct {
 		ResetPasswordURL string
@@ -59,16 +59,16 @@ func initTemplateEmailsBodies() {
 	query.Add("passwordResetToken", string(TokenPlaceholder))
 	redirectURL.RawQuery = query.Encode()
 
-    passwordResetEmailValues := passwordResetEmailTemplateValues{
-        ResetPasswordURL: redirectURL.String(),
-    }
+	passwordResetEmailValues := passwordResetEmailTemplateValues{
+		ResetPasswordURL: redirectURL.String(),
+	}
 
-    b, err = parseEmailTemplate(passwordResetEmailTemplate, passwordResetEmailValues)
-    if err != nil {
-        panic(err.Error())
-    }
+	b, err = parseEmailTemplate(passwordResetEmailTemplate, passwordResetEmailValues)
+	if err != nil {
+		panic(err.Error())
+	}
 
-    forgotPasswordEmailBody = b
+	forgotPasswordEmailBody = b
 
 	type newSessionAlertEmailTemplateValues struct {
 		Location string
@@ -79,10 +79,9 @@ func initTemplateEmailsBodies() {
 	}
 
 	b, err = parseEmailTemplate(newSessionAlertEmailTemplate, newSessionAlertEmailValues)
-    if err != nil {
-        panic(err.Error())
-    }
+	if err != nil {
+		panic(err.Error())
+	}
 
 	newSessionAlertEmailBody = b
 }
-

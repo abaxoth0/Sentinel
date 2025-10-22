@@ -25,36 +25,35 @@ func SecurityHeaders(next echo.HandlerFunc) echo.HandlerFunc {
 		// Special handling for Swagger UI
 		if strings.HasPrefix(ctx.Path(), "/docs") {
 			res.Header().Set("Content-Security-Policy",
-				"default-src 'self';" +
-				"script-src 'self' 'unsafe-inline' 'unsafe-eval';" +  // Required for Swagger
-				"style-src 'self' 'unsafe-inline';" +                 // Required for inline styles
-				"img-src 'self' data:;" +                             // Allow data URIs for images
-				"font-src 'self';" +
-				"connect-src 'self';" +                                // For API requests
-				"frame-ancestors 'none';" +
-				"form-action 'self';" +
-				"base-uri 'self';")
+				"default-src 'self';"+
+					"script-src 'self' 'unsafe-inline' 'unsafe-eval';"+ // Required for Swagger
+					"style-src 'self' 'unsafe-inline';"+ // Required for inline styles
+					"img-src 'self' data:;"+ // Allow data URIs for images
+					"font-src 'self';"+
+					"connect-src 'self';"+ // For API requests
+					"frame-ancestors 'none';"+
+					"form-action 'self';"+
+					"base-uri 'self';")
 		} else {
 			// Mitigate XSS and data injection
 			res.Header().Set("Content-Security-Policy",
-				"default-src 'none';" +
-				"script-src 'none'; " +
-				"frame-ancestors 'none'; " +
-				"form-action 'none'; " +
-				"base-uri 'none'")
+				"default-src 'none';"+
+					"script-src 'none'; "+
+					"frame-ancestors 'none'; "+
+					"form-action 'none'; "+
+					"base-uri 'none'")
 		}
 
 		// Control browser feature access
 		res.Header().Set("Permissions-Policy",
-                "accelerometer=(), " +
-                "camera=(), " +
-                "geolocation=(), " +
-                "microphone=(), " +
-                "usb=()")
+			"accelerometer=(), "+
+				"camera=(), "+
+				"geolocation=(), "+
+				"microphone=(), "+
+				"usb=()")
 
 		res.Header().Set("Referrer-Policy", "no-referrer")
 
 		return next(ctx)
 	}
 }
-

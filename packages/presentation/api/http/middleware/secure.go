@@ -15,7 +15,7 @@ import (
 )
 
 var invalidAuthorizationHeaderFormat = echo.NewHTTPError(
-    http.StatusUnauthorized,
+	http.StatusUnauthorized,
 	"Authorization header has invalid format. Expected token bearer format. ('Bearer <token>')",
 )
 
@@ -65,4 +65,3 @@ func Secure(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(ctx)
 	}
 }
-

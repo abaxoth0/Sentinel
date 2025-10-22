@@ -24,4 +24,3 @@ func (serializer) Serialize(c echo.Context, v interface{}, indent string) error 
 func (serializer) Deserialize(c echo.Context, v interface{}) error {
 	return json.NewDecoder(c.Request().Body).Decode(v)
 }
-

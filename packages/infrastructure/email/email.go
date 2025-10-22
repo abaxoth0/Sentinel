@@ -28,11 +28,11 @@ const (
 )
 
 var emailsNames = map[EmailType]string{
-	PasswordResetEmail: "forgot pasword",
-	ActivationEmail: "activation",
+	PasswordResetEmail:       "forgot pasword",
+	ActivationEmail:          "activation",
 	PasswordChangeAlertEmail: "password change alert",
-	LoginChangeAlertEmail: "login change alert",
-	NewSessionAlertEmail: "new session alert",
+	LoginChangeAlertEmail:    "login change alert",
+	NewSessionAlertEmail:     "new session alert",
 }
 
 func (t EmailType) Name() (string, bool) {
@@ -43,11 +43,11 @@ func (t EmailType) Name() (string, bool) {
 }
 
 var emailsSubjects = map[EmailType]string{
-	PasswordResetEmail: "Password reset",
-	ActivationEmail: "Account activation",
+	PasswordResetEmail:       "Password reset",
+	ActivationEmail:          "Account activation",
 	PasswordChangeAlertEmail: "Security Alert: password changed",
-	LoginChangeAlertEmail: "Security Alert: login changed",
-	NewSessionAlertEmail: "Security Alert: new sign-in",
+	LoginChangeAlertEmail:    "Security Alert: login changed",
+	NewSessionAlertEmail:     "Security Alert: new sign-in",
 }
 
 func (t EmailType) Subject() (string, bool) {
@@ -58,23 +58,23 @@ func (t EmailType) Subject() (string, bool) {
 }
 
 type AnyEmail interface {
-	Type()		EmailType
-    Send() 		*Error.Status
-	To()		string
-	Subject() 	string
+	Type() EmailType
+	Send() *Error.Status
+	To() string
+	Subject() string
 }
 
 func send(email AnyEmail, body string) *Error.Status {
-    letter := gomail.NewMessage()
+	letter := gomail.NewMessage()
 
-    letter.SetHeader("From", config.Secret.MailerEmail)
-    letter.SetHeader("To", email.To())
-    letter.SetHeader("Subject", email.Subject())
-    letter.SetBody("text/html", body)
+	letter.SetHeader("From", config.Secret.MailerEmail)
+	letter.SetHeader("To", email.To())
+	letter.SetHeader("Subject", email.Subject())
+	letter.SetBody("text/html", body)
 
-    if err := dialer.DialAndSend(letter); err != nil {
-        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
-    }
+	if err := dialer.DialAndSend(letter); err != nil {
+		return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
+	}
 
 	return nil
 }
@@ -83,7 +83,7 @@ func send(email AnyEmail, body string) *Error.Status {
 type SubstitutionPlaceholder string
 
 const (
-	TokenPlaceholder SubstitutionPlaceholder = "{{token}}"
+	TokenPlaceholder    SubstitutionPlaceholder = "{{token}}"
 	LocationPlaceholder SubstitutionPlaceholder = "{{location}}"
 )
 
@@ -92,11 +92,11 @@ type Substitutions = map[SubstitutionPlaceholder]string
 // Contains common fields for all emails: type, name, to and subject.
 // Also implemets Type(), To() and Subject() methods of Email interface.
 type Email struct {
-	_type			EmailType
-	name 			string
-	to 				string
-	subject 		string
-	substitutions	Substitutions
+	_type         EmailType
+	name          string
+	to            string
+	subject       string
+	substitutions Substitutions
 }
 
 func NewEmail(emailType EmailType, to string, substitutions Substitutions) (*Email, *Error.Status) {
@@ -107,24 +107,24 @@ func NewEmail(emailType EmailType, to string, substitutions Substitutions) (*Ema
 		return nil, Error.StatusInternalError
 	}
 
-    if err := validation.Email(to); err != nil {
-        if err == Error.InvalidValue {
+	if err := validation.Email(to); err != nil {
+		if err == Error.InvalidValue {
 			errMsg := "Invlaid E-Mail format"
 			log.Error("Failed to create "+name+" email", errMsg, nil)
-            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
-        }
+			return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
+		}
 		if err == Error.NoValue {
 			errMsg := "E-Mail is not specified"
 			log.Error("Failed to create "+name+" email", errMsg, nil)
-            return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
-        }
-    }
+			return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
+		}
+	}
 
 	return &Email{
-		_type: emailType,
-		to: to,
-		name: name,
-		subject: subject,
+		_type:         emailType,
+		to:            to,
+		name:          name,
+		subject:       subject,
 		substitutions: substitutions,
 	}, nil
 }
@@ -176,14 +176,14 @@ func (e *Email) Send() *Error.Status {
 
 	log.Trace("Sending "+e.name+" email...", nil)
 
-    if err := send(e, body); err != nil {
+	if err := send(e, body); err != nil {
 		log.Error("Failed to send "+e.name+" email", err.Error(), nil)
-        return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
-    }
+		return Error.NewStatusError(err.Error(), http.StatusInternalServerError)
+	}
 
 	log.Trace("Sending "+e.name+" email: OK", nil)
 
-    return nil
+	return nil
 }
 
 func (e *Email) Type() EmailType {
@@ -219,28 +219,28 @@ var isInit = false
 func Init() error {
 	log.Info("Initializing email module...", nil)
 
-    if isInit {
+	if isInit {
 		errMsg := "Email module already initialized"
-        log.Error("Failed to init email module", errMsg, nil)
+		log.Error("Failed to init email module", errMsg, nil)
 		return errors.New(errMsg)
-    }
+	}
 
-    initTemplateEmailsBodies()
+	initTemplateEmailsBodies()
 
-    validSMTPPorts := []int{587, 25, 465, 2525}
+	validSMTPPorts := []int{587, 25, 465, 2525}
 
-    if !slices.Contains(validSMTPPorts, config.Email.SmtpPort) {
+	if !slices.Contains(validSMTPPorts, config.Email.SmtpPort) {
 		errMsg := "Invlid SMTP port"
-        log.Error("Failed to start mailer", errMsg, nil)
+		log.Error("Failed to start mailer", errMsg, nil)
 		return errors.New(errMsg)
-    }
+	}
 
-    dialer = gomail.NewDialer(
-        config.Email.SmtpHost,
-        config.Email.SmtpPort,
-        config.Secret.MailerEmail,
-        config.Secret.MailerEmailPassword,
-    )
+	dialer = gomail.NewDialer(
+		config.Email.SmtpHost,
+		config.Email.SmtpPort,
+		config.Secret.MailerEmail,
+		config.Secret.MailerEmailPassword,
+	)
 
 	var err error
 
@@ -249,12 +249,12 @@ func Init() error {
 		return err
 	}
 
-    go MainMailer.Run(5)
+	go MainMailer.Run(5)
 
-    isInit = true
+	isInit = true
 
-    // give some time for MainMailer to start
-    time.Sleep(time.Millisecond * 10)
+	// give some time for MainMailer to start
+	time.Sleep(time.Millisecond * 10)
 
 	log.Info("Initializing email module: OK", nil)
 
@@ -264,18 +264,17 @@ func Init() error {
 func Stop() error {
 	log.Info("Stopping email module...", nil)
 
-    if !isInit {
+	if !isInit {
 		errMsg := "email module isn't initialized, hence can't be stopped"
-        log.Error("Failed to stop email module", errMsg, nil)
-        return errors.New(errMsg)
-    }
+		log.Error("Failed to stop email module", errMsg, nil)
+		return errors.New(errMsg)
+	}
 
-    if err := MainMailer.Stop(); err != nil {
-        return err
-    }
+	if err := MainMailer.Stop(); err != nil {
+		return err
+	}
 
 	log.Info("Stopping email module: OK", nil)
 
-    return nil
+	return nil
 }
-

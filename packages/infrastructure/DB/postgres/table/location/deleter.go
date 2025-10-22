@@ -55,8 +55,8 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bo
 	}
 
 	cache.Client.Delete(
-		cache.KeyBase[cache.LocationByID] + id,
-		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,
+		cache.KeyBase[cache.LocationByID]+id,
+		cache.KeyBase[cache.LocationBySessionID]+location.SessionID,
 	)
 
 	log.DB.Info(logPrefix+"deleting location "+id+": OK", nil)
@@ -71,4 +71,3 @@ func (l *Manager) SoftDeleteLocation(id string, act *ActionDTO.UserTargeted) *Er
 func (l *Manager) DropLocation(id string, act *ActionDTO.UserTargeted) *Error.Status {
 	return l.deleteLocation(id, act, true)
 }
-

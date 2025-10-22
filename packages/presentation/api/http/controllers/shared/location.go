@@ -61,4 +61,3 @@ func updateOrCreateLocation(act *ActionDTO.UserTargeted, sessionID string, ip ne
 
 	return newLocation, nil
 }
-

@@ -13,4 +13,3 @@ var authProviderMap = map[authProvider]string{
 func (p authProvider) String() string {
 	return authProviderMap[p]
 }
-

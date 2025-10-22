@@ -31,11 +31,11 @@ func Create() *echo.Echo {
 	OAuth.Init()
 
 	if err := sentry.Init(sentry.ClientOptions{
-		Dsn: config.Secret.SentryDSN,
-		EnableTracing: true,
+		Dsn:              config.Secret.SentryDSN,
+		EnableTracing:    true,
 		TracesSampleRate: config.Sentry.TraceSampleRate,
-		Debug: config.Debug.Enabled,
-		ServerName: config.App.ServiceID,
+		Debug:            config.Debug.Enabled,
+		ServerName:       config.App.ServiceID,
 		AttachStacktrace: true,
 	}); err != nil {
 		panic("Sentry initialization failed: " + err.Error())
@@ -51,8 +51,8 @@ func Create() *echo.Echo {
 	router.Binder = &binder{}
 
 	cors := echoMiddleware.CORSConfig{
-		Skipper:      echoMiddleware.DefaultSkipper,
-		AllowOrigins: config.HTTP.AllowedOrigins,
+		Skipper:          echoMiddleware.DefaultSkipper,
+		AllowOrigins:     config.HTTP.AllowedOrigins,
 		AllowCredentials: true,
 		AllowMethods: []string{
 			http.MethodGet,
@@ -250,7 +250,7 @@ func Create() *echo.Echo {
 		middleware.DoubleSubmitCSRF,
 	)
 
-	docsGroupMiddlewares := []echo.MiddlewareFunc{ middleware.Sensivity(middleware.SensitiveEndpoint),
+	docsGroupMiddlewares := []echo.MiddlewareFunc{middleware.Sensivity(middleware.SensitiveEndpoint),
 		limit.Max1reqPerSecond(),
 		middleware.DoubleSubmitCSRF,
 	}
@@ -264,4 +264,3 @@ func Create() *echo.Echo {
 
 	return router
 }
-

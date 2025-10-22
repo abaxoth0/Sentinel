@@ -10,7 +10,8 @@ import (
 )
 
 // TODO add private method for updating without authz and add authz for this method, do the same for sessions
-// 		(also need to request ActionDTO.Targeted instead of location id)
+//
+//	(also need to request ActionDTO.Targeted instead of location id)
 func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Error.Status {
 	log.DB.Trace("Updating locaiton "+id+"...", nil)
 
@@ -45,12 +46,11 @@ func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Erro
 	}
 
 	cache.Client.Delete(
-		cache.KeyBase[cache.LocationByID] + id,
-		cache.KeyBase[cache.LocationBySessionID] + location.SessionID,
+		cache.KeyBase[cache.LocationByID]+id,
+		cache.KeyBase[cache.LocationBySessionID]+location.SessionID,
 	)
 
 	log.DB.Trace("Updating locaiton "+id+"...", nil)
 
 	return nil
 }
-

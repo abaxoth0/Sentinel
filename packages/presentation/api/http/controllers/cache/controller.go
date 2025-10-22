@@ -32,20 +32,19 @@ func Drop(ctx echo.Context) error {
 
 	controller.Log.Info("Dropping all cache...", reqMeta)
 
-    act := SharedController.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
 	if err := authz.User.DropCache(act.RequesterRoles); err != nil {
 		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)
 		return err
 	}
 
-    if err := cache.Client.FlushAll(); err != nil {
+	if err := cache.Client.FlushAll(); err != nil {
 		controller.Log.Error("Failed to clear cache", err.Error(), reqMeta)
-        return err
-    }
+		return err
+	}
 
 	controller.Log.Info("Dropping all cache: OK", reqMeta)
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
-

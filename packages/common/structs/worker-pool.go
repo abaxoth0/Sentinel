@@ -10,40 +10,40 @@ import (
 )
 
 type Task interface {
-    Process()
+	Process()
 }
 
 type WorkerPoolOptions struct {
 	// Default: 1. If <= 0, then will be set to the default
-	BatchSize 	int
+	BatchSize int
 	// Default: 1s. If <= 0, then will be set to the default
 	StopTimeout time.Duration
 }
 
 type WorkerPool struct {
-	canceled   	atomic.Bool
-    queue      	*SyncFifoQueue[Task]
-    ctx        	context.Context
-    cancel     	context.CancelFunc
-    wg         	*sync.WaitGroup
-	once 		sync.Once
-	stopOnce	sync.Once
-	opt			*WorkerPoolOptions
+	canceled atomic.Bool
+	queue    *SyncFifoQueue[Task]
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       *sync.WaitGroup
+	once     sync.Once
+	stopOnce sync.Once
+	opt      *WorkerPoolOptions
 }
 
 const (
-	workerPoolDefaultBatchSize int = 1
+	workerPoolDefaultBatchSize   int           = 1
 	workerPoolDefaultStopTimeout time.Duration = 1 * time.Second
 )
 
 // Creates new worker pool with parent context and options.
 // If opt is nil then it will be created using default values of WorkerPoolOptions fields.
 func NewWorkerPool(ctx context.Context, opt *WorkerPoolOptions) *WorkerPool {
-    ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 
 	if opt == nil {
 		opt = &WorkerPoolOptions{
-			BatchSize: workerPoolDefaultBatchSize,
+			BatchSize:   workerPoolDefaultBatchSize,
 			StopTimeout: workerPoolDefaultStopTimeout,
 		}
 	}
@@ -54,13 +54,13 @@ func NewWorkerPool(ctx context.Context, opt *WorkerPoolOptions) *WorkerPool {
 		opt.StopTimeout = workerPoolDefaultStopTimeout
 	}
 
-    return &WorkerPool{
-        queue: NewSyncFifoQueue[Task](0),
-        ctx: ctx,
-        cancel: cancel,
-        wg: new(sync.WaitGroup),
-		opt: opt,
-    }
+	return &WorkerPool{
+		queue:  NewSyncFifoQueue[Task](0),
+		ctx:    ctx,
+		cancel: cancel,
+		wg:     new(sync.WaitGroup),
+		opt:    opt,
+	}
 }
 
 // Starts worker pool.
@@ -133,7 +133,7 @@ func (wp *WorkerPool) Cancel() error {
 	}
 
 	wp.canceled.Store(true)
-    wp.cancel()
+	wp.cancel()
 	// Fixed: WaitGroup reuse issue by using stopOnce.Do() in work() method
 	// to ensure stop() is only called once from a single worker goroutine
 	wp.wg.Wait()

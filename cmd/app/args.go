@@ -35,4 +35,3 @@ func (a *appArgs) Parse() {
 		fmt.Println(parser.Usage(err))
 	}
 }
-

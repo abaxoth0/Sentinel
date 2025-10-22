@@ -4,7 +4,6 @@ package log
 import "sentinel/packages/common/logger"
 
 var (
-	DB 		  = logger.NewSource("DATABASE", logger.Default)
+	DB        = logger.NewSource("DATABASE", logger.Default)
 	Migration = logger.NewSource("MIGRATION", logger.Default)
 )
-

@@ -63,26 +63,25 @@ func IntrospectOAuthToken(ctx echo.Context) error {
 	default:
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
-			`Invalid token type, valid types are: "access", "refresh" and "activate". But got: ` + body.Type,
+			`Invalid token type, valid types are: "access", "refresh" and "activate". But got: `+body.Type,
 		)
 	}
 
 	tk, err := token.ParseSingedToken(body.Token, key)
 	if err != nil {
-		return echo.NewHTTPError(err.Status(), "Failed to parse specified token: " + err.Error())
+		return echo.NewHTTPError(err.Status(), "Failed to parse specified token: "+err.Error())
 	}
 
 	claims := tk.Claims.(*token.Claims)
 
 	return ctx.JSON(http.StatusOK, ResponseBody.Introspection{
-		Active: 	true,
-		SessionID: 	claims.ID,
-		Subject: 	claims.Subject,
-		Issuer: 	claims.Issuer,
-		Audience: 	claims.Audience,
-		ExpiresAt: 	claims.ExpiresAt.Unix(),
-		IssuedAt: 	claims.IssuedAt.Unix(),
-		Scope: 		claims.Roles,
+		Active:    true,
+		SessionID: claims.ID,
+		Subject:   claims.Subject,
+		Issuer:    claims.Issuer,
+		Audience:  claims.Audience,
+		ExpiresAt: claims.ExpiresAt.Unix(),
+		IssuedAt:  claims.IssuedAt.Unix(),
+		Scope:     claims.Roles,
 	})
 }
-

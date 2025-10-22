@@ -10,116 +10,116 @@ import (
 )
 
 type secrets struct {
-    PrimaryDatabaseHost     string `validate:"required"`
-    PrimaryDatabasePort     string `validate:"required"`
-    PrimaryDatabaseName     string `validate:"required"`
-    PrimaryDatabaseUser     string `validate:"required"`
-    PrimaryDatabasePassword string `validate:"required"`
+	PrimaryDatabaseHost     string `validate:"required"`
+	PrimaryDatabasePort     string `validate:"required"`
+	PrimaryDatabaseName     string `validate:"required"`
+	PrimaryDatabaseUser     string `validate:"required"`
+	PrimaryDatabasePassword string `validate:"required"`
 
-    ReplicaDatabaseHost     string `validate:"required"`
-    ReplicaDatabasePort     string `validate:"required"`
-    ReplicaDatabaseName     string `validate:"required"`
-    ReplicaDatabaseUser     string `validate:"required"`
-    ReplicaDatabasePassword string `validate:"required"`
+	ReplicaDatabaseHost     string `validate:"required"`
+	ReplicaDatabasePort     string `validate:"required"`
+	ReplicaDatabaseName     string `validate:"required"`
+	ReplicaDatabaseUser     string `validate:"required"`
+	ReplicaDatabasePassword string `validate:"required"`
 
-    AccessTokenPrivateKey     		ed25519.PrivateKey `validate:"required"`
-    AccessTokenPublicKey      		ed25519.PublicKey  `validate:"required"`
-    RefreshTokenPrivateKey    		ed25519.PrivateKey `validate:"required"`
-    RefreshTokenPublicKey     		ed25519.PublicKey  `validate:"required"`
-    ActivationTokenPrivateKey 		ed25519.PrivateKey `validate:"required"`
-    ActivationTokenPublicKey  		ed25519.PublicKey  `validate:"required"`
-    PasswordResetTokenPrivateKey 	ed25519.PrivateKey `validate:"required"`
-    PasswordResetTokenPublicKey  	ed25519.PublicKey  `validate:"required"`
+	AccessTokenPrivateKey        ed25519.PrivateKey `validate:"required"`
+	AccessTokenPublicKey         ed25519.PublicKey  `validate:"required"`
+	RefreshTokenPrivateKey       ed25519.PrivateKey `validate:"required"`
+	RefreshTokenPublicKey        ed25519.PublicKey  `validate:"required"`
+	ActivationTokenPrivateKey    ed25519.PrivateKey `validate:"required"`
+	ActivationTokenPublicKey     ed25519.PublicKey  `validate:"required"`
+	PasswordResetTokenPrivateKey ed25519.PrivateKey `validate:"required"`
+	PasswordResetTokenPublicKey  ed25519.PublicKey  `validate:"required"`
 
-    CacheURI            string `validate:"required"`
-    CachePassword       string `validate:"required"`
-    CacheDB             int    `validate:"exists"`
+	CacheURI      string `validate:"required"`
+	CachePassword string `validate:"required"`
+	CacheDB       int    `validate:"exists"`
 
-    MailerEmailPassword	string `validate:"required"`
-    MailerEmail         string `validate:"required"`
+	MailerEmailPassword string `validate:"required"`
+	MailerEmail         string `validate:"required"`
 
-	SentryDSN			string `validate:"required"`
+	SentryDSN string `validate:"required"`
 
-	OAuthGoogleClientID 	string `validate:"required"`
+	OAuthGoogleClientID     string `validate:"required"`
 	OAuthGoogleClientSecret string `validate:"required"`
 }
 
 var Secret secrets
 
 func getEnv(key string) string {
-    env, _ := os.LookupEnv(key)
+	env, _ := os.LookupEnv(key)
 
-    log.Info("Loaded: " + key, nil)
+	log.Info("Loaded: "+key, nil)
 
-    return env
+	return env
 }
 
 func loadSecrets() {
 	log.Info("Loading environment vairables...", nil)
 
-    if err := godotenv.Load(); err != nil {
-        log.Fatal("Failed to load environment vairables", err.Error(), nil)
-    }
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Failed to load environment vairables", err.Error(), nil)
+	}
 
-    requiredEnvVars := []string{
-        "PRIMARY_DB_HOST",
-        "PRIMARY_DB_PORT",
-        "PRIMARY_DB_NAME",
-        "PRIMARY_DB_USER",
-        "PRIMARY_DB_PASSWORD",
+	requiredEnvVars := []string{
+		"PRIMARY_DB_HOST",
+		"PRIMARY_DB_PORT",
+		"PRIMARY_DB_NAME",
+		"PRIMARY_DB_USER",
+		"PRIMARY_DB_PASSWORD",
 
-        "REPLICA_DB_HOST",
-        "REPLICA_DB_PORT",
-        "REPLICA_DB_NAME",
-        "REPLICA_DB_USER",
-        "REPLICA_DB_PASSWORD",
+		"REPLICA_DB_HOST",
+		"REPLICA_DB_PORT",
+		"REPLICA_DB_NAME",
+		"REPLICA_DB_USER",
+		"REPLICA_DB_PASSWORD",
 
-        "ACCESS_TOKEN_SECRET",
-        "REFRESH_TOKEN_SECRET",
-        "ACTIVATION_TOKEN_SECRET",
-        "PASSWORD_RESET_TOKEN_SECRET",
+		"ACCESS_TOKEN_SECRET",
+		"REFRESH_TOKEN_SECRET",
+		"ACTIVATION_TOKEN_SECRET",
+		"PASSWORD_RESET_TOKEN_SECRET",
 
-        "CACHE_URI",
-        "CACHE_PASSWORD",
-        "CACHE_DB",
+		"CACHE_URI",
+		"CACHE_PASSWORD",
+		"CACHE_DB",
 
-        "MAILER_EMAIL_PASSWORD",
-        "MAILER_EMAIL",
+		"MAILER_EMAIL_PASSWORD",
+		"MAILER_EMAIL",
 
-        "SENTRY_DSN",
+		"SENTRY_DSN",
 
 		"OAUTH_GOOGLE_CLIENT_ID",
 		"OAUTH_GOOGLE_CLIENT_SECRET",
-    }
+	}
 
-    // Check is all required env variables exists
-    for _, variable := range requiredEnvVars {
-        if _, exists := os.LookupEnv(variable); !exists {
-            log.Fatal(
-                "Failed to load environment variables",
-				"Missing required env variable: " + variable,
-            	nil,
+	// Check is all required env variables exists
+	for _, variable := range requiredEnvVars {
+		if _, exists := os.LookupEnv(variable); !exists {
+			log.Fatal(
+				"Failed to load environment variables",
+				"Missing required env variable: "+variable,
+				nil,
 			)
-        }
-    }
+		}
+	}
 
-    cacheDB, err := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
+	cacheDB, err := strconv.ParseInt(getEnv("CACHE_DB"), 10, 64)
 
-    if err != nil {
-        log.Fatal("Failed to parse CACHE_DB env variable", err.Error(), nil)
-    }
+	if err != nil {
+		log.Fatal("Failed to parse CACHE_DB env variable", err.Error(), nil)
+	}
 
-    Secret.PrimaryDatabaseHost = getEnv("PRIMARY_DB_HOST")
-    Secret.PrimaryDatabasePort = getEnv("PRIMARY_DB_PORT")
-    Secret.PrimaryDatabaseName = getEnv("PRIMARY_DB_NAME")
-    Secret.PrimaryDatabaseUser = getEnv("PRIMARY_DB_USER")
-    Secret.PrimaryDatabasePassword = getEnv("PRIMARY_DB_PASSWORD")
+	Secret.PrimaryDatabaseHost = getEnv("PRIMARY_DB_HOST")
+	Secret.PrimaryDatabasePort = getEnv("PRIMARY_DB_PORT")
+	Secret.PrimaryDatabaseName = getEnv("PRIMARY_DB_NAME")
+	Secret.PrimaryDatabaseUser = getEnv("PRIMARY_DB_USER")
+	Secret.PrimaryDatabasePassword = getEnv("PRIMARY_DB_PASSWORD")
 
-    Secret.ReplicaDatabaseHost = getEnv("REPLICA_DB_HOST")
-    Secret.ReplicaDatabasePort = getEnv("REPLICA_DB_PORT")
-    Secret.ReplicaDatabaseName = getEnv("REPLICA_DB_NAME")
-    Secret.ReplicaDatabaseUser = getEnv("REPLICA_DB_USER")
-    Secret.ReplicaDatabasePassword = getEnv("REPLICA_DB_PASSWORD")
+	Secret.ReplicaDatabaseHost = getEnv("REPLICA_DB_HOST")
+	Secret.ReplicaDatabasePort = getEnv("REPLICA_DB_PORT")
+	Secret.ReplicaDatabaseName = getEnv("REPLICA_DB_NAME")
+	Secret.ReplicaDatabaseUser = getEnv("REPLICA_DB_USER")
+	Secret.ReplicaDatabasePassword = getEnv("REPLICA_DB_PASSWORD")
 
 	Secret.CacheURI = getEnv("CACHE_URI")
 	Secret.CachePassword = getEnv("CACHE_PASSWORD")
@@ -133,51 +133,50 @@ func loadSecrets() {
 	Secret.OAuthGoogleClientID = getEnv("OAUTH_GOOGLE_CLIENT_ID")
 	Secret.OAuthGoogleClientSecret = getEnv("OAUTH_GOOGLE_CLIENT_SECRET")
 
-    // All must be 32 bytes long
-    AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
-    RefreshTokenSecret := []byte(getEnv("REFRESH_TOKEN_SECRET"))
-    ActivationTokenSecret := []byte(getEnv("ACTIVATION_TOKEN_SECRET"))
-    PasswordResetTokenSecret := []byte(getEnv("PASSWORD_RESET_TOKEN_SECRET"))
+	// All must be 32 bytes long
+	AccessTokenSecret := []byte(getEnv("ACCESS_TOKEN_SECRET"))
+	RefreshTokenSecret := []byte(getEnv("REFRESH_TOKEN_SECRET"))
+	ActivationTokenSecret := []byte(getEnv("ACTIVATION_TOKEN_SECRET"))
+	PasswordResetTokenSecret := []byte(getEnv("PASSWORD_RESET_TOKEN_SECRET"))
 
 	verifyTokenLength("access token", AccessTokenSecret)
 	verifyTokenLength("refresh token", RefreshTokenSecret)
 	verifyTokenLength("activation token", ActivationTokenSecret)
 	verifyTokenLength("password reset token", PasswordResetTokenSecret)
 
-    Secret.AccessTokenPrivateKey 		= ed25519.NewKeyFromSeed(AccessTokenSecret)
-    Secret.RefreshTokenPrivateKey 		= ed25519.NewKeyFromSeed(RefreshTokenSecret)
-    Secret.ActivationTokenPrivateKey 	= ed25519.NewKeyFromSeed(ActivationTokenSecret)
-    Secret.PasswordResetTokenPrivateKey = ed25519.NewKeyFromSeed(RefreshTokenSecret)
+	Secret.AccessTokenPrivateKey = ed25519.NewKeyFromSeed(AccessTokenSecret)
+	Secret.RefreshTokenPrivateKey = ed25519.NewKeyFromSeed(RefreshTokenSecret)
+	Secret.ActivationTokenPrivateKey = ed25519.NewKeyFromSeed(ActivationTokenSecret)
+	Secret.PasswordResetTokenPrivateKey = ed25519.NewKeyFromSeed(RefreshTokenSecret)
 
-    Secret.AccessTokenPublicKey 		= Secret.AccessTokenPrivateKey.Public().(ed25519.PublicKey)
-    Secret.RefreshTokenPublicKey 		= Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
-    Secret.ActivationTokenPublicKey 	= Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
-    Secret.PasswordResetTokenPublicKey 	= Secret.PasswordResetTokenPrivateKey.Public().(ed25519.PublicKey)
+	Secret.AccessTokenPublicKey = Secret.AccessTokenPrivateKey.Public().(ed25519.PublicKey)
+	Secret.RefreshTokenPublicKey = Secret.RefreshTokenPrivateKey.Public().(ed25519.PublicKey)
+	Secret.ActivationTokenPublicKey = Secret.ActivationTokenPrivateKey.Public().(ed25519.PublicKey)
+	Secret.PasswordResetTokenPublicKey = Secret.PasswordResetTokenPrivateKey.Public().(ed25519.PublicKey)
 
-    log.Info("Loading environment vairables: OK", nil)
+	log.Info("Loading environment vairables: OK", nil)
 
-    log.Info("Validating secrets...", nil)
+	log.Info("Validating secrets...", nil)
 
-    validate := validator.New()
+	validate := validator.New()
 
-    validate.RegisterValidation("exists", func(fl validator.FieldLevel) bool {
-        return true // Always pass (just ensure that the field exists)
-    })
+	validate.RegisterValidation("exists", func(fl validator.FieldLevel) bool {
+		return true // Always pass (just ensure that the field exists)
+	})
 
-    if err := validate.Struct(Secret); err != nil {
-        log.Fatal("Secrets validation failed", err.Error(), nil)
-    }
+	if err := validate.Struct(Secret); err != nil {
+		log.Fatal("Secrets validation failed", err.Error(), nil)
+	}
 
-    log.Info("Validating secrets: OK", nil)
+	log.Info("Validating secrets: OK", nil)
 }
 
 func verifyTokenLength(tokenName string, token []byte) {
-    if len(token) != 32 {
-        log.Fatal(
-            "Invalid environment variable value",
-            "Invalid length of "+tokenName+" secret (must be 32 bytes long)",
-         	nil,
+	if len(token) != 32 {
+		log.Fatal(
+			"Invalid environment variable value",
+			"Invalid length of "+tokenName+" secret (must be 32 bytes long)",
+			nil,
 		)
-    }
+	}
 }
-

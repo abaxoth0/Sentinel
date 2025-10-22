@@ -9,8 +9,7 @@ import (
 //
 // Exmaple: http://localhost:1234
 func GetBaseURL() string {
-    transport := util.Ternary(config.HTTP.Secured, "https", "http")
+	transport := util.Ternary(config.HTTP.Secured, "https", "http")
 
-    return transport + "://" + config.HTTP.Domain + ":" + config.HTTP.Port
+	return transport + "://" + config.HTTP.Domain + ":" + config.HTTP.Port
 }
-

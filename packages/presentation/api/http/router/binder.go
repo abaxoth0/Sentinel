@@ -9,20 +9,19 @@ import (
 )
 
 type binder struct {
-    //
+	//
 }
 
 func (b *binder) Bind(i interface{}, ctx echo.Context) error {
-    body, err := io.ReadAll(ctx.Request().Body)
+	body, err := io.ReadAll(ctx.Request().Body)
 
-    if err != nil {
-        return response.FailedToReadRequestBody
-    }
+	if err != nil {
+		return response.FailedToReadRequestBody
+	}
 
-    if err := jsoniter.Unmarshal(body, i); err != nil {
-        return response.FailedToDecodeRequestBody
-    }
+	if err := jsoniter.Unmarshal(body, i); err != nil {
+		return response.FailedToDecodeRequestBody
+	}
 
-    return nil
+	return nil
 }
-

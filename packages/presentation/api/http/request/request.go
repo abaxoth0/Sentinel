@@ -15,9 +15,9 @@ const metaKey = "req_meta"
 func newMeta(requestID string, req *http.Request) logger.Meta {
 	return logger.Meta{
 		"request_id": requestID,
-		"addr": req.RemoteAddr,
-		"method": req.Method,
-		"path": req.URL.RequestURI(),
+		"addr":       req.RemoteAddr,
+		"method":     req.Method,
+		"path":       req.URL.RequestURI(),
 		"user_agent": req.UserAgent(),
 	}
 }
@@ -25,7 +25,7 @@ func newMeta(requestID string, req *http.Request) logger.Meta {
 // This middleware must be applied to the router
 // for the all functions in this package to work correctly.
 func Middleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func (ctx echo.Context) error {
+	return func(ctx echo.Context) error {
 		id := ctx.Response().Header().Get("X-Request-Id")
 		ctx.Set(metaKey, newMeta(id, ctx.Request()))
 
@@ -63,4 +63,3 @@ func GetMetadata(ctx echo.Context) logger.Meta {
 		return nil
 	}
 }
-

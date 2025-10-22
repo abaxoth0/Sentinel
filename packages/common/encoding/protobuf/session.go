@@ -9,20 +9,20 @@ import (
 
 func MarshallFullSessionDTO(dto *SessionDTO.Full) ([]byte, error) {
 	return marshall(&pbgen.FullSessionDTO{
-		ID: dto.ID,
-		UserID: dto.UserID,
-		UserAgent: dto.UserAgent,
-		IpAddress: dto.IpAddress,
-		DeviceID: dto.DeviceID,
-		DeviceType: dto.DeviceType,
-		OS: dto.OS,
-		OSVersion: dto.OSVersion,
-		Browser: dto.Browser,
+		ID:             dto.ID,
+		UserID:         dto.UserID,
+		UserAgent:      dto.UserAgent,
+		IpAddress:      dto.IpAddress,
+		DeviceID:       dto.DeviceID,
+		DeviceType:     dto.DeviceType,
+		OS:             dto.OS,
+		OSVersion:      dto.OSVersion,
+		Browser:        dto.Browser,
 		BrowserVersion: dto.BrowserVersion,
-		CreatedAt: timestamppb.New(dto.CreatedAt),
-		LastUsedAt: timestamppb.New(dto.LastUsedAt),
-		ExpiresAt: timestamppb.New(dto.ExpiresAt),
-		RevokedAt: timestamppb.New(dto.RevokedAt),
+		CreatedAt:      timestamppb.New(dto.CreatedAt),
+		LastUsedAt:     timestamppb.New(dto.LastUsedAt),
+		ExpiresAt:      timestamppb.New(dto.ExpiresAt),
+		RevokedAt:      timestamppb.New(dto.RevokedAt),
 	})
 }
 
@@ -33,20 +33,19 @@ func UnmarshallFullSessionDTO(rawDTO []byte) (*SessionDTO.Full, error) {
 	}
 
 	return &SessionDTO.Full{
-		ID: dto.ID,
-		UserID: dto.UserID,
-		UserAgent: dto.UserAgent,
-		IpAddress: dto.IpAddress,
-		DeviceID: dto.DeviceID,
-		DeviceType: dto.DeviceType,
-		OS: dto.OS,
-		OSVersion: dto.OSVersion,
-		Browser: dto.Browser,
+		ID:             dto.ID,
+		UserID:         dto.UserID,
+		UserAgent:      dto.UserAgent,
+		IpAddress:      dto.IpAddress,
+		DeviceID:       dto.DeviceID,
+		DeviceType:     dto.DeviceType,
+		OS:             dto.OS,
+		OSVersion:      dto.OSVersion,
+		Browser:        dto.Browser,
 		BrowserVersion: dto.BrowserVersion,
-		CreatedAt: dto.CreatedAt.AsTime(),
-		LastUsedAt: dto.LastUsedAt.AsTime(),
-		ExpiresAt: dto.ExpiresAt.AsTime(),
-		RevokedAt: dto.RevokedAt.AsTime(),
+		CreatedAt:      dto.CreatedAt.AsTime(),
+		LastUsedAt:     dto.LastUsedAt.AsTime(),
+		ExpiresAt:      dto.ExpiresAt.AsTime(),
+		RevokedAt:      dto.RevokedAt.AsTime(),
 	}, nil
 }
-

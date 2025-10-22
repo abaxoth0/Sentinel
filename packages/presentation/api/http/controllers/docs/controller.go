@@ -25,4 +25,3 @@ func Swagger(ctx echo.Context) error {
 
 	return echoSwagger.WrapHandler(ctx)
 }
-

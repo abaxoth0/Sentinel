@@ -10,25 +10,25 @@ type Any interface {
 }
 
 type Basic struct {
-	RequesterUID   	string
-	RequesterRoles 	[]string
-	Reason 			string
+	RequesterUID   string
+	RequesterRoles []string
+	Reason         string
 }
 
 func (dto *Basic) ValidateRequesterUID() *Error.Status {
-    if err := validation.UUID(dto.RequesterUID); err != nil {
-        return err.ToStatus(
-            "Requester user ID is not specified",
-            "Invalid requester user ID",
-            )
-    }
-    return nil
+	if err := validation.UUID(dto.RequesterUID); err != nil {
+		return err.ToStatus(
+			"Requester user ID is not specified",
+			"Invalid requester user ID",
+		)
+	}
+	return nil
 }
 
 func (dto *Basic) ToUserTargeted(targetUID string) *UserTargeted {
 	return &UserTargeted{
 		TargetUID: targetUID,
-		Basic: *dto,
+		Basic:     *dto,
 	}
 }
 
@@ -38,32 +38,31 @@ type UserTargeted struct {
 }
 
 func NewUserTargeted(targetdUID string, requesterUID string, requestedRoles []string) *UserTargeted {
-    return &UserTargeted{
-        TargetUID: targetdUID,
-        Basic: Basic{
-            RequesterUID: requesterUID,
-            RequesterRoles: requestedRoles,
-        },
-    }
+	return &UserTargeted{
+		TargetUID: targetdUID,
+		Basic: Basic{
+			RequesterUID:   requesterUID,
+			RequesterRoles: requestedRoles,
+		},
+	}
 }
 
 func (dto *UserTargeted) ValidateTargetUID() *Error.Status {
-    if err := validation.UUID(dto.TargetUID); err != nil {
-        return err.ToStatus(
-            "Target user ID is not specified",
-            "Invalid target user ID",
-        )
-    }
-    return nil
+	if err := validation.UUID(dto.TargetUID); err != nil {
+		return err.ToStatus(
+			"Target user ID is not specified",
+			"Invalid target user ID",
+		)
+	}
+	return nil
 }
 
 func (dto *UserTargeted) ValidateUIDs() *Error.Status {
-    if err := dto.ValidateTargetUID(); err != nil {
-        return err
-    }
-    if err := dto.ValidateRequesterUID(); err != nil {
-        return err
-    }
-    return nil
+	if err := dto.ValidateTargetUID(); err != nil {
+		return err
+	}
+	if err := dto.ValidateRequesterUID(); err != nil {
+		return err
+	}
+	return nil
 }
-

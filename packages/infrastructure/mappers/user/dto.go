@@ -5,14 +5,13 @@ import (
 	"sentinel/packages/infrastructure/token"
 )
 
-func PayloadFromClaims(claims *token.Claims) (*UserDTO.Payload) {
+func PayloadFromClaims(claims *token.Claims) *UserDTO.Payload {
 	return &UserDTO.Payload{
-		ID:    		claims.Subject,
-		Login: 		claims.Login,
-		SessionID: 	claims.ID,
-		Roles: 		claims.Roles,
-		Version: 	claims.Version,
-		Audience: 	claims.Audience,
+		ID:        claims.Subject,
+		Login:     claims.Login,
+		SessionID: claims.ID,
+		Roles:     claims.Roles,
+		Version:   claims.Version,
+		Audience:  claims.Audience,
 	}
 }
-

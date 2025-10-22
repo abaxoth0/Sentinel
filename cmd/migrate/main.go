@@ -41,19 +41,19 @@ func main() {
 
 	DB.Database.Connect()
 
-    go func () {
-        if err := logger.Default.Start(config.Debug.Enabled); err != nil {
-            panic(err.Error())
-        }
-    }()
-    defer func() {
-        if err := logger.Default.Stop(); err != nil {
+	go func() {
+		if err := logger.Default.Start(config.Debug.Enabled); err != nil {
+			panic(err.Error())
+		}
+	}()
+	defer func() {
+		if err := logger.Default.Stop(); err != nil {
 			migrateLogger.Error("Failed to stop logger", err.Error(), nil)
-        }
-    }()
+		}
+	}()
 
-    // Reserve some time for logger to start up
-    time.Sleep(time.Millisecond * 50)
+	// Reserve some time for logger to start up
+	time.Sleep(time.Millisecond * 50)
 
 	app.EndInit()
 
@@ -92,7 +92,7 @@ type migrateArgs struct {
 	Debug     *bool
 	ShowLogs  *bool
 	TraceLogs *bool
-	Steps	  *string
+	Steps     *string
 }
 
 func (a *migrateArgs) Parse() {
@@ -109,10 +109,10 @@ func (a *migrateArgs) Parse() {
 	})
 	args.Steps = parser.String("s", "steps", &argparse.Options{
 		Required: true,
-		Help: "(Required) Amount of database migration steps. Valid values:\n"+
-		"\t\t\t- Up: Migrate forward on 1 version\n"+
-		"\t\t\t- Down: Migrate back on 1 version\n"+
-		"\t\t\t- N: Number, if N > 0 then will migrate forward on N versions, if N < 0 then will migrate back on N versions",
+		Help: "(Required) Amount of database migration steps. Valid values:\n" +
+			"\t\t\t- Up: Migrate forward on 1 version\n" +
+			"\t\t\t- Down: Migrate back on 1 version\n" +
+			"\t\t\t- N: Number, if N > 0 then will migrate forward on N versions, if N < 0 then will migrate back on N versions",
 	})
 
 	if err := parser.Parse(os.Args); err != nil {
@@ -120,4 +120,3 @@ func (a *migrateArgs) Parse() {
 		os.Exit(1)
 	}
 }
-

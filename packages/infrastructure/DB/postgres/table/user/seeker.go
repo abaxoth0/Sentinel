@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	searchUsersSqlStart=`WITH numbered_users AS (SELECT *, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) as row_num FROM "user"`
-	searchUsersSqlSelect=`SELECT id, login, roles, deleted_at, version FROM numbered_users WHERE row_num BETWEEN `
+	searchUsersSqlStart  = `WITH numbered_users AS (SELECT *, ROW_NUMBER() OVER (ORDER BY created_at DESC, id DESC) as row_num FROM "user"`
+	searchUsersSqlSelect = `SELECT id, login, roles, deleted_at, version FROM numbered_users WHERE row_num BETWEEN `
 )
 
 func searchUsersSqlEnd(page, pageSize int) string {
@@ -45,12 +45,12 @@ func (m *Manager) SearchUsers(
 	}
 
 	if page < 1 {
-		errMsg := "Invalid page size: "+strconv.Itoa(page)+". It must greater greater than 0."
+		errMsg := "Invalid page size: " + strconv.Itoa(page) + ". It must greater greater than 0."
 		log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 		return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 	if pageSize < 1 || pageSize > config.DB.MaxSearchPageSize {
-		errMsg := "Invalid page size: "+strconv.Itoa(pageSize)+". It must be between 1 and " + strconv.Itoa(config.DB.MaxSearchPageSize)
+		errMsg := "Invalid page size: " + strconv.Itoa(pageSize) + ". It must be between 1 and " + strconv.Itoa(config.DB.MaxSearchPageSize)
 		log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 		return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
@@ -100,7 +100,7 @@ func (m *Manager) SearchUsers(
 			if filter.Value == nil || filter.Value == "" {
 				errMsg := "Filter has no value: " + rawFilters[i]
 				log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
-				return nil, Error.NewStatusError(	errMsg, http.StatusBadRequest)
+				return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 			}
 
 			valuesCount++
@@ -109,14 +109,14 @@ func (m *Manager) SearchUsers(
 		}
 	}
 
-    searchQuery := query.New(
-		searchUsersSqlStart + " WHERE " + strings.Join(conds, " AND ") + searchUsersSqlEnd(page, pageSize), values...
+	searchQuery := query.New(
+		searchUsersSqlStart+" WHERE "+strings.Join(conds, " AND ")+searchUsersSqlEnd(page, pageSize), values...,
 	)
 
-    dtos, err := executor.CollectPublicUserDTO(connection.Replica, searchQuery)
-    if err != nil {
-        return nil, err
-    }
+	dtos, err := executor.CollectPublicUserDTO(connection.Replica, searchQuery)
+	if err != nil {
+		return nil, err
+	}
 
 	log.DB.Info("Searching users matching "+filtersStr+": OK", nil)
 
@@ -124,15 +124,15 @@ func (m *Manager) SearchUsers(
 }
 
 func (m *Manager) getUserBy(
-    conditionProperty user.Property,
-    conditionValue string,
-    state user.State,
-    cacheKey string,
+	conditionProperty user.Property,
+	conditionValue string,
+	state user.State,
+	cacheKey string,
 ) (*UserDTO.Full, *Error.Status) {
 	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+"...", nil)
 
-    if conditionProperty == user.IdProperty {
-        if err := validation.UUID(conditionValue); err != nil {
+	if conditionProperty == user.IdProperty {
+		if err := validation.UUID(conditionValue); err != nil {
 			e := err.ToStatus(
 				"user id isn't specified",
 				"user id has invalid value",
@@ -142,11 +142,11 @@ func (m *Manager) getUserBy(
 				e.Error(),
 				nil,
 			)
-            return nil, e
-        }
-    }
-    if conditionProperty == user.LoginProperty {
-        if err := validation.Email(conditionValue); err != nil {
+			return nil, e
+		}
+	}
+	if conditionProperty == user.LoginProperty {
+		if err := validation.Email(conditionValue); err != nil {
 			e := err.ToStatus(
 				"User login isn't specified",
 				"User login has invalid value",
@@ -156,9 +156,9 @@ func (m *Manager) getUserBy(
 				e.Error(),
 				nil,
 			)
-            return nil, e
-        }
-    }
+			return nil, e
+		}
+	}
 
 	var selectQuery *query.Query
 
@@ -166,49 +166,49 @@ func (m *Manager) getUserBy(
 
 	switch state {
 	case user.NotDeletedState:
-		selectQuery = query.New(sql + " AND deleted_at IS NULL;", conditionValue)
+		selectQuery = query.New(sql+" AND deleted_at IS NULL;", conditionValue)
 	case user.DeletedState:
-		selectQuery = query.New(sql + " AND deleted_at IS NOT NULL;", conditionValue)
+		selectQuery = query.New(sql+" AND deleted_at IS NOT NULL;", conditionValue)
 	default:
-		log.DB.Panic("Invalid getUserBy() call", "Unknown user state: " + string(state), nil)
+		log.DB.Panic("Invalid getUserBy() call", "Unknown user state: "+string(state), nil)
 		return nil, Error.StatusInternalError
 	}
 
-    dto, err := executor.FullUserDTO(connection.Replica, selectQuery, cacheKey)
-    if err != nil {
-        return nil, err
-    }
+	dto, err := executor.FullUserDTO(connection.Replica, selectQuery, cacheKey)
+	if err != nil {
+		return nil, err
+	}
 
 	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+":OK", nil)
 
-    return dto, nil
+	return dto, nil
 }
 
 func (m *Manager) GetUserByID(id string) (*UserDTO.Full, *Error.Status) {
-    return m.getUserBy(
-        user.IdProperty,
-        id,
-        user.NotDeletedState,
-        cache.KeyBase[cache.UserById] + id,
-    )
+	return m.getUserBy(
+		user.IdProperty,
+		id,
+		user.NotDeletedState,
+		cache.KeyBase[cache.UserById]+id,
+	)
 }
 
 func (m *Manager) GetSoftDeletedUserByID(id string) (*UserDTO.Full, *Error.Status) {
-    return m.getUserBy(
-        user.IdProperty,
-        id,
-        user.DeletedState,
-        cache.KeyBase[cache.DeletedUserById] + id,
-    )
+	return m.getUserBy(
+		user.IdProperty,
+		id,
+		user.DeletedState,
+		cache.KeyBase[cache.DeletedUserById]+id,
+	)
 }
 
 func (m *Manager) GetUserByLogin(login string) (*UserDTO.Full, *Error.Status) {
-    return m.getUserBy(
-        user.LoginProperty,
-        login,
-        user.NotDeletedState,
-        cache.KeyBase[cache.UserByLogin] + login,
-    )
+	return m.getUserBy(
+		user.LoginProperty,
+		login,
+		user.NotDeletedState,
+		cache.KeyBase[cache.UserByLogin]+login,
+	)
 }
 
 func (m *Manager) GetUserBySessionID(sessionID string) (*UserDTO.Full, *Error.Status) {
@@ -233,10 +233,10 @@ func (m *Manager) GetUserBySessionID(sessionID string) (*UserDTO.Full, *Error.St
 func (m *Manager) checkLoginAvailability(login string) *Error.Status {
 	log.DB.Info("Checking availability of login \""+login+"\"...", nil)
 
-    if err := user.ValidateLogin(login); err != nil {
+	if err := user.ValidateLogin(login); err != nil {
 		log.DB.Error("Failed to check availability of login \""+login+"\"", err.Error(), nil)
-        return err
-    }
+		return err
+	}
 
 	_, err := m.GetUserByLogin(login)
 	if err != nil {
@@ -250,11 +250,11 @@ func (m *Manager) checkLoginAvailability(login string) *Error.Status {
 
 	log.DB.Info("Checking availability of login \""+login+"\": Already in use", nil)
 
-    // if there are no any error (which means that user with this login exists)
-    return loginAlreadyInUse
+	// if there are no any error (which means that user with this login exists)
+	return loginAlreadyInUse
 }
 
-func (m *Manager) IsLoginInUse(login string) bool  {
+func (m *Manager) IsLoginInUse(login string) bool {
 	if err := m.checkLoginAvailability(login); err != nil {
 		return true
 	}
@@ -264,41 +264,41 @@ func (m *Manager) IsLoginInUse(login string) bool  {
 func (_ *Manager) GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status) {
 	log.DB.Info("Getting roles of user "+act.TargetUID+"...", nil)
 
-    if err := act.ValidateTargetUID(); err != nil {
+	if err := act.ValidateTargetUID(); err != nil {
 		log.DB.Error("Failed to get roles of user "+act.TargetUID, err.Error(), nil)
-        return nil, err
-    }
+		return nil, err
+	}
 
 	if err := authz.User.GetUserRoles(act.RequesterRoles); err != nil {
 		return nil, err
 	}
 
-    if rawRoles, hit := cache.Client.Get(cache.KeyBase[cache.UserRolesById] + act.TargetUID); hit {
-        return strings.Split(rawRoles, ","), nil
-    }
+	if rawRoles, hit := cache.Client.Get(cache.KeyBase[cache.UserRolesById] + act.TargetUID); hit {
+		return strings.Split(rawRoles, ","), nil
+	}
 
-    // TODO is there a point doing that? why just not use DB.Database.FindUserByID()?
-    selectQuery := query.New(
-        `SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`,
-        act.TargetUID,
-    )
+	// TODO is there a point doing that? why just not use DB.Database.FindUserByID()?
+	selectQuery := query.New(
+		`SELECT roles FROM "user" WHERE id = $1 AND deleted_at IS NULL;`,
+		act.TargetUID,
+	)
 
-    scan, err := executor.Row(connection.Replica, selectQuery)
-    if err != nil {
-        return nil, err
-    }
+	scan, err := executor.Row(connection.Replica, selectQuery)
+	if err != nil {
+		return nil, err
+	}
 
-    roles := []string{}
+	roles := []string{}
 
-    if e := scan(&roles); e != nil {
-        return nil, e
-    }
+	if e := scan(&roles); e != nil {
+		return nil, e
+	}
 
-    cache.Client.Set(cache.KeyBase[cache.UserRolesById] + act.TargetUID, strings.Join(roles, ","))
+	cache.Client.Set(cache.KeyBase[cache.UserRolesById]+act.TargetUID, strings.Join(roles, ","))
 
 	log.DB.Info("Getting roles of user "+act.TargetUID+": OK", nil)
 
-    return roles, nil
+	return roles, nil
 }
 
 func (_ *Manager) GetUserVersion(UID string) (uint32, *Error.Status) {
@@ -338,4 +338,3 @@ func (_ *Manager) GetUserVersion(UID string) (uint32, *Error.Status) {
 
 	return version, nil
 }
-

@@ -33,4 +33,3 @@ type deleter interface {
 	RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Status
 	DeleteUserSessionsCache(UID string) *Error.Status
 }
-

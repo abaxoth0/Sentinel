@@ -30,4 +30,3 @@ type deleter interface {
 	SoftDeleteLocation(id string, act *ActionDTO.UserTargeted) *Error.Status
 	DropLocation(id string, act *ActionDTO.UserTargeted) *Error.Status
 }
-

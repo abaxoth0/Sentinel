@@ -2,8 +2,8 @@ package logger
 
 // Designed to be used by worker pool
 type logTask struct {
-    entry 	*LogEntry
-    logger  *FileLogger
+	entry  *LogEntry
+	logger *FileLogger
 }
 
 func (t logTask) Process() {
@@ -11,8 +11,7 @@ func (t logTask) Process() {
 }
 
 func newTaskProducer(logger *FileLogger) func(*LogEntry) *logTask {
-    return func (entry *LogEntry) *logTask {
-        return &logTask{entry, logger}
-    }
+	return func(entry *LogEntry) *logTask {
+		return &logTask{entry, logger}
+	}
 }
-

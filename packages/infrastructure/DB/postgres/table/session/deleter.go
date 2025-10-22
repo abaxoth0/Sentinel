@@ -45,8 +45,8 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 	}
 
 	cache.Client.Delete(
-		cache.KeyBase[cache.SessionByID] + sessionID,
-		cache.KeyBase[cache.UserBySessionID] + sessionID,
+		cache.KeyBase[cache.SessionByID]+sessionID,
+		cache.KeyBase[cache.UserBySessionID]+sessionID,
 	)
 
 	log.DB.Trace("Revoking user session: OK", nil)
@@ -55,11 +55,11 @@ func (m *Manager) RevokeSession(act *ActionDTO.UserTargeted, sessionID string) *
 }
 
 func (m *Manager) deleteSessionsCache(sessions []*SessionDTO.Full) *Error.Status {
-	cacheKeys := make([]string, 0, len(sessions) * 2)
+	cacheKeys := make([]string, 0, len(sessions)*2)
 
 	for _, session := range sessions {
-		cacheKeys = append(cacheKeys, cache.KeyBase[cache.SessionByID] + session.ID)
-		cacheKeys = append(cacheKeys, cache.KeyBase[cache.UserBySessionID] + session.ID)
+		cacheKeys = append(cacheKeys, cache.KeyBase[cache.SessionByID]+session.ID)
+		cacheKeys = append(cacheKeys, cache.KeyBase[cache.UserBySessionID]+session.ID)
 	}
 
 	return cache.Client.Delete(cacheKeys...)
@@ -83,7 +83,7 @@ func (m *Manager) RevokeAllUserSessions(act *ActionDTO.UserTargeted) *Error.Stat
 
 	revokeQuery := query.New(revokeAllUserSessionsSQL, act.TargetUID)
 
-	queries := make([]*query.Query, 0, len(sessions) + 1)
+	queries := make([]*query.Query, 0, len(sessions)+1)
 	queries = append(queries, revokeQuery)
 
 	for i := range queries {
@@ -131,4 +131,3 @@ func (m *Manager) DeleteUserSessionsCache(UID string) *Error.Status {
 
 	return nil
 }
-

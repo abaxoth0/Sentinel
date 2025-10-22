@@ -28,7 +28,7 @@ func rateLimiterDenyHandler(window time.Duration) func(ctx echo.Context, id stri
 
 		sensivity := GetSensivity(ctx)
 
-		switch sensivity{
+		switch sensivity {
 		case InsignificantEndpoint:
 			log.Trace("Request blocked by rate limmiter", request.GetMetadata(ctx))
 		case DefaultEndpoint:
@@ -61,11 +61,11 @@ func (l *rateLimiter) Max5reqPerHour() echo.MiddlewareFunc {
 
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-			Rate: rate.Every(window / 5),
-			Burst: 1,
+			Rate:      rate.Every(window / 5),
+			Burst:     1,
 			ExpiresIn: window * 2,
 		}),
-		DenyHandler: rateLimiterDenyHandler(window / 5),
+		DenyHandler:         rateLimiterDenyHandler(window / 5),
 		IdentifierExtractor: rateLimiterIdentifierExtractor,
 	})
 }
@@ -75,11 +75,11 @@ func (l *rateLimiter) Max5reqPerMinute() echo.MiddlewareFunc {
 
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-			Rate: rate.Every(window / 5),
-			Burst: 3,
+			Rate:      rate.Every(window / 5),
+			Burst:     3,
 			ExpiresIn: window * 2,
 		}),
-		DenyHandler: rateLimiterDenyHandler(window / 5),
+		DenyHandler:         rateLimiterDenyHandler(window / 5),
 		IdentifierExtractor: rateLimiterIdentifierExtractor,
 	})
 }
@@ -89,11 +89,11 @@ func (l *rateLimiter) Max3reqPerMinute() echo.MiddlewareFunc {
 
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-			Rate: rate.Every(window / 3),
-			Burst: 1,
+			Rate:      rate.Every(window / 3),
+			Burst:     1,
 			ExpiresIn: window * 2,
 		}),
-		DenyHandler: rateLimiterDenyHandler(window / 3),
+		DenyHandler:         rateLimiterDenyHandler(window / 3),
 		IdentifierExtractor: rateLimiterIdentifierExtractor,
 	})
 }
@@ -103,11 +103,11 @@ func (l *rateLimiter) Max1reqPer5Minutes() echo.MiddlewareFunc {
 
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-			Rate: rate.Every(window * 5),
-			Burst: 1,
+			Rate:      rate.Every(window * 5),
+			Burst:     1,
 			ExpiresIn: window * 2,
 		}),
-		DenyHandler: rateLimiterDenyHandler(window * 5),
+		DenyHandler:         rateLimiterDenyHandler(window * 5),
 		IdentifierExtractor: rateLimiterIdentifierExtractor,
 	})
 }
@@ -115,11 +115,11 @@ func (l *rateLimiter) Max1reqPer5Minutes() echo.MiddlewareFunc {
 func (l *rateLimiter) Max1reqPerSecond() echo.MiddlewareFunc {
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-			Rate: 1,
-			Burst: 5,
+			Rate:      1,
+			Burst:     5,
 			ExpiresIn: time.Minute,
 		}),
-		DenyHandler: rateLimiterDenyHandler(1),
+		DenyHandler:         rateLimiterDenyHandler(1),
 		IdentifierExtractor: rateLimiterIdentifierExtractor,
 	})
 }
@@ -127,12 +127,11 @@ func (l *rateLimiter) Max1reqPerSecond() echo.MiddlewareFunc {
 func (l *rateLimiter) Max10reqPerSecond() echo.MiddlewareFunc {
 	return middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
 		Store: middleware.NewRateLimiterMemoryStoreWithConfig(middleware.RateLimiterMemoryStoreConfig{
-			Rate: 10,
-			Burst: 5,
+			Rate:      10,
+			Burst:     5,
 			ExpiresIn: time.Minute,
 		}),
-		DenyHandler: rateLimiterDenyHandler(10),
+		DenyHandler:         rateLimiterDenyHandler(10),
 		IdentifierExtractor: rateLimiterIdentifierExtractor,
 	})
 }
-

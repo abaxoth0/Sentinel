@@ -24,7 +24,7 @@ func (_ *Manager) getLocationByID(id string) (*LocationDTO.Full, *Error.Status) 
 	dto, err := executor.FullLocationDTO(
 		connection.Replica,
 		selectQuery,
-		cache.KeyBase[cache.LocationByID] + id,
+		cache.KeyBase[cache.LocationByID]+id,
 	)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (l *Manager) GetLocationBySessionID(act *ActionDTO.UserTargeted, sessionID 
 	dto, err := executor.FullLocationDTO(
 		connection.Replica,
 		selectQuery,
-		cache.KeyBase[cache.LocationBySessionID] + sessionID,
+		cache.KeyBase[cache.LocationBySessionID]+sessionID,
 	)
 	if err != nil {
 		return nil, err
@@ -73,4 +73,3 @@ func (l *Manager) GetLocationBySessionID(act *ActionDTO.UserTargeted, sessionID 
 
 	return dto, nil
 }
-

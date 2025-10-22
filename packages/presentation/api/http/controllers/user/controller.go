@@ -35,21 +35,21 @@ import (
 func Create(ctx echo.Context) error {
 	var body RequestBody.LoginAndPassword
 
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
-    }
+	if err := controller.BindAndValidate(ctx, &body); err != nil {
+		return err
+	}
 
-    reqMeta := request.GetMetadata(ctx)
+	reqMeta := request.GetMetadata(ctx)
 
-    uid, err := DB.Database.Create(body.Login, body.Password)
-    if err != nil {
-        return err
-    }
+	uid, err := DB.Database.Create(body.Login, body.Password)
+	if err != nil {
+		return err
+	}
 
 	tk, err := token.NewActivationToken(uid, body.Login)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
 	err = email.EnqueueEmail(email.ActivationEmail, body.Login, email.Substitutions{
 		email.TokenPlaceholder: tk.String(),
@@ -58,14 +58,14 @@ func Create(ctx echo.Context) error {
 		return err
 	}
 
-    controller.Log.Info("Creating new user: OK", reqMeta)
+	controller.Log.Info("Creating new user: OK", reqMeta)
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 // Creates basic action DTO with reason and binds specified request body
 func getReasonedAction(ctx echo.Context, body RequestBody.ReasonGetter) (*ActionDTO.Basic, error) {
-    reqMeta := request.GetMetadata(ctx)
+	reqMeta := request.GetMetadata(ctx)
 
 	controller.Log.Info("Binding request...", reqMeta)
 
@@ -76,7 +76,7 @@ func getReasonedAction(ctx echo.Context, body RequestBody.ReasonGetter) (*Action
 		controller.Log.Info("Binding request: OK", reqMeta)
 	}
 
-    act := SharedController.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
 	act.Reason = body.GetReason()
 
@@ -218,7 +218,7 @@ func Drop(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func BulkSoftDelete(ctx echo.Context) error {
-    act := SharedController.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
 
@@ -228,11 +228,11 @@ func BulkSoftDelete(ctx echo.Context) error {
 
 	act.Reason = body.Reason
 
-    if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
-        return err
-    }
+	if err := DB.Database.BulkSoftDelete(act, body.IDs); err != nil {
+		return err
+	}
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Restore several soft deleted users
@@ -253,7 +253,7 @@ func BulkSoftDelete(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func BulkRestore(ctx echo.Context) error {
-    act := SharedController.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
 	var body RequestBody.UsersIDs
 
@@ -263,11 +263,11 @@ func BulkRestore(ctx echo.Context) error {
 
 	act.Reason = body.Reason
 
-    if err := DB.Database.BulkRestore(act, body.IDs); err != nil {
-        return err
-    }
+	if err := DB.Database.BulkRestore(act, body.IDs); err != nil {
+		return err
+	}
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Drop all delete users
@@ -287,45 +287,45 @@ func BulkRestore(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func DropAllDeleted(ctx echo.Context) error {
-    act := SharedController.GetBasicAction(ctx)
+	act := SharedController.GetBasicAction(ctx)
 
-    if err := DB.Database.DropAllSoftDeleted(act); err != nil {
-        return err
-    }
+	if err := DB.Database.DropAllSoftDeleted(act); err != nil {
+		return err
+	}
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.UpdateUser) *Error.Status {
-    // if user tries to update himself
-    if filter.RequesterUID == filter.TargetUID {
-        if err := body.Validate(); err != nil {
-            return Error.NewStatusError(err.Error(), http.StatusBadRequest)
-        }
+	// if user tries to update himself
+	if filter.RequesterUID == filter.TargetUID {
+		if err := body.Validate(); err != nil {
+			return Error.NewStatusError(err.Error(), http.StatusBadRequest)
+		}
 
-        user, err := DB.Database.GetUserByID(filter.TargetUID)
-        if err != nil {
-            return err
-        }
+		user, err := DB.Database.GetUserByID(filter.TargetUID)
+		if err != nil {
+			return err
+		}
 
-        if err := authn.CompareHashAndPassword(user.Password, body.GetPassword()); err != nil {
-            return Error.NewStatusError("Неверный пароль", err.Status())
-        }
+		if err := authn.CompareHashAndPassword(user.Password, body.GetPassword()); err != nil {
+			return Error.NewStatusError("Неверный пароль", err.Status())
+		}
 
-        return nil
-    }
+		return nil
+	}
 
-    // if user tries to update another user
-    if err := body.Validate(); err != nil {
-        if _, ok := body.(*RequestBody.ChangePassword); ok {
-            if err == RequestBody.ErrorMissingPassword || err == RequestBody.ErrorInvalidPassword {
-                return nil
-            }
-        }
-        return Error.NewStatusError(err.Error(), http.StatusBadRequest)
-    }
+	// if user tries to update another user
+	if err := body.Validate(); err != nil {
+		if _, ok := body.(*RequestBody.ChangePassword); ok {
+			if err == RequestBody.ErrorMissingPassword || err == RequestBody.ErrorInvalidPassword {
+				return nil
+			}
+		}
+		return Error.NewStatusError(err.Error(), http.StatusBadRequest)
+	}
 
-    return nil
+	return nil
 }
 
 // TODO try to find a way to merge 'update' and 'handleUserStateUpdate'
@@ -333,63 +333,63 @@ func validateUpdateRequestBody(filter *ActionDTO.UserTargeted, body RequestBody.
 // Updates one of user's properties excluding state (deletion status).
 // If you want to update user's state use 'handleUserStateUpdate' instead.
 func update(ctx echo.Context, body RequestBody.UpdateUser) error {
-    reqMeta := request.GetMetadata(ctx)
+	reqMeta := request.GetMetadata(ctx)
 
-    controller.Log.Trace("Binding request...", reqMeta)
+	controller.Log.Trace("Binding request...", reqMeta)
 
-    if err := ctx.Bind(body); err != nil {
-        controller.Log.Error("Failed to bind request", err.Error(), reqMeta)
-        return err
-    }
+	if err := ctx.Bind(body); err != nil {
+		controller.Log.Error("Failed to bind request", err.Error(), reqMeta)
+		return err
+	}
 
-    controller.Log.Trace("Binding request: OK", reqMeta)
+	controller.Log.Trace("Binding request: OK", reqMeta)
 
-    uid := ctx.Param("uid")
+	uid := ctx.Param("uid")
 
-    act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
+	act := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
 
-    controller.Log.Trace("Validating user update request...", reqMeta)
+	controller.Log.Trace("Validating user update request...", reqMeta)
 
-    if e := validateUpdateRequestBody(act, body); e != nil {
-        controller.Log.Error("Invalid user update request", e.Error(), reqMeta)
-        return e
-    }
+	if e := validateUpdateRequestBody(act, body); e != nil {
+		controller.Log.Error("Invalid user update request", e.Error(), reqMeta)
+		return e
+	}
 
-    controller.Log.Trace("Validating user update request: OK", reqMeta)
+	controller.Log.Trace("Validating user update request: OK", reqMeta)
 
 	if act.TargetUID != act.RequesterUID {
 		act.Reason = body.GetReason()
 	}
 
 	var oldUser *UserDTO.Full
-    var err *Error.Status
+	var err *Error.Status
 
-    switch b := body.(type) {
-    case *RequestBody.ChangeLogin:
+	switch b := body.(type) {
+	case *RequestBody.ChangeLogin:
 		oldUser, err = DB.Database.GetUserByID(act.TargetUID)
 		if err != nil {
 			return err
 		}
-        err = DB.Database.ChangeLogin(act, b.Login)
-    case *RequestBody.ChangePassword:
+		err = DB.Database.ChangeLogin(act, b.Login)
+	case *RequestBody.ChangePassword:
 		oldUser, err = DB.Database.GetUserByID(act.TargetUID)
 		if err != nil {
 			return err
 		}
-        err = DB.Database.ChangePassword(act, b.NewPassword)
-    case *RequestBody.ChangeRoles:
-        err = DB.Database.ChangeRoles(act, b.Roles)
-    default:
+		err = DB.Database.ChangePassword(act, b.NewPassword)
+	case *RequestBody.ChangeRoles:
+		err = DB.Database.ChangeRoles(act, b.Roles)
+	default:
 		controller.Log.Panic(
 			"Invalid update call",
 			fmt.Sprintf("Unexpected request body type - %T", body),
 			reqMeta,
 		)
-        return nil
-    }
-    if err != nil {
-        return err
-    }
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 
 	// Even if this function fails - that means it fails to push alert email in mailer queue.
 	// So even if it will be successfully pushed, there are no guarantee that it will be delivered,
@@ -399,16 +399,16 @@ func update(ctx echo.Context, body RequestBody.UpdateUser) error {
 	// (but remember - this is a pet-project, it mustn't be fully production ready)
 	sendSecurityAlert(oldUser.Login, body)
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 func sendSecurityAlert(login string, body RequestBody.UpdateUser) *Error.Status {
 	var emailType email.EmailType
 
-	switch body.(type){
-    case *RequestBody.ChangeLogin:
+	switch body.(type) {
+	case *RequestBody.ChangeLogin:
 		emailType = email.LoginChangeAlertEmail
-    case *RequestBody.ChangePassword:
+	case *RequestBody.ChangePassword:
 		emailType = email.PasswordChangeAlertEmail
 	default:
 		return nil
@@ -441,7 +441,7 @@ func sendSecurityAlert(login string, body RequestBody.UpdateUser) *Error.Status 
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ChangeLogin(ctx echo.Context) error {
-    return update(ctx, new(RequestBody.ChangeLogin))
+	return update(ctx, new(RequestBody.ChangeLogin))
 }
 
 // @Summary 		Change user password
@@ -464,7 +464,7 @@ func ChangeLogin(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ChangePassword(ctx echo.Context) error {
-    return update(ctx, new(RequestBody.ChangePassword))
+	return update(ctx, new(RequestBody.ChangePassword))
 }
 
 // @Summary 		Change user roles
@@ -487,7 +487,7 @@ func ChangePassword(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ChangeRoles(ctx echo.Context) error {
-    return update(ctx, new(RequestBody.ChangeRoles))
+	return update(ctx, new(RequestBody.ChangeRoles))
 }
 
 // @Summary 		Get user roles
@@ -506,16 +506,16 @@ func ChangeRoles(ctx echo.Context) error {
 // @Router			/v1/user/{uid}/roles [get]
 // @Security		BearerAuth
 func GetRoles(ctx echo.Context) error {
-    uid := ctx.Param("uid")
+	uid := ctx.Param("uid")
 
-    filter := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
+	filter := SharedController.GetBasicAction(ctx).ToUserTargeted(uid)
 
-    roles, err := DB.Database.GetRoles(filter)
-    if err != nil {
-        return err
-    }
+	roles, err := DB.Database.GetRoles(filter)
+	if err != nil {
+		return err
+	}
 
-    return ctx.JSON(http.StatusOK, roles)
+	return ctx.JSON(http.StatusOK, roles)
 }
 
 // @Summary 		Check login availability
@@ -533,26 +533,26 @@ func GetRoles(ctx echo.Context) error {
 // @Header 			491 			{string} 	X-Session-Revoked 			"Set to 'true' if current user session was revoked"
 // @Router			/v1/user/login/available [get]
 func IsLoginAvailable(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
+	reqMeta := request.GetMetadata(ctx)
 
 	login := ctx.QueryParam("login")
 
-    if login == "" {
+	if login == "" {
 		message := "query param 'login' isn't specified"
 
 		controller.Log.Error("Failed to check if login '"+login+"' available", message, reqMeta)
 
-        return echo.NewHTTPError(http.StatusBadRequest, message)
-    }
+		return echo.NewHTTPError(http.StatusBadRequest, message)
+	}
 
-    available := DB.Database.IsLoginInUse(login)
+	available := DB.Database.IsLoginInUse(login)
 
-    return ctx.JSON(
-        http.StatusOK,
-        ResponseBody.IsLoginAvailable{
-            Available: available,
-        },
-    )
+	return ctx.JSON(
+		http.StatusOK,
+		ResponseBody.IsLoginAvailable{
+			Available: available,
+		},
+	)
 }
 
 // @Summary 		Users search
@@ -573,7 +573,7 @@ func IsLoginAvailable(ctx echo.Context) error {
 // @Router			/v1/user/search [get]
 // @Security		BearerAuth
 func SearchUsers(ctx echo.Context) error {
-    reqMeta := request.GetMetadata(ctx)
+	reqMeta := request.GetMetadata(ctx)
 
 	rawFilters := ctx.QueryParams()["filter"]
 	rawPage := ctx.QueryParam("page")
@@ -663,7 +663,7 @@ func GetUserSessions(ctx echo.Context) error {
 		location, err := DB.Database.GetLocationBySessionID(act, session.ID)
 		if err == nil {
 			res = append(res, ResponseBody.UserSession{
-				Session: session,
+				Session:  session,
 				Location: location.MakePublic(),
 			})
 		}
@@ -717,4 +717,3 @@ func GetUser(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, user.Basic.MakePublic())
 }
-

@@ -38,19 +38,19 @@ func GetCSRFToken(ctx echo.Context) error {
 		return err
 	}
 
-    // Set cookie
-    ctx.SetCookie(&http.Cookie{
-        Name:     "_csrf",
-        Value:    tokenStr,
-        Secure:   true,
-        HttpOnly: false,
-        SameSite: http.SameSiteStrictMode,
-        Path:     "/",
-        MaxAge:   300, // 5 minutes
-    })
+	// Set cookie
+	ctx.SetCookie(&http.Cookie{
+		Name:     "_csrf",
+		Value:    tokenStr,
+		Secure:   true,
+		HttpOnly: false,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+		MaxAge:   300, // 5 minutes
+	})
 
 	// Exposuring token like that is safe if CORS configured correctly
-    return ctx.JSON(200, ResponseBody.CSRF{ Token: tokenStr })
+	return ctx.JSON(200, ResponseBody.CSRF{Token: tokenStr})
 }
 
 // @Summary 		Login into the service
@@ -70,27 +70,27 @@ func GetCSRFToken(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func Login(ctx echo.Context) error {
-    var body RequestBody.Auth
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
-    }
+	var body RequestBody.Auth
+	if err := controller.BindAndValidate(ctx, &body); err != nil {
+		return err
+	}
 
 	reqMeta := request.GetMetadata(ctx)
 
 	controller.Log.Info("Authenticating user '"+body.Login+"'...", reqMeta)
 
-    user, err := DB.Database.GetUserByLogin(body.Login)
-    if err != nil {
-        if err.Side() == Error.ClientSide {
-            return authn.InvalidAuthCreditinals
-        }
-        return err
-    }
+	user, err := DB.Database.GetUserByLogin(body.Login)
+	if err != nil {
+		if err.Side() == Error.ClientSide {
+			return authn.InvalidAuthCreditinals
+		}
+		return err
+	}
 
-    if err := authn.CompareHashAndPassword(user.Password, body.Password); err != nil {
+	if err := authn.CompareHashAndPassword(user.Password, body.Password); err != nil {
 		controller.Log.Error("Failed to authenticate user '"+body.Login+"'", err.Error(), reqMeta)
-        return err
-    }
+		return err
+	}
 
 	return SharedController.Authenticate(ctx, user, body.Audience)
 }
@@ -114,10 +114,10 @@ func Login(ctx echo.Context) error {
 func Logout(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
-    authCookie, e := cookie.GetAuthCookie(ctx)
-    if e != nil {
-        return e
-    }
+	authCookie, e := cookie.GetAuthCookie(ctx)
+	if e != nil {
+		return e
+	}
 
 	refreshToken, err := SharedController.GetRefreshToken(ctx)
 	if err != nil {
@@ -157,7 +157,7 @@ func Logout(ctx echo.Context) error {
 
 	controller.Log.Info("Logoutting user "+user.ID+": OK", reqMeta)
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Refreshes auth tokens
@@ -179,10 +179,10 @@ func Refresh(ctx echo.Context) error {
 
 	controller.Log.Info("Refreshing auth tokens...", reqMeta)
 
-    currentRefreshToken, err := SharedController.GetRefreshToken(ctx)
-    if err != nil {
-        return controller.HandleTokenError(ctx, err)
-    }
+	currentRefreshToken, err := SharedController.GetRefreshToken(ctx)
+	if err != nil {
+		return controller.HandleTokenError(ctx, err)
+	}
 
 	payload := UserMapper.PayloadFromClaims(currentRefreshToken.Claims.(*token.Claims))
 
@@ -192,22 +192,22 @@ func Refresh(ctx echo.Context) error {
 	}
 
 	accessToken, refreshToken, err := SharedController.UpdateSession(ctx, nil, user, payload)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    ctx.SetCookie(cookie.NewAuthCookie(refreshToken))
+	ctx.SetCookie(cookie.NewAuthCookie(refreshToken))
 
 	controller.Log.Info("Refreshing auth tokens: OK", reqMeta)
 
-    return ctx.JSON(
-        http.StatusOK,
-        ResponseBody.Token{
-            Message: "Токены успешно обновлены",
-            AccessToken: accessToken.String(),
-            ExpiresIn: int(accessToken.TTL()) / 1000,
-        },
-    )
+	return ctx.JSON(
+		http.StatusOK,
+		ResponseBody.Token{
+			Message:     "Токены успешно обновлены",
+			AccessToken: accessToken.String(),
+			ExpiresIn:   int(accessToken.TTL()) / 1000,
+		},
+	)
 }
 
 // @Summary 		Verifies user authentication
@@ -226,7 +226,7 @@ func Refresh(ctx echo.Context) error {
 // @Router			/v1/auth [get]
 // @Security		BearerAuth
 func Verify(ctx echo.Context) error {
-    return ctx.JSON(http.StatusOK, SharedController.GetUserPayload(ctx))
+	return ctx.JSON(http.StatusOK, SharedController.GetUserPayload(ctx))
 }
 
 // @Summary 		Get JSON Web Keys (JWKs)
@@ -336,10 +336,10 @@ func RevokeAllUserSessions(ctx echo.Context) error {
 // @Failure			400,401,403,500	{object} 	responsebody.Error
 // @Router			/v1/auth/forgot-password [post]
 func ForgotPassword(ctx echo.Context) error {
-    var body RequestBody.UserLogin
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
-    }
+	var body RequestBody.UserLogin
+	if err := controller.BindAndValidate(ctx, &body); err != nil {
+		return err
+	}
 
 	user, err := DB.Database.GetUserByLogin(body.Login)
 	if err != nil {
@@ -374,10 +374,10 @@ func ForgotPassword(ctx echo.Context) error {
 // @Security		CSRF_Header
 // @Security		CSRF_Cookie
 func ResetPassword(ctx echo.Context) error {
-    var body RequestBody.PasswordReset
-    if err := controller.BindAndValidate(ctx, &body); err != nil {
-        return err
-    }
+	var body RequestBody.PasswordReset
+	if err := controller.BindAndValidate(ctx, &body); err != nil {
+		return err
+	}
 
 	tk, err := token.ParseSingedToken(body.Token, config.Secret.PasswordResetTokenPublicKey)
 	if err != nil {
@@ -399,4 +399,3 @@ func ResetPassword(ctx echo.Context) error {
 
 	return ctx.NoContent(http.StatusOK)
 }
-

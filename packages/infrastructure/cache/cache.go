@@ -16,32 +16,31 @@ import (
 // For example, full cache key must look like that: user_id:2384
 
 const (
-	UserKeyPrefix 		 	= "user_"
-	DeletedUserKeyPrefix 	= "sd_user_"
-	AnyUserKeyPrefix 	 	= "any_user_"
-	SessionKeyPrefix 	 	= "session_"
+	UserKeyPrefix           = "user_"
+	DeletedUserKeyPrefix    = "sd_user_"
+	AnyUserKeyPrefix        = "any_user_"
+	SessionKeyPrefix        = "session_"
 	RevokedSessionKeyPrefix = "revoked_session_"
-	LocationKeyPrefix 		= "location_"
+	LocationKeyPrefix       = "location_"
 )
 
 type client interface {
-    Connect()
-    Close() *Error.Status
-    Get(key string) (string, bool)
+	Connect()
+	Close() *Error.Status
+	Get(key string) (string, bool)
 	// Uses default cache TTL (config.Cache.TTL())
-    Set(key string, value any) *Error.Status
+	Set(key string, value any) *Error.Status
 	// Same as Set(), but uses custom TTL instead of default
 	SetWithTTL(key string, value any, ttl time.Duration) *Error.Status
-    Delete(keys ...string) *Error.Status
-    FlushAll() *Error.Status
-    // Deletes cache entries whose keys match the pattern.
-    // When need to delete a lot of entries consider using ProgressiveDeletePattern.
-    DeletePattern(pattern string) *Error.Status
-    // Do the same as DeletePattern, but more optimized for deleting a large amount of entries
-    ProgressiveDeletePattern(pattern string) *Error.Status
+	Delete(keys ...string) *Error.Status
+	FlushAll() *Error.Status
+	// Deletes cache entries whose keys match the pattern.
+	// When need to delete a lot of entries consider using ProgressiveDeletePattern.
+	DeletePattern(pattern string) *Error.Status
+	// Do the same as DeletePattern, but more optimized for deleting a large amount of entries
+	ProgressiveDeletePattern(pattern string) *Error.Status
 	// Same as Delete, but uses batch processing
 	ProgressiveDelete(keys []string) *Error.Status
 }
 
 var Client client = redis.New()
-

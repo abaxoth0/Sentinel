@@ -24,10 +24,10 @@ import (
 func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 	log.DB.Info("Soft deleting user...", nil)
 
-    if err := act.ValidateUIDs(); err != nil {
+	if err := act.ValidateUIDs(); err != nil {
 		log.DB.Error("Failed to soft delete user", err.Error(), nil)
-        return err
-    }
+		return err
+	}
 
 	if err := authz.User.SoftDeleteUser(
 		act.RequesterUID == act.TargetUID,
@@ -36,23 +36,23 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 		return err
 	}
 
-    user, err := m.GetUserByID(act.TargetUID)
-    if err != nil {
-        return err
-    }
+	user, err := m.GetUserByID(act.TargetUID)
+	if err != nil {
+		return err
+	}
 
-    auditUserDTO := newAuditDTO(audit.DeleteOperation, act, user)
+	auditUserDTO := newAuditDTO(audit.DeleteOperation, act, user)
 
-    updateQuery := query.New(
-        `UPDATE "user" SET deleted_at = $1, version = version + 1
+	updateQuery := query.New(
+		`UPDATE "user" SET deleted_at = $1, version = version + 1
         WHERE id = $2 AND deleted_at IS NULL;`,
-        // deleted_at set manualy instead of using NOW()
-        // cuz changed_at and deleted_at should be synchronized
-        auditUserDTO.ChangedAt, act.TargetUID,
-    )
+		// deleted_at set manualy instead of using NOW()
+		// cuz changed_at and deleted_at should be synchronized
+		auditUserDTO.ChangedAt, act.TargetUID,
+	)
 	sessionsDeleteQuery := SessionTable.NewRevokeAllUserSessionsQuery(act)
 
-    if err := execTxWithAudit(&auditUserDTO, updateQuery, sessionsDeleteQuery); err != nil {
+	if err := execTxWithAudit(&auditUserDTO, updateQuery, sessionsDeleteQuery); err != nil {
 		return err
 	}
 
@@ -71,21 +71,21 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 func (m *Manager) Restore(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
 	log.DB.Info("Restoring soft deleted user...", nil)
 
-    if err := act.ValidateUIDs(); err != nil {
+	if err := act.ValidateUIDs(); err != nil {
 		log.DB.Error("Failed to restore soft deleted user", err.Error(), nil)
-        return err
-    }
+		return err
+	}
 
 	if err := authz.User.RestoreUser(act.RequesterRoles); err != nil {
 		return err
 	}
 
-    user, err := m.GetSoftDeletedUserByID(act.TargetUID)
-    if err != nil {
-        return err
-    }
+	user, err := m.GetSoftDeletedUserByID(act.TargetUID)
+	if err != nil {
+		return err
+	}
 
-    auditUserDTO := newAuditDTO(audit.RestoreOperation, act, user)
+	auditUserDTO := newAuditDTO(audit.RestoreOperation, act, user)
 
 	queries := []*query.Query{}
 
@@ -116,7 +116,7 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted, newLogin string) *Error.S
 		),
 	)
 
-    if err := execTxWithAudit(&auditUserDTO, queries...); err != nil {
+	if err := execTxWithAudit(&auditUserDTO, queries...); err != nil {
 		return err
 	}
 
@@ -140,9 +140,9 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 		return Error.StatusInternalError
 	}
 
-    if err := act.ValidateRequesterUID(); err != nil {
-        return err
-    }
+	if err := act.ValidateRequesterUID(); err != nil {
+		return err
+	}
 
 	for _, uid := range UIDs {
 		if uid == act.RequesterUID {
@@ -158,7 +158,7 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 		if err := validation.UUID(uid); err != nil {
 			return err.ToStatus(
 				"One of user IDs has no value", // empty string or just a bunch of ' '
-				"Invalid user ID format (expected UUID): " + uid,
+				"Invalid user ID format (expected UUID): "+uid,
 			)
 		}
 	}
@@ -174,7 +174,7 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 		return err
 	}
 	if len(deletedUsers) != len(UIDs) {
-		ids := make([]string, 0, len(UIDs) - len(deletedUsers))
+		ids := make([]string, 0, len(UIDs)-len(deletedUsers))
 		for _, user := range deletedUsers {
 			if !slices.Contains(UIDs, user.ID) {
 				ids = append(ids, user.ID)
@@ -192,7 +192,7 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 	cond = util.Ternary(newState == user.DeletedState, "IS", "IS NOT")
 	value := util.Ternary(newState == user.DeletedState, "NOW()", "NULL")
 
-	queries := make([]*query.Query, 0, len(deletedUsers) + 1)
+	queries := make([]*query.Query, 0, len(deletedUsers)+1)
 
 	updateQuery := query.New(
 		`UPDATE "user" SET deleted_at = `+value+`, version = version + 1 WHERE id = ANY($1) and deleted_at `+cond+` NULL`,
@@ -235,7 +235,7 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 }
 
 func (m *Manager) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Status {
-	uidsStr := strings.Join(UIDs,", ")
+	uidsStr := strings.Join(UIDs, ", ")
 
 	log.DB.Info("Bulk soft deleting users "+uidsStr+"...", nil)
 
@@ -253,7 +253,7 @@ func (m *Manager) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Sta
 }
 
 func (m *Manager) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status {
-	uidsStr := strings.Join(UIDs,", ")
+	uidsStr := strings.Join(UIDs, ", ")
 
 	log.DB.Info("Bulk soft deleting users "+uidsStr+"...", nil)
 
@@ -274,17 +274,17 @@ func (m *Manager) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status
 func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 	log.DB.Info("Dropping soft deleted user...", nil)
 
-    if err := act.ValidateUIDs(); err != nil {
+	if err := act.ValidateUIDs(); err != nil {
 		log.DB.Error("Failed to drop soft deleted user", err.Error(), nil)
-        return err
-    }
+		return err
+	}
 
 	if err := authz.User.DropUser(act.RequesterRoles); err != nil {
 		return err
 	}
 
-    user, err := m.GetSoftDeletedUserByID(act.TargetUID)
-    if err != nil {
+	user, err := m.GetSoftDeletedUserByID(act.TargetUID)
+	if err != nil {
 		if err != Error.StatusNotFound {
 			return err
 		}
@@ -296,15 +296,15 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 
 		errMsg := "Only soft deleted users can be dropped"
 		log.DB.Error("Failed to drop soft deleted user", errMsg, nil)
-        return Error.NewStatusError(errMsg, http.StatusBadRequest)
-    }
+		return Error.NewStatusError(errMsg, http.StatusBadRequest)
+	}
 
-    deleteQuery := query.New(
-        `DELETE FROM "user"
+	deleteQuery := query.New(
+		`DELETE FROM "user"
         WHERE id = $1 AND deleted_at IS NOT NULL;`,
-        act.TargetUID,
-    )
-    if err := executor.Exec(connection.Primary, deleteQuery); err != nil {
+		act.TargetUID,
+	)
+	if err := executor.Exec(connection.Primary, deleteQuery); err != nil {
 		return err
 	}
 
@@ -321,41 +321,40 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 func (m *Manager) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
 	log.DB.Info("Dropping all soft deleted users...", nil)
 
-    if err := act.ValidateRequesterUID(); err != nil {
+	if err := act.ValidateRequesterUID(); err != nil {
 		log.DB.Error("Failed to drop all soft deleted users", err.Error(), nil)
-        return err
-    }
+		return err
+	}
 
 	if err := authz.User.DropAllSoftDeletedUsers(act.RequesterRoles); err != nil {
 		return err
 	}
 
-    user, err := m.GetUserByID(act.RequesterUID)
-    if err != nil {
-        return err
-    }
+	user, err := m.GetUserByID(act.RequesterUID)
+	if err != nil {
+		return err
+	}
 
-    // it's not necessary, but may it be here.
-    // Some additional security checks won't be a problem.
-    for _, role := range user.Roles {
-        if !slices.Contains(act.RequesterRoles, role) {
+	// it's not necessary, but may it be here.
+	// Some additional security checks won't be a problem.
+	for _, role := range user.Roles {
+		if !slices.Contains(act.RequesterRoles, role) {
 			errMsg := "Your roles differs on server, try to re-logging in"
 			log.DB.Error("Failed to drop all soft deleted users", errMsg, nil)
-            return Error.NewStatusError(errMsg, http.StatusConflict)
-        }
-    }
+			return Error.NewStatusError(errMsg, http.StatusConflict)
+		}
+	}
 
-    deleteQuery := query.New(
-        `DELETE FROM "user"
+	deleteQuery := query.New(
+		`DELETE FROM "user"
         WHERE deleted_at IS NOT NULL;`,
-    )
+	)
 
-    err = executor.Exec(connection.Primary, deleteQuery)
+	err = executor.Exec(connection.Primary, deleteQuery)
 
-    cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
+	cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
 
 	log.DB.Info("Dropping all soft deleted users: OK", nil)
 
-    return err
+	return err
 }
-

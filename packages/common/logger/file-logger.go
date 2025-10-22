@@ -19,47 +19,47 @@ import (
 var fileLog = NewSource("FILE LOGGER", Stderr)
 
 const (
-	fallbackBatchSize 	= 500
-	fallbackWorkers   	= 5
-	stopTimeout  		= time.Second * 10
+	fallbackBatchSize = 500
+	fallbackWorkers   = 5
+	stopTimeout       = time.Second * 10
 )
 
 // Satisfies Logger and LoggerBinder interfaces
 type FileLogger struct {
-	name 				 string
-	instance 			 string
-	isInit 				 bool
-    done                 chan struct{}
-    isRunning            atomic.Bool
-    disruptor            *structs.Disruptor[*LogEntry]
-    fallback             *structs.WorkerPool
-    logger               *log.Logger
-    logFile              *os.File
-    transmissions        []Logger
-    taskProducer         func(entry *LogEntry) *logTask
-	streamPool			 sync.Pool
+	name          string
+	instance      string
+	isInit        bool
+	done          chan struct{}
+	isRunning     atomic.Bool
+	disruptor     *structs.Disruptor[*LogEntry]
+	fallback      *structs.WorkerPool
+	logger        *log.Logger
+	logFile       *os.File
+	transmissions []Logger
+	taskProducer  func(entry *LogEntry) *logTask
+	streamPool    sync.Pool
 }
 
 func NewFileLogger(name string) *FileLogger {
-    if err := os.MkdirAll("/var/log/sentinel", 0755); err != nil {
-        panic("Failed to create log directory: " + err.Error())
-    }
+	if err := os.MkdirAll("/var/log/sentinel", 0755); err != nil {
+		panic("Failed to create log directory: " + err.Error())
+	}
 
 	logger := &FileLogger{
-		name: name,
-        done: make(chan struct{}),
-        disruptor: structs.NewDisruptor[*LogEntry](),
-        fallback: structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
-			BatchSize: fallbackBatchSize,
+		name:      name,
+		done:      make(chan struct{}),
+		disruptor: structs.NewDisruptor[*LogEntry](),
+		fallback: structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
+			BatchSize:   fallbackBatchSize,
 			StopTimeout: stopTimeout,
 		}),
-        transmissions: []Logger{},
+		transmissions: []Logger{},
 		streamPool: sync.Pool{
 			New: func() any {
 				return jsoniter.NewStream(jsoniter.ConfigFastest, nil, 1024)
 			},
 		},
-    }
+	}
 	logger.taskProducer = newTaskProducer(logger)
 
 	return logger
@@ -67,22 +67,22 @@ func NewFileLogger(name string) *FileLogger {
 
 func (l *FileLogger) Init(instance string) {
 	// file with logs have following format: <logger name>:<app instance>:<session start date>
-	fileName := l.name+":"+instance+":"+time.Now().Format(time.RFC3339)+".log"
+	fileName := l.name + ":" + instance + ":" + time.Now().Format(time.RFC3339) + ".log"
 
-    f, err := os.OpenFile(
-		"/var/log/sentinel/" + fileName,
-        os.O_APPEND | os.O_CREATE | os.O_WRONLY,
-        0644, // -rw-r--r--
-    )
-    if err != nil {
-        panic(err)
-    }
+	f, err := os.OpenFile(
+		"/var/log/sentinel/"+fileName,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+		0644, // -rw-r--r--
+	)
+	if err != nil {
+		panic(err)
+	}
 
-    logger := log.New(
-        f,
-        "",
-        log.LstdFlags | log.Lmicroseconds,
-    )
+	logger := log.New(
+		f,
+		"",
+		log.LstdFlags|log.Lmicroseconds,
+	)
 
 	l.instance = instance
 	l.logger = logger
@@ -96,75 +96,75 @@ func (l *FileLogger) Start(debug bool) error {
 		return errors.New("logger isn't initialized")
 	}
 
-    if l.isRunning.Load() {
-        return errors.New("logger already started")
-    }
+	if l.isRunning.Load() {
+		return errors.New("logger already started")
+	}
 
-    // canceled WorkerPool can't be started
-    if l.fallback.IsCanceled() {
-        l.fallback = structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
-			BatchSize: fallbackBatchSize,
+	// canceled WorkerPool can't be started
+	if l.fallback.IsCanceled() {
+		l.fallback = structs.NewWorkerPool(context.Background(), &structs.WorkerPoolOptions{
+			BatchSize:   fallbackBatchSize,
 			StopTimeout: stopTimeout,
 		})
-    }
+	}
 
-    l.isRunning.Store(true)
+	l.isRunning.Store(true)
 
-    go l.disruptor.Consume(l.handler)
-    go l.fallback.Start(fallbackWorkers)
+	go l.disruptor.Consume(l.handler)
+	go l.fallback.Start(fallbackWorkers)
 
-    for {
-        select {
-        case <-l.done:
-            return nil
-        default:
-            time.Sleep(time.Millisecond * 50)
-        }
-    }
+	for {
+		select {
+		case <-l.done:
+			return nil
+		default:
+			time.Sleep(time.Millisecond * 50)
+		}
+	}
 }
 
 func (l *FileLogger) Stop() error {
-    if !l.isRunning.Load() {
-        return errors.New("logger isn't started, hence can't be stopped")
-    }
+	if !l.isRunning.Load() {
+		return errors.New("logger isn't started, hence can't be stopped")
+	}
 
-    l.isRunning.Store(false)
+	l.isRunning.Store(false)
 
-    l.disruptor.Close()
+	l.disruptor.Close()
 
-    disruptorDone := false
-    timeout := time.After(stopTimeout)
+	disruptorDone := false
+	timeout := time.After(stopTimeout)
 
-    for !disruptorDone {
-        select {
-        case <-timeout:
-            fileLog.Error("disruptor processing timeout during shutdown", "", nil)
-            disruptorDone = true
-        default:
-            if l.disruptor.IsEmpty() {
-                disruptorDone = true
-            } else {
-                time.Sleep(time.Millisecond * 10)
-            }
-        }
-    }
+	for !disruptorDone {
+		select {
+		case <-timeout:
+			fileLog.Error("disruptor processing timeout during shutdown", "", nil)
+			disruptorDone = true
+		default:
+			if l.disruptor.IsEmpty() {
+				disruptorDone = true
+			} else {
+				time.Sleep(time.Millisecond * 10)
+			}
+		}
+	}
 
-    if err := l.fallback.Cancel(); err != nil {
-        return err
-    }
+	if err := l.fallback.Cancel(); err != nil {
+		return err
+	}
 
-    // Flush any remaining data in the file buffer
-    if err := l.logger.Writer().(*os.File).Sync(); err != nil {
-        fileLog.Error("failed to sync log file during shutdown", err.Error(), nil)
-    }
+	// Flush any remaining data in the file buffer
+	if err := l.logger.Writer().(*os.File).Sync(); err != nil {
+		fileLog.Error("failed to sync log file during shutdown", err.Error(), nil)
+	}
 
-    if err := l.logFile.Close(); err != nil {
-        return err
-    }
+	if err := l.logFile.Close(); err != nil {
+		return err
+	}
 
-    close(l.done)
+	close(l.done)
 
-    return nil
+	return nil
 }
 
 func (l *FileLogger) handler(entry *LogEntry) {
@@ -193,20 +193,20 @@ func (l *FileLogger) handler(entry *LogEntry) {
 }
 
 func (l *FileLogger) log(entry *LogEntry) {
-    // if ok is false, that means disruptor's buffer is overflowed
-    if ok := l.disruptor.Publish(entry); ok {
-        return
-    }
+	// if ok is false, that means disruptor's buffer is overflowed
+	if ok := l.disruptor.Publish(entry); ok {
+		return
+	}
 
-    l.fallback.Push(l.taskProducer(entry))
+	l.fallback.Push(l.taskProducer(entry))
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-    if !preprocess(entry, l.transmissions) {
+	if !preprocess(entry, l.transmissions) {
 		return
-    }
+	}
 
-    l.log(entry)
+	l.log(entry)
 
 	if entry.rawLevel >= FatalLogLevel {
 		handleCritical(entry)
@@ -214,34 +214,34 @@ func (l *FileLogger) Log(entry *LogEntry) {
 }
 
 func (l *FileLogger) NewTransmission(logger Logger) error {
-    if logger == nil {
-        return errors.New("received nil instead of logger")
-    }
+	if logger == nil {
+		return errors.New("received nil instead of logger")
+	}
 
-    if l == logger {
-        return errors.New("can't create transmission for self")
-    }
+	if l == logger {
+		return errors.New("can't create transmission for self")
+	}
 
-    if slices.Contains(l.transmissions, logger) {
-        return errors.New("this logger already has transmission")
-    }
+	if slices.Contains(l.transmissions, logger) {
+		return errors.New("this logger already has transmission")
+	}
 
-    l.transmissions = append(l.transmissions, logger)
+	l.transmissions = append(l.transmissions, logger)
 
-    return nil
+	return nil
 }
 
 func (l *FileLogger) RemoveTransmission(logger Logger) error {
-    if logger == nil {
-        return errors.New("received nil instead of logger")
-    }
+	if logger == nil {
+		return errors.New("received nil instead of logger")
+	}
 
-    for idx, transmission := range l.transmissions {
-        if transmission == logger {
-            l.transmissions = slices.Delete(l.transmissions, idx, idx+1)
-            return nil
-        }
-    }
+	for idx, transmission := range l.transmissions {
+		if transmission == logger {
+			l.transmissions = slices.Delete(l.transmissions, idx, idx+1)
+			return nil
+		}
+	}
 
-    return errors.New("transmission now found")
+	return errors.New("transmission now found")
 }

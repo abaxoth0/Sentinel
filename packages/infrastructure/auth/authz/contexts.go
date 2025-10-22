@@ -5,9 +5,9 @@ import (
 )
 
 func newAuthzContext(
-    entity *rbac.Entity,
-    actionName string,
-    requiredPermissions rbac.Permissions,
+	entity *rbac.Entity,
+	actionName string,
+	requiredPermissions rbac.Permissions,
 	resource *rbac.Resource,
 ) rbac.AuthorizationContext {
 	act := rbac.Action(actionName)
@@ -24,29 +24,29 @@ func newAuthzContext(
 }
 
 var (
-	userSoftDeleteUserContext 			rbac.AuthorizationContext
-	userSoftDeleteSelfContext 			rbac.AuthorizationContext
-	userRestoreUserContext 				rbac.AuthorizationContext
-	userDropUserContext 				rbac.AuthorizationContext
-	userDropAllSoftDeletedUsersContext 	rbac.AuthorizationContext
-	userChangeUserLoginContext 			rbac.AuthorizationContext
-	userChangeSelfLoginContext 			rbac.AuthorizationContext
-	userChangeUserPasswordContext 		rbac.AuthorizationContext
-	userChangeSelfPasswordContext 		rbac.AuthorizationContext
-	userChangeUserRolesContext 			rbac.AuthorizationContext
-	userChangeSelfRolesContext			rbac.AuthorizationContext
-	userGetUserRolesContext				rbac.AuthorizationContext
-	userSearchUsersContext 				rbac.AuthorizationContext
-	userLogoutUserContext 				rbac.AuthorizationContext
-	userGetSessionContext 				rbac.AuthorizationContext
-	userGetSelfSessionContext 			rbac.AuthorizationContext
-	userAccessAPIDocsContext 			rbac.AuthorizationContext
-	userGetSessionLocationContext 		rbac.AuthorizationContext
-	userDeleteLocationContext 			rbac.AuthorizationContext
-	userGetUserContext 					rbac.AuthorizationContext
-	userGetSelfContext 					rbac.AuthorizationContext
-	userIntrospectOAuthTokenContext 	rbac.AuthorizationContext
-	userDropCacheContext 				rbac.AuthorizationContext
+	userSoftDeleteUserContext          rbac.AuthorizationContext
+	userSoftDeleteSelfContext          rbac.AuthorizationContext
+	userRestoreUserContext             rbac.AuthorizationContext
+	userDropUserContext                rbac.AuthorizationContext
+	userDropAllSoftDeletedUsersContext rbac.AuthorizationContext
+	userChangeUserLoginContext         rbac.AuthorizationContext
+	userChangeSelfLoginContext         rbac.AuthorizationContext
+	userChangeUserPasswordContext      rbac.AuthorizationContext
+	userChangeSelfPasswordContext      rbac.AuthorizationContext
+	userChangeUserRolesContext         rbac.AuthorizationContext
+	userChangeSelfRolesContext         rbac.AuthorizationContext
+	userGetUserRolesContext            rbac.AuthorizationContext
+	userSearchUsersContext             rbac.AuthorizationContext
+	userLogoutUserContext              rbac.AuthorizationContext
+	userGetSessionContext              rbac.AuthorizationContext
+	userGetSelfSessionContext          rbac.AuthorizationContext
+	userAccessAPIDocsContext           rbac.AuthorizationContext
+	userGetSessionLocationContext      rbac.AuthorizationContext
+	userDeleteLocationContext          rbac.AuthorizationContext
+	userGetUserContext                 rbac.AuthorizationContext
+	userGetSelfContext                 rbac.AuthorizationContext
+	userIntrospectOAuthTokenContext    rbac.AuthorizationContext
+	userDropCacheContext               rbac.AuthorizationContext
 )
 
 func initContexts() {
@@ -215,4 +215,3 @@ func initContexts() {
 
 	log.Info("Initializing contexts: OK", nil)
 }
-

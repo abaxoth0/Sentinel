@@ -38,4 +38,3 @@ func (m *Manager) SaveSession(session *SessionDTO.Full) *Error.Status {
 
 	return nil
 }
-

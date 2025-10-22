@@ -19,19 +19,18 @@ func (e *Validation) Error() string {
 // Will return Error.StatusInternalError if for some reason
 // error is not NoValue or InvalidValue.
 func (e *Validation) ToStatus(noValueMsg string, invalidValueMsg string) *Status {
-    if e == NoValue {
-        return NewStatusError(noValueMsg, http.StatusBadRequest)
-    }
-    if e == InvalidValue {
-        return NewStatusError(invalidValueMsg, http.StatusBadRequest)
-    }
-    panic("Invalid validation error: Expected NoValue or InvalidValue")
+	if e == NoValue {
+		return NewStatusError(noValueMsg, http.StatusBadRequest)
+	}
+	if e == InvalidValue {
+		return NewStatusError(invalidValueMsg, http.StatusBadRequest)
+	}
+	panic("Invalid validation error: Expected NoValue or InvalidValue")
 }
 
 func NewValidationError(message string) *Validation {
-    return &Validation{message}
+	return &Validation{message}
 }
 
 var NoValue = NewValidationError("validation error: no value")
 var InvalidValue = NewValidationError("validation error: invalid value")
-

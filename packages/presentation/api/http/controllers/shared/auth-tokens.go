@@ -82,22 +82,21 @@ func GetRefreshToken(ctx echo.Context) (*jwt.Token, *Error.Status) {
 
 	controller.Log.Trace("Getting refresh token from the request...", reqMeta)
 
-    cookie, err := ctx.Cookie(cookie.RefreshTokenCookieKey)
-    if err != nil {
+	cookie, err := ctx.Cookie(cookie.RefreshTokenCookieKey)
+	if err != nil {
 		controller.Log.Error("Failed to get refresh token from cookie", err.Error(), reqMeta)
-        if err == http.ErrNoCookie {
-            return nil, Error.StatusUnauthorized
-        }
-        return nil, Error.StatusInternalError
-    }
+		if err == http.ErrNoCookie {
+			return nil, Error.StatusUnauthorized
+		}
+		return nil, Error.StatusInternalError
+	}
 
 	token, e := token.ParseSingedToken(cookie.Value, config.Secret.RefreshTokenPublicKey)
-    if e != nil {
-        return nil, e
-    }
+	if e != nil {
+		return nil, e
+	}
 
 	controller.Log.Trace("Getting refresh token from the request: OK", reqMeta)
 
 	return token, nil
 }
-

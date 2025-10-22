@@ -14,8 +14,8 @@ import (
 )
 
 var tokenIsMissing = echo.NewHTTPError(
-    http.StatusBadRequest,
-    "Token is missing",
+	http.StatusBadRequest,
+	"Token is missing",
 )
 
 // @Summary 		Activate user
@@ -31,18 +31,18 @@ var tokenIsMissing = echo.NewHTTPError(
 func Activate(ctx echo.Context) error {
 	reqMeta := request.GetMetadata(ctx)
 
-    token := ctx.Param("token")
+	token := ctx.Param("token")
 
-    if strings.ReplaceAll(token, " ", "") == "" {
+	if strings.ReplaceAll(token, " ", "") == "" {
 		controller.Log.Error("Failed to activate user", tokenIsMissing.Error(), reqMeta)
-        return tokenIsMissing
-    }
+		return tokenIsMissing
+	}
 
-    if err := DB.Database.Activate(token); err != nil {
-        return err
-    }
+	if err := DB.Database.Activate(token); err != nil {
+		return err
+	}
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
 
 // @Summary 		Resend activation token
@@ -60,22 +60,22 @@ func Resend(ctx echo.Context) error {
 
 	controller.Log.Info("Resending activation email...", reqMeta)
 
-    var body RequestBody.UserLogin
+	var body RequestBody.UserLogin
 
-    if e := controller.BindAndValidate(ctx, &body); e != nil {
-        return e
-    }
+	if e := controller.BindAndValidate(ctx, &body); e != nil {
+		return e
+	}
 
-    user, err := DB.Database.GetUserByLogin(body.Login)
-    if err != nil {
-        return err
-    }
+	user, err := DB.Database.GetUserByLogin(body.Login)
+	if err != nil {
+		return err
+	}
 
-    if user.IsActive() {
+	if user.IsActive() {
 		errMsg := "User already active"
 		controller.Log.Error("Failed to resend activation email", errMsg, reqMeta)
-        return echo.NewHTTPError(http.StatusConflict, errMsg)
-    }
+		return echo.NewHTTPError(http.StatusConflict, errMsg)
+	}
 
 	tk, err := token.NewActivationToken(user.ID, user.Login)
 	if err != nil {
@@ -85,10 +85,9 @@ func Resend(ctx echo.Context) error {
 	err = email.EnqueueEmail(email.ActivationEmail, user.Login, email.Substitutions{
 		email.TokenPlaceholder: tk.String(),
 	})
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    return ctx.NoContent(http.StatusOK)
+	return ctx.NoContent(http.StatusOK)
 }
-

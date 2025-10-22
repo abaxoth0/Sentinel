@@ -43,12 +43,11 @@ func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSessi
 	}
 
 	cache.Client.Delete(
-		cache.KeyBase[cache.SessionByID] + sessionID,
-		cache.KeyBase[cache.UserBySessionID] + sessionID,
+		cache.KeyBase[cache.SessionByID]+sessionID,
+		cache.KeyBase[cache.UserBySessionID]+sessionID,
 	)
 
 	log.DB.Trace("Updating session "+sessionID+": OK", nil)
 
 	return nil
 }
-

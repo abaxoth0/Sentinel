@@ -28,8 +28,8 @@ import (
 type deviceType string
 
 const (
-	mobile 	deviceType = "mobile"
-	tablet 	deviceType = "tablet"
+	mobile  deviceType = "mobile"
+	tablet  deviceType = "tablet"
 	desktop deviceType = "desktop"
 )
 
@@ -138,19 +138,19 @@ func createSession(ctx echo.Context, ID string, UID string, ttl time.Duration) (
 	now := time.Now()
 
 	return &SessionDTO.Full{
-		ID: ID,
-		UserID: UID,
-		UserAgent: ua.String,
-		IpAddress: net.ParseIP(ctx.RealIP()),
-		DeviceID: deviceID,
-		DeviceType: string(deviceType),
-		OS: os,
-		OSVersion: osVersion,
-		Browser: ua.Name,
+		ID:             ID,
+		UserID:         UID,
+		UserAgent:      ua.String,
+		IpAddress:      net.ParseIP(ctx.RealIP()),
+		DeviceID:       deviceID,
+		DeviceType:     string(deviceType),
+		OS:             os,
+		OSVersion:      osVersion,
+		Browser:        ua.Name,
 		BrowserVersion: ua.Version,
-		CreatedAt: now,
-		LastUsedAt: now,
-		ExpiresAt: now.Add(ttl),
+		CreatedAt:      now,
+		LastUsedAt:     now,
+		ExpiresAt:      now.Add(ttl),
 	}, nil
 }
 
@@ -199,19 +199,19 @@ func actualizeSession(
 	now := time.Now()
 
 	return &SessionDTO.Full{
-		ID: session.ID,
-		UserID: session.UserID,
-		UserAgent: ua.String,
-		IpAddress: net.ParseIP(ctx.RealIP()),
-		DeviceID: session.DeviceID,
-		DeviceType: session.DeviceType,
-		OS: session.OS,
-		OSVersion: osVersion,
-		Browser: session.Browser,
+		ID:             session.ID,
+		UserID:         session.UserID,
+		UserAgent:      ua.String,
+		IpAddress:      net.ParseIP(ctx.RealIP()),
+		DeviceID:       session.DeviceID,
+		DeviceType:     session.DeviceType,
+		OS:             session.OS,
+		OSVersion:      osVersion,
+		Browser:        session.Browser,
 		BrowserVersion: ua.Version,
-		CreatedAt: session.CreatedAt,
-		LastUsedAt: now,
-		ExpiresAt: now.Add(ttl),
+		CreatedAt:      session.CreatedAt,
+		LastUsedAt:     now,
+		ExpiresAt:      now.Add(ttl),
 	}, nil
 }
 
@@ -223,7 +223,7 @@ func UpdateSession(
 	session *SessionDTO.Full, // can be nil
 	user *UserDTO.Full,
 	payload *UserDTO.Payload, // from existing token claims
-) (accessToken *token.SignedToken, refreshToken *token.SignedToken, err *Error.Status){
+) (accessToken *token.SignedToken, refreshToken *token.SignedToken, err *Error.Status) {
 	if user == nil {
 		controller.Log.Panic(
 			"Invalid updateSession call",
@@ -290,4 +290,3 @@ func UpdateSession(
 
 	return accessToken, refreshToken, nil
 }
-

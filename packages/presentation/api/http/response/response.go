@@ -7,12 +7,11 @@ import (
 )
 
 var FailedToReadRequestBody = echo.NewHTTPError(
-    http.StatusBadRequest,
-    "Failed to read request body",
+	http.StatusBadRequest,
+	"Failed to read request body",
 )
 
 var FailedToDecodeRequestBody = echo.NewHTTPError(
-    http.StatusBadRequest,
-    "Failed to decode request body",
+	http.StatusBadRequest,
+	"Failed to decode request body",
 )
-

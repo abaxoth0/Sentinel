@@ -12,41 +12,40 @@ import (
 )
 
 func newAuditDTO(op audit.Operation, location *LocationDTO.Full) LocationDTO.Audit {
-    return LocationDTO.Audit{
+	return LocationDTO.Audit{
 		ChangedLocationID: location.ID,
-		Operation: string(op),
-		ChangedAt: time.Now(),
-		Full: location,
-    }
+		Operation:         string(op),
+		ChangedAt:         time.Now(),
+		Full:              location,
+	}
 }
 
 func newAuditQuery(dto *LocationDTO.Audit) *query.Query {
-    var deletedAt = util.Ternary(dto.IsDeleted(), &dto.DeletedAt, nil)
+	var deletedAt = util.Ternary(dto.IsDeleted(), &dto.DeletedAt, nil)
 
-    return query.New(
-        `INSERT INTO "audit_location"
+	return query.New(
+		`INSERT INTO "audit_location"
         (changed_location_id, session_id, operation, ip, country, region, city, latitude, longitude, isp, deleted_at, created_at, changed_at)
         VALUES
         ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        dto.ChangedLocationID,
+		dto.ChangedLocationID,
 		dto.SessionID,
-        dto.Operation,
+		dto.Operation,
 		dto.IP,
-        dto.Country,
-        dto.Region,
-        dto.City,
-        dto.Latitude,
+		dto.Country,
+		dto.Region,
+		dto.City,
+		dto.Latitude,
 		dto.Longitude,
 		dto.ISP,
 		deletedAt,
 		dto.CreatedAt,
 		dto.ChangedAt,
-    )
+	)
 }
 
 func execTxWithAudit(dto *LocationDTO.Audit, queries ...*query.Query) *Error.Status {
-    queries = append(queries, newAuditQuery(dto))
+	queries = append(queries, newAuditQuery(dto))
 
-    return transaction.New(queries...).Exec(connection.Primary)
+	return transaction.New(queries...).Exec(connection.Primary)
 }
-

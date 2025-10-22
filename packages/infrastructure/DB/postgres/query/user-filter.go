@@ -10,18 +10,18 @@ import (
 )
 
 type UserFilter struct {
-	Property  user.Property
-	Cond 	  filterCond
-	Value 	  any
+	Property user.Property
+	Cond     filterCond
+	Value    any
 }
 
 // Creates valid SQL query condition based on this UserFilter.
 // n - number of argument, used for value placeholders.
 // If Cond is CondIsNull or CondIsNotNull then placeholder will be ommited.
 // Example output:
-// 	- "id = $1"
-//	- "roles @> $8"
-//	- "deleted_at IS NULL"
+//   - "id = $1"
+//   - "roles @> $8"
+//   - "deleted_at IS NULL"
 func (f UserFilter) Build(n int) string {
 	base := string(f.Property) + " " + string(f.Cond)
 
@@ -48,7 +48,7 @@ func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error
 			log.DB.Error("Failed to map user filters", errMsg, nil)
 			return nil, errors.New(errMsg)
 		}
-		if f.Cond != filter.IsNull && f.Cond != filter.IsNotNull && f.Value == nil{
+		if f.Cond != filter.IsNull && f.Cond != filter.IsNotNull && f.Value == nil {
 			errMsg := "Filter Value is missing or nil"
 			log.DB.Error("Failed to map user filters", errMsg, nil)
 			return nil, errors.New(errMsg)
@@ -56,8 +56,8 @@ func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error
 
 		queryFilter[i] = UserFilter{
 			Property: f.Property,
-			Cond: condMap[f.Cond],
-			Value: f.Value,
+			Cond:     condMap[f.Cond],
+			Value:    f.Value,
 		}
 	}
 
@@ -65,4 +65,3 @@ func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error
 
 	return queryFilter, nil
 }
-

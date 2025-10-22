@@ -19,9 +19,9 @@ func DeleteCookie(ctx echo.Context, cookie *http.Cookie) {
 
 	transport.Log.Trace("Deleting cookie "+cookie.Name+"...", reqMeta)
 
-    cookie.Expires = time.Now().Add(time.Hour * -1)
+	cookie.Expires = time.Now().Add(time.Hour * -1)
 
-    ctx.SetCookie(cookie)
+	ctx.SetCookie(cookie)
 
 	transport.Log.Trace("Deleting cookie "+cookie.Name+": OK", reqMeta)
 }
@@ -31,32 +31,31 @@ func GetAuthCookie(ctx echo.Context) (*http.Cookie, *Error.Status) {
 
 	transport.Log.Trace("Getting auth cookie...", reqMeta)
 
-    authCookie, err := ctx.Cookie(RefreshTokenCookieKey)
+	authCookie, err := ctx.Cookie(RefreshTokenCookieKey)
 
-    if err != nil {
+	if err != nil {
 		transport.Log.Error("Failed to get auth cookie", err.Error(), reqMeta)
 
-        if err == http.ErrNoCookie {
-            return nil, Error.StatusUnauthorized
-        }
-        return nil, Error.StatusInternalError
-    }
+		if err == http.ErrNoCookie {
+			return nil, Error.StatusUnauthorized
+		}
+		return nil, Error.StatusInternalError
+	}
 
 	transport.Log.Trace("Getting auth cookie: OK", reqMeta)
 
-    return authCookie, nil
+	return authCookie, nil
 }
 
 func NewAuthCookie(refreshToken *token.SignedToken) *http.Cookie {
-    return &http.Cookie{
-		Name:     RefreshTokenCookieKey,
-		Value:    refreshToken.String(),
-		Path:     "/",
-        // token's TTL specified in millisconds,
-        // but MaxAge expects time in seconds
+	return &http.Cookie{
+		Name:  RefreshTokenCookieKey,
+		Value: refreshToken.String(),
+		Path:  "/",
+		// token's TTL specified in millisconds,
+		// but MaxAge expects time in seconds
 		MaxAge:   int(refreshToken.TTL()) / 1000,
 		HttpOnly: true,
 		Secure:   config.HTTP.Secured,
 	}
 }
-

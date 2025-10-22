@@ -15,20 +15,20 @@ import (
 )
 
 func handleHttpError(err error, ctx echo.Context) {
-    if ctx.Response().Committed {
-        return
-    }
+	if ctx.Response().Committed {
+		return
+	}
 
-    // TODO check this out
-    // ctx.Response().Before()
-    // ctx.Response().After()
-    code := http.StatusInternalServerError
-    message := "Internal Server Error"
+	// TODO check this out
+	// ctx.Response().Before()
+	// ctx.Response().After()
+	code := http.StatusInternalServerError
+	message := "Internal Server Error"
 
 	switch e := any(err).(type) {
 	case *echo.HTTPError:
-        code = e.Code
-        message = e.Message.(string)
+		code = e.Code
+		message = e.Message.(string)
 	case *Error.Status:
 		code = e.Status()
 		message = e.Error()
@@ -39,7 +39,7 @@ func handleHttpError(err error, ctx echo.Context) {
 		)
 	}
 
-    statusText := Error.StatusText(code)
+	statusText := Error.StatusText(code)
 
 	if code == Error.SessionRevoked {
 		ctx.Response().Header().Set("X-Session-Revoked", "true")
@@ -50,12 +50,12 @@ func handleHttpError(err error, ctx echo.Context) {
 
 	reqMeta := request.GetMetadata(ctx)
 
-    controller.Log.Error(message, statusText, reqMeta)
+	controller.Log.Error(message, statusText, reqMeta)
 
 	// if server error
 	if code >= 500 {
 		if hub := sentryecho.GetHubFromContext(ctx); hub != nil {
-			hub.WithScope(func (scope *sentry.Scope) {
+			hub.WithScope(func(scope *sentry.Scope) {
 				scope.SetLevel(sentry.LevelError)
 
 				if httpErr, ok := err.(*echo.HTTPError); ok {
@@ -73,8 +73,7 @@ func handleHttpError(err error, ctx echo.Context) {
 	}
 
 	ctx.JSON(code, ResponseBody.Error{
-		Error: statusText,
+		Error:   statusText,
 		Message: message,
 	})
 }
-

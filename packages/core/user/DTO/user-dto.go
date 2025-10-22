@@ -13,35 +13,35 @@ import (
 */
 
 type Any interface {
-    IsDeleted() bool
+	IsDeleted() bool
 }
 
 type Public struct {
-    ID           string     `json:"id"`
-	Login        string     `json:"login"`
-	Roles        []string   `json:"roles"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
-	Version 	 uint32	    `json:"version"`
+	ID        string     `json:"id"`
+	Login     string     `json:"login"`
+	Roles     []string   `json:"roles"`
+	DeletedAt *time.Time `json:"deletedAt,omitempty"`
+	Version   uint32     `json:"version"`
 }
 
 func (dto *Public) IsDeleted() bool {
 	if dto.DeletedAt == nil {
 		return false
 	}
-    return !dto.DeletedAt.IsZero()
+	return !dto.DeletedAt.IsZero()
 }
 
 func (dto *Public) IsActive() bool {
-    return !slices.Contains(dto.Roles, "unconfirmed_user")
+	return !slices.Contains(dto.Roles, "unconfirmed_user")
 }
 
 type Basic struct {
-    ID           string    `json:"id"`
-	Login        string    `json:"login"`
-	Password     string    `json:"password"`
-	Roles        []string  `json:"roles"`
-	DeletedAt    *time.Time `json:"deletedAt,omitempty"`
-	Version 	 uint32	   `json:"version"`
+	ID        string     `json:"id"`
+	Login     string     `json:"login"`
+	Password  string     `json:"password"`
+	Roles     []string   `json:"roles"`
+	DeletedAt *time.Time `json:"deletedAt,omitempty"`
+	Version   uint32     `json:"version"`
 }
 
 // Creates new copy of this DTO, returns non-nil pointer to it
@@ -49,10 +49,10 @@ func (dto *Basic) Copy() *Basic {
 	roles := make([]string, len(dto.Roles))
 	copy(roles, dto.Roles)
 	return &Basic{
-		ID: dto.ID,
-		Login: dto.Login,
-		Password: dto.Password,
-		Roles: roles,
+		ID:        dto.ID,
+		Login:     dto.Login,
+		Password:  dto.Password,
+		Roles:     roles,
 		DeletedAt: dto.DeletedAt,
 	}
 }
@@ -61,34 +61,34 @@ func (dto *Basic) IsDeleted() bool {
 	if dto.DeletedAt == nil {
 		return false
 	}
-    return !dto.DeletedAt.IsZero()
+	return !dto.DeletedAt.IsZero()
 }
 
 func (dto *Basic) IsActive() bool {
-    return !slices.Contains(dto.Roles, "unconfirmed_user")
+	return !slices.Contains(dto.Roles, "unconfirmed_user")
 }
 
 func (dto *Basic) MakePublic() *Public {
 	return &Public{
-		ID: dto.ID,
-		Login: dto.Login,
-		Roles: dto.Roles,
+		ID:        dto.ID,
+		Login:     dto.Login,
+		Roles:     dto.Roles,
 		DeletedAt: dto.DeletedAt,
-		Version: dto.Version,
+		Version:   dto.Version,
 	}
 }
 
 type Full struct {
-    CreatedAt time.Time `json:"createdAt"`
+	CreatedAt time.Time `json:"createdAt"`
 
-	Basic				`json:",inline"`
+	Basic `json:",inline"`
 }
 
 func (dto *Full) IsDeleted() bool {
 	if dto.DeletedAt == nil {
 		return false
 	}
-    return !dto.DeletedAt.IsZero()
+	return !dto.DeletedAt.IsZero()
 }
 
 // Creates new copy of this DTO, returns non-nil pointer to it
@@ -98,39 +98,38 @@ func (dto *Full) Copy() *Full {
 	return &Full{
 		CreatedAt: dto.CreatedAt,
 		Basic: Basic{
-			ID: dto.ID,
-			Login: dto.Login,
-			Password: dto.Password,
-			Roles: roles,
+			ID:        dto.ID,
+			Login:     dto.Login,
+			Password:  dto.Password,
+			Roles:     roles,
 			DeletedAt: dto.DeletedAt,
 		},
 	}
 }
 
 type Audit struct {
-    ChangedUserID    string    	`json:"changedUserID"`
-    ChangedByUserID  string    	`json:"changedByUserID"`
-    Operation        string    	`json:"operation"`
-    ChangedAt        time.Time 	`json:"changedAt"`
-	Reason			 string		`json:"reason,omitempty"`
+	ChangedUserID   string    `json:"changedUserID"`
+	ChangedByUserID string    `json:"changedByUserID"`
+	Operation       string    `json:"operation"`
+	ChangedAt       time.Time `json:"changedAt"`
+	Reason          string    `json:"reason,omitempty"`
 
-	*Basic						`json:",inline"`
+	*Basic `json:",inline"`
 }
 
 func (dto *Audit) IsDeleted() bool {
 	if dto.DeletedAt == nil {
 		return false
 	}
-    return !dto.DeletedAt.IsZero()
+	return !dto.DeletedAt.IsZero()
 }
 
 // swagger:model UserPayload
 type Payload struct {
-	ID    		string   `json:"id" example:"d529a8d2-1eb4-4bce-82aa-e62095dbc653"`
-	Login 		string   `json:"login" example:"admin@mail.com"`
-	Roles 		[]string `json:"roles" example:"user,moderator"`
-	Version 	uint32	 `json:"version" example:"7"`
-	SessionID 	string 	 `json:"session-id" example:"35b92582-7694-4958-9751-1fef710cb94d"`
-	Audience	[]string `json:"audience" example:"urn:api:auth,urn:api:billing,https://example.domain.com"`
+	ID        string   `json:"id" example:"d529a8d2-1eb4-4bce-82aa-e62095dbc653"`
+	Login     string   `json:"login" example:"admin@mail.com"`
+	Roles     []string `json:"roles" example:"user,moderator"`
+	Version   uint32   `json:"version" example:"7"`
+	SessionID string   `json:"session-id" example:"35b92582-7694-4958-9751-1fef710cb94d"`
+	Audience  []string `json:"audience" example:"urn:api:auth,urn:api:billing,https://example.domain.com"`
 }
-

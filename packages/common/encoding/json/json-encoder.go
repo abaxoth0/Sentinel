@@ -8,7 +8,7 @@ import (
 )
 
 type Encoder struct {
-    //
+	//
 }
 
 // Decode given json.
@@ -17,11 +17,10 @@ func Decode[T any](input io.Reader) (T, error) {
 	var result T
 
 	if err := json.NewDecoder(input).Decode(&result); err != nil {
-        encoding.Log.Error("Failed to decode JSON", err.Error(), nil)
+		encoding.Log.Error("Failed to decode JSON", err.Error(), nil)
 
 		return result, err
 	}
 
 	return result, nil
 }
-

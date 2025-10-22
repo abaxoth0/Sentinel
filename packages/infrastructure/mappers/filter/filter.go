@@ -9,16 +9,16 @@ import (
 )
 
 const (
-	condEqualStr 		  = "="
-	condLessStr     	  = "<"
-	condGreaterStr		  = ">"
-	condLessOrEqualStr	  = "<="
+	condEqualStr          = "="
+	condLessStr           = "<"
+	condGreaterStr        = ">"
+	condLessOrEqualStr    = "<="
 	condGreaterOrEqualStr = ">="
-	condLikeStr			  = "~"
-	condIsNullStr		  = "null"
-	condIsNotNullStr 	  = "notnull"
-	condContainsStr		  = "@>"
-	condContainedStr	  = "<@"
+	condLikeStr           = "~"
+	condIsNullStr         = "null"
+	condIsNotNullStr      = "notnull"
+	condContainsStr       = "@>"
+	condContainedStr      = "<@"
 )
 
 var condsStrings = []string{
@@ -57,30 +57,30 @@ func GetCondFromStringPrefix(s string) (filter.Condition, error) {
 	return cond, nil
 }
 
-var condToStringMap = map[filter.Condition]string {
-	filter.Equal: 		   condEqualStr,
-	filter.Less: 		   condLessStr,
-	filter.Greater: 	   condGreaterStr,
+var condToStringMap = map[filter.Condition]string{
+	filter.Equal:          condEqualStr,
+	filter.Less:           condLessStr,
+	filter.Greater:        condGreaterStr,
 	filter.LessOrEqual:    condLessOrEqualStr,
 	filter.GreaterOrEqual: condGreaterOrEqualStr,
-	filter.Like: 		   condLikeStr,
-	filter.IsNull: 		   condIsNullStr,
-	filter.IsNotNull: 	   condIsNotNullStr,
-	filter.Contains: 	   condContainsStr,
-	filter.Containd: 	   condContainedStr,
+	filter.Like:           condLikeStr,
+	filter.IsNull:         condIsNullStr,
+	filter.IsNotNull:      condIsNotNullStr,
+	filter.Contains:       condContainsStr,
+	filter.Containd:       condContainedStr,
 }
 
-var stringToCondMap = map[string]filter.Condition {
-	condEqualStr:	   	   filter.Equal,
-	condLessStr: 	   	   filter.Less,
-	condGreaterStr: 	   filter.Greater,
+var stringToCondMap = map[string]filter.Condition{
+	condEqualStr:          filter.Equal,
+	condLessStr:           filter.Less,
+	condGreaterStr:        filter.Greater,
 	condLessOrEqualStr:    filter.LessOrEqual,
 	condGreaterOrEqualStr: filter.GreaterOrEqual,
-	condLikeStr: 	   	   filter.Like,
-	condIsNullStr:    	   filter.IsNull,
-	condIsNotNullStr: 	   filter.IsNotNull,
-	condContainsStr: 	   filter.Contains,
-	condContainedStr: 	   filter.Containd,
+	condLikeStr:           filter.Like,
+	condIsNullStr:         filter.IsNull,
+	condIsNotNullStr:      filter.IsNotNull,
+	condContainsStr:       filter.Contains,
+	condContainedStr:      filter.Containd,
 }
 
 func FormatCond(cond filter.Condition) (string, error) {
@@ -94,4 +94,3 @@ func FormatCond(cond filter.Condition) (string, error) {
 	mapper.Log.Trace("Formatting filter condition into the string: OK", nil)
 	return r, nil
 }
-

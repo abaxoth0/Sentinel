@@ -9,15 +9,15 @@ import (
 
 func MarshallFullLocationDTO(dto *LocationDTO.Full) ([]byte, error) {
 	return marshall(&pbgen.FullLocationDTO{
-		ID: dto.ID,
+		ID:        dto.ID,
 		SessionID: dto.SessionID,
-		IP: dto.IP,
-		Country: dto.Country,
-		Region: dto.Region,
-		City: dto.City,
-		Latitude: dto.Latitude,
+		IP:        dto.IP,
+		Country:   dto.Country,
+		Region:    dto.Region,
+		City:      dto.City,
+		Latitude:  dto.Latitude,
 		Longitude: dto.Longitude,
-		ISP: dto.ISP,
+		ISP:       dto.ISP,
 		DeletedAt: timestamppb.New(dto.DeletedAt),
 		CreatedAt: timestamppb.New(dto.CreatedAt),
 	})
@@ -30,17 +30,16 @@ func UnmarshallFullLocationDTO(rawDTO []byte) (*LocationDTO.Full, error) {
 	}
 
 	return &LocationDTO.Full{
-		ID: dto.ID,
+		ID:        dto.ID,
 		SessionID: dto.SessionID,
-		IP: dto.IP,
-		Country: dto.Country,
-		Region: dto.Region,
-		City: dto.City,
-		Latitude: dto.Latitude,
+		IP:        dto.IP,
+		Country:   dto.Country,
+		Region:    dto.Region,
+		City:      dto.City,
+		Latitude:  dto.Latitude,
 		Longitude: dto.Longitude,
-		ISP: dto.ISP,
+		ISP:       dto.ISP,
 		DeletedAt: dto.DeletedAt.AsTime(),
 		CreatedAt: dto.CreatedAt.AsTime(),
 	}, nil
 }
-

@@ -31,7 +31,7 @@ type seeker interface {
 
 	IsLoginInUse(login string) bool
 
-    GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status)
+	GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status)
 
 	GetUserVersion(UID string) (uint32, *Error.Status)
 }
@@ -59,4 +59,3 @@ type deleter interface {
 
 	BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status
 }
-

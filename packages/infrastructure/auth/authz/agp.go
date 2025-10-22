@@ -22,4 +22,3 @@ func initAGP() {
 
 	log.Info("Initializing Action Gate Policy: OK", nil)
 }
-

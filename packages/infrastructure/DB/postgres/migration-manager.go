@@ -30,7 +30,7 @@ func (_ Migrate) init() (*migrate.Migrate, error) {
 		"postgres",
 		dbDriver,
 	)
-	if err !=  nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -100,4 +100,3 @@ func (m Migrate) Down() error {
 func (m Migrate) Steps(n int) error {
 	return m.step(n)
 }
-

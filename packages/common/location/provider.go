@@ -20,16 +20,16 @@ var log = logger.NewSource("LOCATION PROVIDER", logger.Default)
 const fields string = "?fields=status,message,country,countryCode,region,regionName,city,lat,lon,isp"
 
 type geoIpResponseBody struct {
-	Status 	string 		`json:"status"`
-	Message string 		`json:"message"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
 
-	LocationDTO.Full 	`json:",inline"`
+	LocationDTO.Full `json:",inline"`
 }
 
 var circuitBreaker = gobreaker.NewCircuitBreaker[*LocationDTO.Full](gobreaker.Settings{
-	Name: "Location provider",
-	Interval: time.Second,
-	Timeout: time.Second * 20,
+	Name:        "Location provider",
+	Interval:    time.Second,
+	Timeout:     time.Second * 20,
 	MaxRequests: 10,
 })
 
@@ -49,12 +49,12 @@ func GetLocationFromIP(ip string) (*LocationDTO.Full, *Error.Status) {
 		var err error
 
 		structs.SetTimeout(context.Background(), requestTimeout, func(ctx context.Context) {
-			res, err = http.Get("http://ip-api.com/json/"+ip+fields)
+			res, err = http.Get("http://ip-api.com/json/" + ip + fields)
 		})
 		if err != nil {
 			log.Error("Failed to get location for "+ip, err.Error(), nil)
 			return nil, Error.NewStatusError(
-				"Failed to get user location:" + err.Error(),
+				"Failed to get user location:"+err.Error(),
 				http.StatusInternalServerError,
 			)
 		}
@@ -65,7 +65,7 @@ func GetLocationFromIP(ip string) (*LocationDTO.Full, *Error.Status) {
 			return nil, Error.NewStatusError(
 				"Failed to read response body from location provider",
 				http.StatusInternalServerError,
-				)
+			)
 		}
 		if body.Status != "success" {
 			log.Error("Failed to get location for "+ip, body.Message, nil)
@@ -97,4 +97,3 @@ func GetLocationFromIP(ip string) (*LocationDTO.Full, *Error.Status) {
 
 	return dto, nil
 }
-

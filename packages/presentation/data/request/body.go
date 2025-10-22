@@ -21,17 +21,17 @@ import (
 */
 
 func missingFieldValue(field string) *Error.Status {
-    return Error.NewStatusError(
-        fmt.Sprintf("Invalid request body: field '%s' has no value", field),
-        http.StatusBadRequest,
-    )
+	return Error.NewStatusError(
+		fmt.Sprintf("Invalid request body: field '%s' has no value", field),
+		http.StatusBadRequest,
+	)
 }
 
 func invalidFieldValue(field string) *Error.Status {
-    return Error.NewStatusError(
-        fmt.Sprintf("Invalid request body: field '%s' has invalid value", field),
-        http.StatusBadRequest,
-    )
+	return Error.NewStatusError(
+		fmt.Sprintf("Invalid request body: field '%s' has invalid value", field),
+		http.StatusBadRequest,
+	)
 }
 
 var ErrorMissingLogin = missingFieldValue("login")
@@ -50,35 +50,35 @@ var ErrorMissingUserIDs = missingFieldValue("IDs")
 var ErrorInvalidUserIDs = invalidFieldValue("IDs")
 
 var invalidField map[string]*Error.Status = map[string]*Error.Status{
-    "login": ErrorInvalidLogin,
-    "password": ErrorInvalidPassword,
-    "newPassword": ErrorInvalidNewPassword,
-    "roles": ErrorInvalidRoles,
+	"login":       ErrorInvalidLogin,
+	"password":    ErrorInvalidPassword,
+	"newPassword": ErrorInvalidNewPassword,
+	"roles":       ErrorInvalidRoles,
 }
 
 var missingField map[string]*Error.Status = map[string]*Error.Status{
-    "login": ErrorMissingLogin,
-    "password": ErrorMissingPassword,
-    "newPassword": ErrorMissingNewPassword,
-    "roles": ErrorMissingRoles,
+	"login":       ErrorMissingLogin,
+	"password":    ErrorMissingPassword,
+	"newPassword": ErrorMissingNewPassword,
+	"roles":       ErrorMissingRoles,
 }
 
 func validateStr(field string, value string) *Error.Status {
-    if value == "" {
-        return missingField[field]
-    }
-    if strings.ReplaceAll(value, " ", "") == ""{
-        return invalidField[field]
-    }
-    return nil
+	if value == "" {
+		return missingField[field]
+	}
+	if strings.ReplaceAll(value, " ", "") == "" {
+		return invalidField[field]
+	}
+	return nil
 }
 
 type Validator interface {
-    Validate() *Error.Status
+	Validate() *Error.Status
 }
 
 type PasswordGetter interface {
-    GetPassword() string
+	GetPassword() string
 }
 
 type ReasonGetter interface {
@@ -86,8 +86,8 @@ type ReasonGetter interface {
 }
 
 type UpdateUser interface {
-    PasswordGetter
-    Validator
+	PasswordGetter
+	Validator
 	ReasonGetter
 }
 
@@ -97,11 +97,11 @@ type UserPassword struct {
 }
 
 func (b *UserPassword) GetPassword() string {
-    return b.Password
+	return b.Password
 }
 
 func (b *UserPassword) Validate() *Error.Status {
-    return validateStr("password", b.Password)
+	return validateStr("password", b.Password)
 }
 
 // swagger:model UserLoginRequest
@@ -110,7 +110,7 @@ type UserLogin struct {
 }
 
 func (b *UserLogin) Validate() *Error.Status {
-    return validateStr("login", b.Login)
+	return validateStr("login", b.Login)
 }
 
 // swagger:model UserRolesRequest
@@ -119,15 +119,15 @@ type UserRoles struct {
 }
 
 func (b *UserRoles) Validate() *Error.Status {
-    if len(b.Roles) == 0 {
-        return ErrorMissingRoles
-    }
-    for _, role := range b.Roles {
-        if strings.ReplaceAll(role, " ", "") == "" {
-            return ErrorInvalidRoles
-        }
-    }
-    return nil
+	if len(b.Roles) == 0 {
+		return ErrorMissingRoles
+	}
+	for _, role := range b.Roles {
+		if strings.ReplaceAll(role, " ", "") == "" {
+			return ErrorInvalidRoles
+		}
+	}
+	return nil
 }
 
 type ActionReason struct {
@@ -140,54 +140,54 @@ func (b *ActionReason) GetReason() string {
 
 // swagger:model UserLoginAndPasswordRequest
 type LoginAndPassword struct {
-    UserLogin 		`json:",inline"`
-    UserPassword 	`json:",inline"`
+	UserLogin    `json:",inline"`
+	UserPassword `json:",inline"`
 }
 
 func (b *LoginAndPassword) Validate() *Error.Status {
-    if err := b.UserLogin.Validate(); err != nil {
-        return err
-    }
-    if err := b.UserPassword.Validate(); err != nil {
-        return err
-    }
-    return nil
+	if err := b.UserLogin.Validate(); err != nil {
+		return err
+	}
+	if err := b.UserPassword.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 type Auth struct {
-    UserLogin 			`json:",inline"`
-    UserPassword 		`json:",inline"`
-	Audience []string	`json:"audience"`
+	UserLogin    `json:",inline"`
+	UserPassword `json:",inline"`
+	Audience     []string `json:"audience"`
 }
 
 func (b *Auth) Validate() *Error.Status {
-    if err := b.UserLogin.Validate(); err != nil {
-        return err
-    }
-    if err := b.UserPassword.Validate(); err != nil {
-        return err
-    }
+	if err := b.UserLogin.Validate(); err != nil {
+		return err
+	}
+	if err := b.UserPassword.Validate(); err != nil {
+		return err
+	}
 	if b.Audience == nil || len(b.Audience) == 0 {
 		return missingFieldValue("audience")
 	}
-    return nil
+	return nil
 }
 
 // swagger:model UserChangePasswordRequest
 type ChangePassword struct {
-    UserPassword 		`json:",inline"`
-	NewPassword string 	`json:"newPassword" example:"your-new-password"`
-	Reason 		string 	`json:"reason" example:"Violation of terms of use"`
+	UserPassword `json:",inline"`
+	NewPassword  string `json:"newPassword" example:"your-new-password"`
+	Reason       string `json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *ChangePassword) Validate() *Error.Status {
-    if err := validateStr("newPassword", b.NewPassword); err != nil {
-        return err
-    }
-    if err := b.UserPassword.Validate(); err != nil {
-        return err
-    }
-    return nil
+	if err := validateStr("newPassword", b.NewPassword); err != nil {
+		return err
+	}
+	if err := b.UserPassword.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *ChangePassword) GetReason() string {
@@ -196,19 +196,19 @@ func (b *ChangePassword) GetReason() string {
 
 // swagger:model UserChangeLoginRequest
 type ChangeLogin struct {
-    UserLogin 		`json:",inline"`
-    UserPassword 	`json:",inline"`
-	Reason 	string 	`json:"reason" example:"Violation of terms of use"`
+	UserLogin    `json:",inline"`
+	UserPassword `json:",inline"`
+	Reason       string `json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *ChangeLogin) Validate() *Error.Status {
-    if err := b.UserLogin.Validate(); err != nil {
-        return err
-    }
-    if err := b.UserPassword.Validate(); err != nil {
-        return err
-    }
-    return nil
+	if err := b.UserLogin.Validate(); err != nil {
+		return err
+	}
+	if err := b.UserPassword.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *ChangeLogin) GetReason() string {
@@ -217,19 +217,19 @@ func (b *ChangeLogin) GetReason() string {
 
 // swagger:model UserChangeRolesRequest
 type ChangeRoles struct {
-    UserRoles 		`json:",inline"`
-    UserPassword 	`json:",inline"`
-	Reason 	string 	`json:"reason" example:"Violation of terms of use"`
+	UserRoles    `json:",inline"`
+	UserPassword `json:",inline"`
+	Reason       string `json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *ChangeRoles) Validate() *Error.Status {
-    if err := b.UserRoles.Validate(); err != nil {
-        return err
-    }
-    if err := b.UserPassword.Validate(); err != nil {
-        return err
-    }
-    return nil
+	if err := b.UserRoles.Validate(); err != nil {
+		return err
+	}
+	if err := b.UserPassword.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *ChangeRoles) GetReason() string {
@@ -238,8 +238,8 @@ func (b *ChangeRoles) GetReason() string {
 
 // swagger:model UsersIDsRequest
 type UsersIDs struct {
-	IDs 	[]string 	`json:"id" example:"cef85e5a-5a5f-42d0-81bd-1650391c0e82,9bc87af1-5f92-4d8c-bf41-7ade642c5a91"`
-	Reason 	string 		`json:"reason" example:"Violation of terms of use"`
+	IDs    []string `json:"id" example:"cef85e5a-5a5f-42d0-81bd-1650391c0e82,9bc87af1-5f92-4d8c-bf41-7ade642c5a91"`
+	Reason string   `json:"reason" example:"Violation of terms of use"`
 }
 
 func (b *UsersIDs) Validate() *Error.Status {
@@ -253,8 +253,8 @@ func (b *UsersIDs) Validate() *Error.Status {
 }
 
 type Introspect struct {
-	Token 	string 	`form:"token" json:"token" example:"eyJhbGciOiJFZER..."`
-	Type	string	`form:"type" json:"type" example:"access"`
+	Token string `form:"token" json:"token" example:"eyJhbGciOiJFZER..."`
+	Type  string `form:"type" json:"type" example:"access"`
 }
 
 func (b *Introspect) Validate() *Error.Status {
@@ -268,9 +268,9 @@ func (b *Introspect) Validate() *Error.Status {
 }
 
 type PasswordReset struct {
-	Token 		string 	`json:"token" example:"eyJhbGciOiJFZER..."`
+	Token string `json:"token" example:"eyJhbGciOiJFZER..."`
 
-	UserPassword		`json:",inline"`
+	UserPassword `json:",inline"`
 }
 
 func (b *PasswordReset) Validate() *Error.Status {
@@ -284,7 +284,6 @@ func (b *PasswordReset) Validate() *Error.Status {
 }
 
 type RestoreUser struct {
-	UserLogin 		`json:",inline"`
-	ActionReason 	`json:",inline"`
+	UserLogin    `json:",inline"`
+	ActionReason `json:",inline"`
 }
-

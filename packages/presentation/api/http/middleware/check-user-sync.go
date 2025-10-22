@@ -16,7 +16,7 @@ func setTokenRefreshRequiredHeader(ctx echo.Context) {
 
 // IMPORTANT: Works only if route\group was secured via 'secure' middleware.
 func CheckUserSync(next echo.HandlerFunc) echo.HandlerFunc {
-	return func (ctx echo.Context) error {
+	return func(ctx echo.Context) error {
 		reqMeta := request.GetMetadata(ctx)
 
 		if secured := ctx.Get("Secured"); secured == nil || !secured.(bool) {
@@ -53,4 +53,3 @@ func CheckUserSync(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(ctx)
 	}
 }
-

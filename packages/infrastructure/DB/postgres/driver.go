@@ -12,10 +12,10 @@ import (
 // Cuz all this structs are named "Manager" they can't be directly put into postgres struct,
 // this will cause an error. So the most easy solution for this problem is to create type aliases for them.
 type (
-	ConnectionManager 	= *connection.Manager
-    UserManager    		= *UserTable.Manager
-    SessionManager 		= *SessionTable.Manager
-    LocationManager 	= *LocationTable.Manager
+	ConnectionManager = *connection.Manager
+	UserManager       = *UserTable.Manager
+	SessionManager    = *SessionTable.Manager
+	LocationManager   = *LocationTable.Manager
 )
 
 type postgers struct {
@@ -36,14 +36,13 @@ func InitDriver() *postgers {
 
 	driver = &postgers{
 		ConnectionManager: ConnectionManager(connection),
-		UserManager: UserManager(user),
-		SessionManager: SessionManager(session),
-		LocationManager: LocationManager(location),
+		UserManager:       UserManager(user),
+		SessionManager:    SessionManager(session),
+		LocationManager:   LocationManager(location),
 	}
 
 	executor.Init(connection)
 	transaction.Init(connection)
 
-    return driver
+	return driver
 }
-
