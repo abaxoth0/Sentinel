@@ -1,10 +1,5 @@
 package sharedcontroller
 
-// 0xd34df00d
-// 0xd4b4c507
-// 0x0d34d10c
-// 0x001e5a5a
-
 import (
 	"net"
 	"net/http"
