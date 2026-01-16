@@ -72,3 +72,22 @@ func NewLogEntry(
 
 	return e
 }
+
+// Returns colour for SGR sequence (ANSI X3.64)
+func (level logLevel) getColour() string {
+	switch level {
+	case TraceLogLevel:
+		return "34" // blue
+	case DebugLogLevel:
+		return "36" // cyan
+	case InfoLogLevel:
+		return "32" // green
+	case WarningLogLevel:
+		return "33" // yellow
+	case ErrorLogLevel:
+		return "31" // red
+	case FatalLogLevel, PanicLogLevel:
+		return "35" // magenta
+	}
+	panic("Unknow logLevel")
+}

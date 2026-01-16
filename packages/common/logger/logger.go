@@ -15,39 +15,37 @@ func (m Meta) stringSuffix() string {
 		return ""
 	}
 
-	return createSuffixFromRequestMeta(m)
+	return createSuffixFromWellKnownMeta(m)
 }
 
-func createSuffixFromRequestMeta(m Meta) string {
-	s := " ("
-
-	if v, ok := m["addr"].(string); ok {
-		s += v + " "
-	}
-	if v, ok := m["method"].(string); ok {
-		s += v + " "
-	}
-	if v, ok := m["path"].(string); ok {
-		s += v + " "
-	}
-	if v, ok := m["user_agent"].(string); ok {
-		s += v + " "
-	}
-	if v, ok := m["request_id"].(string); ok {
-		s += "id:" + v
-	}
-
-	s += ")"
-
-	return s
+var wellKnownMetaProperties = []string{
+	"addr",
+	"method",
+	"path",
+	"user_agent",
+	"request_id",
 }
+
+func createSuffixFromWellKnownMeta(m Meta) string {
+	s := ""
+	for _, prop := range wellKnownMetaProperties {
+		if v, ok := m[prop].(string); ok {
+			s += v + " "
+		}
+	}
+	if s == "" {
+		return ""
+	}
+	return " ("+s+")"
+}
+
 
 type Logger interface {
 	Log(entry *LogEntry)
-	// Just performs logging of an entry. (saving it into a file, sending it to stdout et cetera)
-	// This method mustn't cause any side effects and mostly required for TransmittingLogger.
+	// Just logs specified entry.
+	// This method mustn't cause any side effects and mostly required for ForwardingLogger.
 	// e.g. entry with panic level won't cause panic when
-	// transmitted to another logger, only when main logger will handle it
+	// forwarded to another logger, only when main logger will handle it
 	log(entry *LogEntry)
 }
 
@@ -58,8 +56,8 @@ type ConcurrentLogger interface {
 	Stop() error
 }
 
-// Logger that can transmit logs to another loggers.
-type TransmittingLogger interface {
+// Logger that can forward logs to another loggers.
+type ForwardingLogger interface {
 	Logger
 
 	// Binds another logger to this logger.
@@ -67,15 +65,15 @@ type TransmittingLogger interface {
 	// (entry will be the same for all loggers)
 	//
 	// Can't bind to self. Can't bind to one logger more then once.
-	NewTransmission(logger Logger) error
+	NewForwarding(logger Logger) error
 
-	// Removes existing transition.
-	// Will return error if transmission to specified logger isn't exist.
-	RemoveTransmission(logger Logger) error
+	// Removes existing forwarding.
+	// Will return error if forwading to specified logger isn't exist.
+	RemoveForwarding(logger Logger) error
 }
 
 // Returns false if log must not be processed
-func preprocess(entry *LogEntry, transmissions []Logger) bool {
+func preprocess(entry *LogEntry, forwardings []Logger) bool {
 	if entry.rawLevel == DebugLogLevel && !Debug.Load() {
 		return false
 	}
@@ -84,13 +82,11 @@ func preprocess(entry *LogEntry, transmissions []Logger) bool {
 		return false
 	}
 
-	if transmissions != nil && len(transmissions) != 0 {
-		for _, transmission := range transmissions {
+	if forwardings != nil && len(forwardings) != 0 {
+		for _, forwardings := range forwardings {
 			// Must call log() not Log(), since log() just doing logging
 			// without any additional side effects.
-			// Also log() won't cause recursive transmissions.
-			// (cuz transmissions handled at Log())
-			transmission.log(entry)
+			forwardings.log(entry)
 		}
 	}
 

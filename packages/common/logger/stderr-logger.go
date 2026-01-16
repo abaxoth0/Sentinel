@@ -19,7 +19,8 @@ func newStderrLogger() *stderrLogger {
 }
 
 func (l *stderrLogger) log(entry *LogEntry) {
-	msg := "[" + entry.Source + ": " + entry.Level + "] " + entry.Message
+	// msg := "[" + entry.Source + ": " + entry.Level + "] " + entry.Message
+	msg := "[" + entry.Source + ": \033["+entry.rawLevel.getColour()+"m" + entry.Level + "\033[0m] " + entry.Message
 	if entry.rawLevel >= ErrorLogLevel {
 		msg += ": " + entry.Error
 	}

@@ -35,7 +35,7 @@ type FileLogger struct {
 	fallback      *structs.WorkerPool
 	logger        *log.Logger
 	logFile       *os.File
-	transmissions []Logger
+	forwardings   []Logger
 	taskProducer  func(entry *LogEntry) *logTask
 	streamPool    sync.Pool
 }
@@ -53,7 +53,7 @@ func NewFileLogger(name string) *FileLogger {
 			BatchSize:   fallbackBatchSize,
 			StopTimeout: stopTimeout,
 		}),
-		transmissions: []Logger{},
+		forwardings: []Logger{},
 		streamPool: sync.Pool{
 			New: func() any {
 				return jsoniter.NewStream(jsoniter.ConfigFastest, nil, 1024)
@@ -202,7 +202,7 @@ func (l *FileLogger) log(entry *LogEntry) {
 }
 
 func (l *FileLogger) Log(entry *LogEntry) {
-	if !preprocess(entry, l.transmissions) {
+	if !preprocess(entry, l.forwardings) {
 		return
 	}
 
@@ -219,14 +219,14 @@ func (l *FileLogger) NewTransmission(logger Logger) error {
 	}
 
 	if l == logger {
-		return errors.New("can't create transmission for self")
+		return errors.New("can't create forwarding for self")
 	}
 
-	if slices.Contains(l.transmissions, logger) {
-		return errors.New("this logger already has transmission")
+	if slices.Contains(l.forwardings, logger) {
+		return errors.New("forwarding duplication")
 	}
 
-	l.transmissions = append(l.transmissions, logger)
+	l.forwardings = append(l.forwardings, logger)
 
 	return nil
 }
@@ -236,12 +236,12 @@ func (l *FileLogger) RemoveTransmission(logger Logger) error {
 		return errors.New("received nil instead of logger")
 	}
 
-	for idx, transmission := range l.transmissions {
-		if transmission == logger {
-			l.transmissions = slices.Delete(l.transmissions, idx, idx+1)
+	for idx, forwadings := range l.forwardings {
+		if forwadings == logger {
+			l.forwardings = slices.Delete(l.forwardings, idx, idx+1)
 			return nil
 		}
 	}
 
-	return errors.New("transmission now found")
+	return errors.New("forwarding now found")
 }
