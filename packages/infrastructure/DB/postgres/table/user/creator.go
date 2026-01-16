@@ -4,8 +4,8 @@ import (
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/core/user"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
@@ -15,20 +15,20 @@ import (
 )
 
 func (m *Manager) Create(login string, password string) (string, *Error.Status) {
-	log.DB.Info("Creating new user...", nil)
+	dblog.Logger.Info("Creating new user...", nil)
 
 	if err := m.checkLoginAvailability(login); err != nil {
 		return "", err
 	}
 
 	if err := user.ValidatePassword(password); err != nil {
-		log.DB.Error("Failed to create new user", err.Error(), nil)
+		dblog.Logger.Error("Failed to create new user", err.Error(), nil)
 		return "", err
 	}
 
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		log.DB.Error("Failed to create new user", err.Error(), nil)
+		dblog.Logger.Error("Failed to create new user", err.Error(), nil)
 		return "", nil
 	}
 
@@ -49,7 +49,7 @@ func (m *Manager) Create(login string, password string) (string, *Error.Status) 
 		cache.KeyBase[cache.AnyUserByLogin]+login,
 	)
 
-	log.DB.Info("Creating new user: OK", nil)
+	dblog.Logger.Info("Creating new user: OK", nil)
 
 	return uid.String(), nil
 }

@@ -5,7 +5,7 @@ import (
 	"errors"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"time"
 
@@ -16,7 +16,7 @@ var conManager *connection.Manager
 
 func Init(manager *connection.Manager) {
 	if manager == nil {
-		log.DB.Panic(
+		dblog.Logger.Panic(
 			"Failed to initlized DB transaction module",
 			"Connetion manager can't be nil",
 			nil,
@@ -34,16 +34,16 @@ func New(queries ...*query.Query) *Transaction {
 }
 
 func (t *Transaction) Exec(conType connection.Type) *Error.Status {
-	log.DB.Trace("Executing transaction...", nil)
+	dblog.Logger.Trace("Executing transaction...", nil)
 
 	if len(t.queries) == 0 {
-		log.DB.Warning("Transaction has no queries, execution will be skipped", nil)
+		dblog.Logger.Warning("Transaction has no queries, execution will be skipped", nil)
 		return nil
 	}
 
 	for _, query := range t.queries {
 		if query == nil {
-			log.DB.Panic("Failed to run transaction", "At least one query is nil", nil)
+			dblog.Logger.Panic("Failed to run transaction", "At least one query is nil", nil)
 			return Error.StatusInternalError
 		}
 	}
@@ -59,7 +59,7 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 	case connection.Replica:
 		tx, err = conManager.ReplicaPool.Begin(ctx)
 	default:
-		log.DB.Panic(
+		dblog.Logger.Panic(
 			"Failed to run DB transaction",
 			"Unknown connection type",
 			nil,
@@ -67,29 +67,29 @@ func (t *Transaction) Exec(conType connection.Type) *Error.Status {
 	}
 
 	if err != nil {
-		log.DB.Error("Failed to begin transaction", err.Error(), nil)
+		dblog.Logger.Error("Failed to begin transaction", err.Error(), nil)
 		return Error.StatusInternalError
 	}
 
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			log.DB.Error("Rollback failed (non-critical)", err.Error(), nil)
+			dblog.Logger.Error("Rollback failed (non-critical)", err.Error(), nil)
 		}
 	}()
 
 	for _, query := range t.queries {
 		if _, err := tx.Exec(ctx, query.SQL, query.Args...); err != nil {
-			log.DB.Error("Transaction failed", err.Error(), nil)
+			dblog.Logger.Error("Transaction failed", err.Error(), nil)
 			return query.ConvertAndLogError(err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		log.DB.Error("Failed to commit transaction", err.Error(), nil)
+		dblog.Logger.Error("Failed to commit transaction", err.Error(), nil)
 		return Error.StatusInternalError
 	}
 
-	log.DB.Trace("Executing transaction: OK", nil)
+	dblog.Logger.Trace("Executing transaction: OK", nil)
 
 	return nil
 }

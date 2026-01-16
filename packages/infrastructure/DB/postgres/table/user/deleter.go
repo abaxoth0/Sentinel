@@ -9,8 +9,8 @@ import (
 	"sentinel/packages/core/user"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	SessionTable "sentinel/packages/infrastructure/DB/postgres/table/session"
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
@@ -22,10 +22,10 @@ import (
 )
 
 func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
-	log.DB.Info("Soft deleting user...", nil)
+	dblog.Logger.Info("Soft deleting user...", nil)
 
 	if err := act.ValidateUIDs(); err != nil {
-		log.DB.Error("Failed to soft delete user", err.Error(), nil)
+		dblog.Logger.Error("Failed to soft delete user", err.Error(), nil)
 		return err
 	}
 
@@ -63,16 +63,16 @@ func (m *Manager) SoftDelete(act *ActionDTO.UserTargeted) *Error.Status {
 
 	m.session.DeleteUserSessionsCache(user.ID)
 
-	log.DB.Info("Soft deleting user: OK", nil)
+	dblog.Logger.Info("Soft deleting user: OK", nil)
 
 	return nil
 }
 
 func (m *Manager) Restore(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
-	log.DB.Info("Restoring soft deleted user...", nil)
+	dblog.Logger.Info("Restoring soft deleted user...", nil)
 
 	if err := act.ValidateUIDs(); err != nil {
-		log.DB.Error("Failed to restore soft deleted user", err.Error(), nil)
+		dblog.Logger.Error("Failed to restore soft deleted user", err.Error(), nil)
 		return err
 	}
 
@@ -125,14 +125,14 @@ func (m *Manager) Restore(act *ActionDTO.UserTargeted, newLogin string) *Error.S
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	log.DB.Info("Restoring soft deleted user: OK", nil)
+	dblog.Logger.Info("Restoring soft deleted user: OK", nil)
 
 	return nil
 }
 
 func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UIDs []string) *Error.Status {
 	if newState != user.DeletedState && newState != user.NotDeletedState {
-		log.DB.Panic(
+		dblog.Logger.Panic(
 			"Invalid bulkStateUpdate call",
 			"newState must be either user.DeletedState, either user.NotDeletedState",
 			nil,
@@ -219,13 +219,13 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 		UIDs[i] = deletedUser.ID
 		logins[i] = deletedUser.Login
 		if newState == user.DeletedState {
-			log.DB.Trace("Revoking sessions of user "+deletedUser.ID+"...", nil)
+			dblog.Logger.Trace("Revoking sessions of user "+deletedUser.ID+"...", nil)
 			// TODO find more optimal solution, cuz this one cause a lot of DB queries
 			err := m.session.RevokeAllUserSessions(act.ToUserTargeted(deletedUser.ID))
 			if err != nil && err != Error.StatusNotFound {
-				log.DB.Error("Failed to revoke sessions of user "+deletedUser.ID, err.Error(), nil)
+				dblog.Logger.Error("Failed to revoke sessions of user "+deletedUser.ID, err.Error(), nil)
 			}
-			log.DB.Trace("Revoking sessions of user "+deletedUser.ID+": OK", nil)
+			dblog.Logger.Trace("Revoking sessions of user "+deletedUser.ID+": OK", nil)
 		}
 	}
 
@@ -237,7 +237,7 @@ func (m *Manager) bulkStateUpdate(newState user.State, act *ActionDTO.Basic, UID
 func (m *Manager) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Status {
 	uidsStr := strings.Join(UIDs, ", ")
 
-	log.DB.Info("Bulk soft deleting users "+uidsStr+"...", nil)
+	dblog.Logger.Info("Bulk soft deleting users "+uidsStr+"...", nil)
 
 	if err := authz.User.SoftDeleteUser(false, act.RequesterRoles); err != nil {
 		return err
@@ -247,7 +247,7 @@ func (m *Manager) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Sta
 		return err
 	}
 
-	log.DB.Info("Bulk soft deleting users "+uidsStr+": OK", nil)
+	dblog.Logger.Info("Bulk soft deleting users "+uidsStr+": OK", nil)
 
 	return nil
 }
@@ -255,7 +255,7 @@ func (m *Manager) BulkSoftDelete(act *ActionDTO.Basic, UIDs []string) *Error.Sta
 func (m *Manager) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status {
 	uidsStr := strings.Join(UIDs, ", ")
 
-	log.DB.Info("Bulk soft deleting users "+uidsStr+"...", nil)
+	dblog.Logger.Info("Bulk soft deleting users "+uidsStr+"...", nil)
 
 	if err := authz.User.RestoreUser(act.RequesterRoles); err != nil {
 		return err
@@ -265,17 +265,17 @@ func (m *Manager) BulkRestore(act *ActionDTO.Basic, UIDs []string) *Error.Status
 		return err
 	}
 
-	log.DB.Info("Bulk soft deleting users "+uidsStr+": OK", nil)
+	dblog.Logger.Info("Bulk soft deleting users "+uidsStr+": OK", nil)
 
 	return nil
 }
 
 // TODO add audit (there are some problem with foreign keys)
 func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
-	log.DB.Info("Dropping soft deleted user...", nil)
+	dblog.Logger.Info("Dropping soft deleted user...", nil)
 
 	if err := act.ValidateUIDs(); err != nil {
-		log.DB.Error("Failed to drop soft deleted user", err.Error(), nil)
+		dblog.Logger.Error("Failed to drop soft deleted user", err.Error(), nil)
 		return err
 	}
 
@@ -295,7 +295,7 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 		}
 
 		errMsg := "Only soft deleted users can be dropped"
-		log.DB.Error("Failed to drop soft deleted user", errMsg, nil)
+		dblog.Logger.Error("Failed to drop soft deleted user", errMsg, nil)
 		return Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
@@ -312,17 +312,17 @@ func (m *Manager) Drop(act *ActionDTO.UserTargeted) *Error.Status {
 	updatedUser.DeletedAt = new(time.Time)
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	log.DB.Info("Dropping soft deleted user: OK", nil)
+	dblog.Logger.Info("Dropping soft deleted user: OK", nil)
 
 	return nil
 }
 
 // TODO add audit (this method really cause a lot of problems)
 func (m *Manager) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
-	log.DB.Info("Dropping all soft deleted users...", nil)
+	dblog.Logger.Info("Dropping all soft deleted users...", nil)
 
 	if err := act.ValidateRequesterUID(); err != nil {
-		log.DB.Error("Failed to drop all soft deleted users", err.Error(), nil)
+		dblog.Logger.Error("Failed to drop all soft deleted users", err.Error(), nil)
 		return err
 	}
 
@@ -340,7 +340,7 @@ func (m *Manager) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
 	for _, role := range user.Roles {
 		if !slices.Contains(act.RequesterRoles, role) {
 			errMsg := "Your roles differs on server, try to re-logging in"
-			log.DB.Error("Failed to drop all soft deleted users", errMsg, nil)
+			dblog.Logger.Error("Failed to drop all soft deleted users", errMsg, nil)
 			return Error.NewStatusError(errMsg, http.StatusConflict)
 		}
 	}
@@ -354,7 +354,7 @@ func (m *Manager) DropAllSoftDeleted(act *ActionDTO.Basic) *Error.Status {
 
 	cache.Client.ProgressiveDeletePattern(cache.DeletedUserKeyPrefix + "*")
 
-	log.DB.Info("Dropping all soft deleted users: OK", nil)
+	dblog.Logger.Info("Dropping all soft deleted users: OK", nil)
 
 	return err
 }

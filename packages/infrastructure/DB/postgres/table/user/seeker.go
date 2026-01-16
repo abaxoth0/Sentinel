@@ -9,8 +9,8 @@ import (
 	"sentinel/packages/core/user"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
@@ -38,7 +38,7 @@ func (m *Manager) SearchUsers(
 ) ([]*UserDTO.Public, *Error.Status) {
 	filtersStr := strings.Join(rawFilters, ", ")
 
-	log.DB.Info("Searching users matching "+filtersStr+"...", nil)
+	dblog.Logger.Info("Searching users matching "+filtersStr+"...", nil)
 
 	if err := authz.User.SearchUsers(act.RequesterRoles); err != nil {
 		return nil, err
@@ -46,18 +46,18 @@ func (m *Manager) SearchUsers(
 
 	if page < 1 {
 		errMsg := "Invalid page size: " + strconv.Itoa(page) + ". It must greater greater than 0."
-		log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
+		dblog.Logger.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 		return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 	if pageSize < 1 || pageSize > config.DB.MaxSearchPageSize {
 		errMsg := "Invalid page size: " + strconv.Itoa(pageSize) + ". It must be between 1 and " + strconv.Itoa(config.DB.MaxSearchPageSize)
-		log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
+		dblog.Logger.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 		return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
 	if rawFilters == nil || len(rawFilters) == 0 {
 		errMsg := "Filter is missing or has invalid format"
-		log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
+		dblog.Logger.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 		return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
@@ -90,7 +90,7 @@ func (m *Manager) SearchUsers(
 	for i, filter := range filters {
 		if filter.Property == user.PasswordProperty {
 			errMsg := "Can't search by user password"
-			log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
+			dblog.Logger.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 			return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 		}
 
@@ -99,7 +99,7 @@ func (m *Manager) SearchUsers(
 		if filter.Cond != query.CondIsNotNull && filter.Cond != query.CondIsNull {
 			if filter.Value == nil || filter.Value == "" {
 				errMsg := "Filter has no value: " + rawFilters[i]
-				log.DB.Error("Failed to search users matching "+filtersStr, errMsg, nil)
+				dblog.Logger.Error("Failed to search users matching "+filtersStr, errMsg, nil)
 				return nil, Error.NewStatusError(errMsg, http.StatusBadRequest)
 			}
 
@@ -118,7 +118,7 @@ func (m *Manager) SearchUsers(
 		return nil, err
 	}
 
-	log.DB.Info("Searching users matching "+filtersStr+": OK", nil)
+	dblog.Logger.Info("Searching users matching "+filtersStr+": OK", nil)
 
 	return dtos, nil
 }
@@ -129,7 +129,7 @@ func (m *Manager) getUserBy(
 	state user.State,
 	cacheKey string,
 ) (*UserDTO.Full, *Error.Status) {
-	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+"...", nil)
+	dblog.Logger.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+"...", nil)
 
 	if conditionProperty == user.IdProperty {
 		if err := validation.UUID(conditionValue); err != nil {
@@ -137,7 +137,7 @@ func (m *Manager) getUserBy(
 				"user id isn't specified",
 				"user id has invalid value",
 			)
-			log.DB.Error(
+			dblog.Logger.Error(
 				"Failed to get "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue,
 				e.Error(),
 				nil,
@@ -151,7 +151,7 @@ func (m *Manager) getUserBy(
 				"User login isn't specified",
 				"User login has invalid value",
 			)
-			log.DB.Error(
+			dblog.Logger.Error(
 				"Failed to get "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue,
 				e.Error(),
 				nil,
@@ -170,7 +170,7 @@ func (m *Manager) getUserBy(
 	case user.DeletedState:
 		selectQuery = query.New(sql+" AND deleted_at IS NOT NULL;", conditionValue)
 	default:
-		log.DB.Panic("Invalid getUserBy() call", "Unknown user state: "+string(state), nil)
+		dblog.Logger.Panic("Invalid getUserBy() call", "Unknown user state: "+string(state), nil)
 		return nil, Error.StatusInternalError
 	}
 
@@ -179,7 +179,7 @@ func (m *Manager) getUserBy(
 		return nil, err
 	}
 
-	log.DB.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+":OK", nil)
+	dblog.Logger.Info("Getting "+state.String()+" user with "+string(conditionProperty)+" = "+conditionValue+":OK", nil)
 
 	return dto, nil
 }
@@ -231,24 +231,24 @@ func (m *Manager) GetUserBySessionID(sessionID string) (*UserDTO.Full, *Error.St
 
 // Return loginAlreadyInUse error if login already in use by some user, otherwise returns nil
 func (m *Manager) checkLoginAvailability(login string) *Error.Status {
-	log.DB.Info("Checking availability of login \""+login+"\"...", nil)
+	dblog.Logger.Info("Checking availability of login \""+login+"\"...", nil)
 
 	if err := user.ValidateLogin(login); err != nil {
-		log.DB.Error("Failed to check availability of login \""+login+"\"", err.Error(), nil)
+		dblog.Logger.Error("Failed to check availability of login \""+login+"\"", err.Error(), nil)
 		return err
 	}
 
 	_, err := m.GetUserByLogin(login)
 	if err != nil {
 		if err == Error.StatusNotFound {
-			log.DB.Info("Checking availability of login \""+login+"\": OK", nil)
+			dblog.Logger.Info("Checking availability of login \""+login+"\": OK", nil)
 			return nil
 		}
-		log.DB.Info("Checking availability of login \""+login+"\": Reserved by soft deleted user", nil)
+		dblog.Logger.Info("Checking availability of login \""+login+"\": Reserved by soft deleted user", nil)
 		return err
 	}
 
-	log.DB.Info("Checking availability of login \""+login+"\": Already in use", nil)
+	dblog.Logger.Info("Checking availability of login \""+login+"\": Already in use", nil)
 
 	// if there are no any error (which means that user with this login exists)
 	return loginAlreadyInUse
@@ -262,10 +262,10 @@ func (m *Manager) IsLoginInUse(login string) bool {
 }
 
 func (_ *Manager) GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status) {
-	log.DB.Info("Getting roles of user "+act.TargetUID+"...", nil)
+	dblog.Logger.Info("Getting roles of user "+act.TargetUID+"...", nil)
 
 	if err := act.ValidateTargetUID(); err != nil {
-		log.DB.Error("Failed to get roles of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to get roles of user "+act.TargetUID, err.Error(), nil)
 		return nil, err
 	}
 
@@ -296,13 +296,13 @@ func (_ *Manager) GetRoles(act *ActionDTO.UserTargeted) ([]string, *Error.Status
 
 	cache.Client.Set(cache.KeyBase[cache.UserRolesById]+act.TargetUID, strings.Join(roles, ","))
 
-	log.DB.Info("Getting roles of user "+act.TargetUID+": OK", nil)
+	dblog.Logger.Info("Getting roles of user "+act.TargetUID+": OK", nil)
 
 	return roles, nil
 }
 
 func (_ *Manager) GetUserVersion(UID string) (uint32, *Error.Status) {
-	log.DB.Info("Getting version of user "+UID+"...", nil)
+	dblog.Logger.Info("Getting version of user "+UID+"...", nil)
 
 	cacheKey := cache.KeyBase[cache.UserVersionByID] + UID
 
@@ -311,7 +311,7 @@ func (_ *Manager) GetUserVersion(UID string) (uint32, *Error.Status) {
 		if err != nil {
 			cache.Client.Delete(cacheKey)
 		} else {
-			log.DB.Info("Getting version of user "+UID+": OK", nil)
+			dblog.Logger.Info("Getting version of user "+UID+": OK", nil)
 			return uint32(ver), nil
 		}
 	}
@@ -334,7 +334,7 @@ func (_ *Manager) GetUserVersion(UID string) (uint32, *Error.Status) {
 
 	cache.Client.Set(cacheKey, version)
 
-	log.DB.Info("Getting version of user "+UID+": OK", nil)
+	dblog.Logger.Info("Getting version of user "+UID+": OK", nil)
 
 	return version, nil
 }

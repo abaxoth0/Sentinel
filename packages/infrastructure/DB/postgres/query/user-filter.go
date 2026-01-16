@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sentinel/packages/core/filter"
 	"sentinel/packages/core/user"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"strconv"
 )
 
@@ -35,7 +35,7 @@ func (f UserFilter) Build(n int) string {
 
 // Converts []filter.Entity[user.Property] to []QueryFilter.
 func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error) {
-	log.DB.Trace("Mapping user filters...", nil)
+	dblog.Logger.Trace("Mapping user filters...", nil)
 
 	queryFilter := make([]UserFilter, len(filters))
 
@@ -45,12 +45,12 @@ func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error
 				"Filter property or condition has invalid value. Property: %v; Condition: %v",
 				f.Property, f.Cond,
 			)
-			log.DB.Error("Failed to map user filters", errMsg, nil)
+			dblog.Logger.Error("Failed to map user filters", errMsg, nil)
 			return nil, errors.New(errMsg)
 		}
 		if f.Cond != filter.IsNull && f.Cond != filter.IsNotNull && f.Value == nil {
 			errMsg := "Filter Value is missing or nil"
-			log.DB.Error("Failed to map user filters", errMsg, nil)
+			dblog.Logger.Error("Failed to map user filters", errMsg, nil)
 			return nil, errors.New(errMsg)
 		}
 
@@ -61,7 +61,7 @@ func MapUserFilters(filters []filter.Entity[user.Property]) ([]UserFilter, error
 		}
 	}
 
-	log.DB.Trace("Mapping user filters: OK", nil)
+	dblog.Logger.Trace("Mapping user filters: OK", nil)
 
 	return queryFilter, nil
 }

@@ -9,7 +9,7 @@ import (
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
 	"sentinel/packages/infrastructure/auth/authz"
@@ -23,22 +23,22 @@ import (
 func invalidateBasicUserDtoCache(old, current *UserDTO.Full) {
 	invalidator := cache.NewBasicUserDtoInvalidator(old, current)
 	if err := invalidator.Invalidate(); err != nil {
-		log.DB.Error("Failed to invalidate cache", err.Error(), nil)
+		dblog.Logger.Error("Failed to invalidate cache", err.Error(), nil)
 	}
 }
 
 // TODO make this change methods also return old user?
 
 func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Error.Status {
-	log.DB.Info("Changing login of user "+act.TargetUID+"...", nil)
+	dblog.Logger.Info("Changing login of user "+act.TargetUID+"...", nil)
 
 	if err := act.ValidateUIDs(); err != nil {
-		log.DB.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
 		return err
 	}
 
 	if err := user.ValidateLogin(newLogin); err != nil {
-		log.DB.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
 		return err
 	}
 
@@ -56,7 +56,7 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
 
 	if user.Login == newLogin {
 		errMsg := "Login not changed: Current login and new login are the same"
-		log.DB.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to change login of user "+act.TargetUID, err.Error(), nil)
 		return Error.NewStatusError(errMsg, http.StatusConflict)
 	}
 
@@ -81,21 +81,21 @@ func (m *Manager) ChangeLogin(act *ActionDTO.UserTargeted, newLogin string) *Err
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	log.DB.Info("Changing login of user "+act.TargetUID+": OK", nil)
+	dblog.Logger.Info("Changing login of user "+act.TargetUID+": OK", nil)
 
 	return nil
 }
 
 func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string) *Error.Status {
-	log.DB.Info("Changing password of user "+act.TargetUID+"...", nil)
+	dblog.Logger.Info("Changing password of user "+act.TargetUID+"...", nil)
 
 	if err := act.ValidateUIDs(); err != nil {
-		log.DB.Error("Failed to change password of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to change password of user "+act.TargetUID, err.Error(), nil)
 		return err
 	}
 
 	if err := user.ValidatePassword(newPassword); err != nil {
-		log.DB.Error("Failed to change password of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to change password of user "+act.TargetUID, err.Error(), nil)
 		return err
 	}
 
@@ -113,7 +113,7 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
 
 	hashedPassword, e := hashPassword(newPassword)
 	if e != nil {
-		log.DB.Error("Failed to change password of user "+act.TargetUID, e.Error(), nil)
+		dblog.Logger.Error("Failed to change password of user "+act.TargetUID, e.Error(), nil)
 		return e
 	}
 
@@ -134,13 +134,13 @@ func (m *Manager) ChangePassword(act *ActionDTO.UserTargeted, newPassword string
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	log.DB.Info("Changing password of user "+act.TargetUID+": OK", nil)
+	dblog.Logger.Info("Changing password of user "+act.TargetUID+": OK", nil)
 
 	return nil
 }
 
 func (m *Manager) ChangeRoles(act *ActionDTO.UserTargeted, newRoles []string) *Error.Status {
-	log.DB.Info("Changing roles of user "+act.TargetUID+"...", nil)
+	dblog.Logger.Info("Changing roles of user "+act.TargetUID+"...", nil)
 
 main_loop:
 	for _, newRole := range newRoles {
@@ -151,12 +151,12 @@ main_loop:
 		}
 
 		errMsg := "Role '" + newRole + "' doesn't exists"
-		log.DB.Error("Failed to change roles of user "+act.TargetUID, errMsg, nil)
+		dblog.Logger.Error("Failed to change roles of user "+act.TargetUID, errMsg, nil)
 		return Error.NewStatusError(errMsg, http.StatusBadRequest)
 	}
 
 	if err := act.ValidateUIDs(); err != nil {
-		log.DB.Error("Failed to change roles of user "+act.TargetUID, err.Error(), nil)
+		dblog.Logger.Error("Failed to change roles of user "+act.TargetUID, err.Error(), nil)
 		return err
 	}
 
@@ -165,7 +165,7 @@ main_loop:
 
 	if act.TargetUID == act.RequesterUID && isRequesterAdmin && !isAdminInNewRoles {
 		errMsg := "Нельзя снять роль администратора с самого себя"
-		log.DB.Error("Failed to change roles of user "+act.TargetUID, errMsg, nil)
+		dblog.Logger.Error("Failed to change roles of user "+act.TargetUID, errMsg, nil)
 		return Error.NewStatusError(errMsg, http.StatusForbidden)
 	}
 
@@ -198,13 +198,13 @@ main_loop:
 	updatedUser.Version++
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	log.DB.Info("Changing roles of user "+act.TargetUID+": OK", nil)
+	dblog.Logger.Info("Changing roles of user "+act.TargetUID+": OK", nil)
 
 	return nil
 }
 
 func (m *Manager) Activate(tk string) *Error.Status {
-	log.DB.Info("Activating user...", nil)
+	dblog.Logger.Info("Activating user...", nil)
 
 	t, err := token.ParseSingedToken(tk, config.Secret.ActivationTokenPublicKey)
 	if err != nil {
@@ -219,7 +219,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
 	}
 	if user.IsActive() {
 		errMsg := "User already active"
-		log.DB.Error("Failed activate user", errMsg, nil)
+		dblog.Logger.Error("Failed activate user", errMsg, nil)
 		return Error.NewStatusError(errMsg, http.StatusConflict)
 	}
 
@@ -239,7 +239,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
 
 	// This should be impossible, but additional check won't be redundant
 	if updatedUser == nil {
-		log.DB.Error(
+		dblog.Logger.Error(
 			"Failed to activate user "+user.ID,
 			"User doesn't have role unconfirmed_user: "+strings.Join(user.Roles, ","),
 			nil,
@@ -261,7 +261,7 @@ func (m *Manager) Activate(tk string) *Error.Status {
 
 	invalidateBasicUserDtoCache(user, updatedUser)
 
-	log.DB.Info("Activating user: OK", nil)
+	dblog.Logger.Info("Activating user: OK", nil)
 
 	return nil
 }

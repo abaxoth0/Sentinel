@@ -6,7 +6,7 @@ import (
 	"sentinel/packages/common/util"
 	ActionDTO "sentinel/packages/core/action/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/auth/authz"
 	"sentinel/packages/infrastructure/cache"
@@ -15,7 +15,7 @@ import (
 func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bool) *Error.Status {
 	logPrefix := util.Ternary(drop, "Hard ", "Soft ")
 
-	log.DB.Info(logPrefix+"deleting location "+id+"...", nil)
+	dblog.Logger.Info(logPrefix+"deleting location "+id+"...", nil)
 
 	if act.TargetUID != act.RequesterUID {
 		if err := authz.User.DeleteLocation(act.RequesterRoles); err != nil {
@@ -59,7 +59,7 @@ func (l *Manager) deleteLocation(id string, act *ActionDTO.UserTargeted, drop bo
 		cache.KeyBase[cache.LocationBySessionID]+location.SessionID,
 	)
 
-	log.DB.Info(logPrefix+"deleting location "+id+": OK", nil)
+	dblog.Logger.Info(logPrefix+"deleting location "+id+": OK", nil)
 
 	return nil
 }

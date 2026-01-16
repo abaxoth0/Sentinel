@@ -5,13 +5,13 @@ import (
 	actiondto "sentinel/packages/core/action/DTO"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 )
 
 func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSession *SessionDTO.Full) *Error.Status {
-	log.DB.Trace("Updating session "+sessionID+"...", nil)
+	dblog.Logger.Trace("Updating session "+sessionID+"...", nil)
 
 	session, err := m.getSessionByID(sessionID, false)
 	if err != nil {
@@ -47,7 +47,7 @@ func (m *Manager) UpdateSession(act *actiondto.Basic, sessionID string, newSessi
 		cache.KeyBase[cache.UserBySessionID]+sessionID,
 	)
 
-	log.DB.Trace("Updating session "+sessionID+": OK", nil)
+	dblog.Logger.Trace("Updating session "+sessionID+": OK", nil)
 
 	return nil
 }

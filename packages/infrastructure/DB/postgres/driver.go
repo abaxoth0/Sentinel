@@ -9,8 +9,6 @@ import (
 	"sentinel/packages/infrastructure/DB/postgres/transaction"
 )
 
-// Cuz all this structs are named "Manager" they can't be directly put into postgres struct,
-// this will cause an error. So the most easy solution for this problem is to create type aliases for them.
 type (
 	ConnectionManager = *connection.Manager
 	UserManager       = *UserTable.Manager

@@ -8,7 +8,7 @@ import (
 	"sentinel/packages/common/config"
 	Error "sentinel/packages/common/errors"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"strconv"
 	"strings"
@@ -21,7 +21,7 @@ var conManager *connection.Manager
 
 func Init(manager *connection.Manager) {
 	if manager == nil {
-		log.DB.Panic(
+		dblog.Logger.Panic(
 			"Failed to initlized database query executor",
 			"Connetion manager is nil",
 			nil,
@@ -68,7 +68,7 @@ func initExecutionContext(conType connection.Type, q *query.Query) (*executionCo
 			}
 		}
 
-		log.DB.Debug("Running query:\n"+q.SQL+"\n * Query args: "+strings.Join(args, "; "), nil)
+		dblog.Logger.Debug("Running query:\n"+q.SQL+"\n * Query args: "+strings.Join(args, "; "), nil)
 	}
 
 	ctx, cancel := newExecutionContext(context.Background(), time.Second*5, con)
@@ -109,14 +109,14 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 	row := ctx.Connection.QueryRow(ctx, query.SQL, query.Args...)
 
 	return func(dests ...any) *Error.Status {
-		log.DB.Trace("Scanning row...", nil)
+		dblog.Logger.Trace("Scanning row...", nil)
 
 		if config.Debug.Enabled && config.Debug.SafeDatabaseScans {
 			for _, dest := range dests {
 				typeof := reflect.TypeOf(dest)
 
 				if typeof.Kind() != reflect.Ptr {
-					log.DB.Panic(
+					dblog.Logger.Panic(
 						"Query scan failed",
 						"Destination for scanning must be a pointer, but got '"+typeof.String()+"'",
 						nil,
@@ -132,7 +132,7 @@ func Row(conType connection.Type, query *query.Query) (rowScanner, *Error.Status
 			return query.ConvertAndLogError(e)
 		}
 
-		log.DB.Trace("Scanning row: OK", nil)
+		dblog.Logger.Trace("Scanning row: OK", nil)
 
 		return nil
 	}, nil

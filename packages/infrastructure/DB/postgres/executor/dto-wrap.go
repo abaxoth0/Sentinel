@@ -9,7 +9,7 @@ import (
 	SessionDTO "sentinel/packages/core/session/DTO"
 	UserDTO "sentinel/packages/core/user/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 
@@ -24,7 +24,7 @@ func collect[T any](
 	q *query.Query,
 	collectFunc func(pgx.CollectableRow) (T, error),
 ) ([]T, *Error.Status) {
-	log.DB.Trace("Collecting rows...", nil)
+	dblog.Logger.Trace("Collecting rows...", nil)
 
 	rows, err := Rows(conType, q)
 	if err != nil {
@@ -33,14 +33,14 @@ func collect[T any](
 
 	dtos, e := pgx.CollectRows(rows, collectFunc)
 	if e != nil {
-		log.DB.Error("Failed to collect rows", e.Error(), nil)
+		dblog.Logger.Error("Failed to collect rows", e.Error(), nil)
 		return nil, q.ConvertAndLogError(e)
 	}
 	if len(dtos) == 0 {
 		return nil, q.ConvertAndLogError(Error.StatusNotFound)
 	}
 
-	log.DB.Trace("Collecting rows: OK", nil)
+	dblog.Logger.Trace("Collecting rows: OK", nil)
 
 	return dtos, nil
 }

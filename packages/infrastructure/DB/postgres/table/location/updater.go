@@ -4,7 +4,7 @@ import (
 	Error "sentinel/packages/common/errors"
 	LocationDTO "sentinel/packages/core/location/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/audit"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 	"sentinel/packages/infrastructure/cache"
 )
@@ -13,14 +13,14 @@ import (
 //
 //	(also need to request ActionDTO.Targeted instead of location id)
 func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Error.Status {
-	log.DB.Trace("Updating locaiton "+id+"...", nil)
+	dblog.Logger.Trace("Updating locaiton "+id+"...", nil)
 
 	location, err := m.getLocationByID(id)
 	if err != nil {
 		return err
 	}
 	if !location.DeletedAt.IsZero() {
-		log.DB.Error("Failed to update locaiton "+id, Error.StatusNotFound.Error(), nil)
+		dblog.Logger.Error("Failed to update locaiton "+id, Error.StatusNotFound.Error(), nil)
 		return Error.StatusNotFound
 	}
 
@@ -50,7 +50,7 @@ func (m *Manager) UpdateLocation(id string, newLocation *LocationDTO.Full) *Erro
 		cache.KeyBase[cache.LocationBySessionID]+location.SessionID,
 	)
 
-	log.DB.Trace("Updating locaiton "+id+"...", nil)
+	dblog.Logger.Trace("Updating locaiton "+id+"...", nil)
 
 	return nil
 }

@@ -4,13 +4,13 @@ import (
 	Error "sentinel/packages/common/errors"
 	SessionDTO "sentinel/packages/core/session/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 )
 
 func (m *Manager) SaveSession(session *SessionDTO.Full) *Error.Status {
-	log.DB.Trace("Saving session...", nil)
+	dblog.Logger.Trace("Saving session...", nil)
 
 	insertQuery := query.New(
 		`INSERT INTO "user_session" (id, user_id, user_agent, ip_address, device_id, device_type, os, os_version, browser, browser_version, created_at, last_used_at, expires_at)
@@ -34,7 +34,7 @@ func (m *Manager) SaveSession(session *SessionDTO.Full) *Error.Status {
 		return err
 	}
 
-	log.DB.Trace("Saving session: OK", nil)
+	dblog.Logger.Trace("Saving session: OK", nil)
 
 	return nil
 }

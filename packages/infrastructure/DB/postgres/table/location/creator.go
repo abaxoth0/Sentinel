@@ -4,15 +4,15 @@ import (
 	Error "sentinel/packages/common/errors"
 	LocationDTO "sentinel/packages/core/location/DTO"
 	"sentinel/packages/infrastructure/DB/postgres/connection"
+	"sentinel/packages/infrastructure/DB/postgres/dblog"
 	"sentinel/packages/infrastructure/DB/postgres/executor"
-	log "sentinel/packages/infrastructure/DB/postgres/logger"
 	"sentinel/packages/infrastructure/DB/postgres/query"
 
 	"github.com/google/uuid"
 )
 
 func (_ *Manager) SaveLocation(dto *LocationDTO.Full) *Error.Status {
-	log.DB.Trace("Saving location...", nil)
+	dblog.Logger.Trace("Saving location...", nil)
 
 	insertQuery := query.New(
 		`INSERT INTO "location" (id, ip, session_id, country, region, city, latitude, longitude, isp, created_at)
@@ -33,7 +33,7 @@ func (_ *Manager) SaveLocation(dto *LocationDTO.Full) *Error.Status {
 		return err
 	}
 
-	log.DB.Trace("Saving location: OK", nil)
+	dblog.Logger.Trace("Saving location: OK", nil)
 
 	return nil
 }
